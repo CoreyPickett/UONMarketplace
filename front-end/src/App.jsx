@@ -10,6 +10,7 @@ function App() {
   console.log("App loaded");
 
   return (
+    <>
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
@@ -18,6 +19,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
+    </>
   );
 }
 
