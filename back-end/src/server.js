@@ -1,36 +1,65 @@
 import express from 'express';
-
-const listingInfo = [
-  { name: 'friends-1001', upvotes: 0, comments: [] },
-  { name: 'NuBot', upvotes: 0, comments: [] },
-  { name: 'parking-spot', upvotes: 0, comments: [] },
-]
+import { MongoClient, ServerApiVersion } from 'mongodb';
 
 const app = express();
 
 app.use(express.json());
 
-app.post('/api/marketplace/:name/upvote', (req, res) => {
-  const listing = listingInfo.find(a => a.name === req.params.name);
-  listing.upvotes += 1;
+let db;
 
-  res.json(listing);
-});
+async function connectToDB() {
+  const uri = 'mongodb://127.0.0.1:27017';
 
-app.post('/api/marketplace/:name/comments', (req, res) => {
-  const { name } = req.params;
-  const { postedBy, text } = req.body;
-
-  const listing = listingInfo.find(a => a.name === name);
-
-  listing.comments.push({
-    postedBy,
-    text,
+  const client = new MongoClient(uri, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
   });
 
+  await client.connect();
+
+  db = client.db('test-marketplace-db');
+}
+
+app.get('/api/marketplace/:name', async (req, res) => {
+  const { name } = req.params;
+  const listing = await db.collection('listings').findOne({ name });
   res.json(listing);
 });
 
-app.listen(8000, function() {
-  console.log('Server is listening on port 8000');
+app.post('/api/marketplace/:name/upvote', async (req, res) => {
+  const { name } = req.params;
+
+  const updatedListing = await db.collection('listings').findOneAndUpdate({ name }, {
+    $inc: { upvotes: 1 }
+  }, {
+    returnDocument: "after",
+  });
+
+  res.json(updatedListing);
 });
+
+app.post('/api/marketplace/:name/comments', async (req, res) => {
+  const { name } = req.params;
+  const { postedBy, text } = req.body;
+  const newComment = { postedBy, text };
+
+  const updatedListing = await db.collection('listings').findOneAndUpdate({ name }, {
+    $push: { comments: newComment }
+  }, {
+    returnDocument: 'after',
+  });
+
+  res.json(updatedListing);
+});
+
+async function start() {
+  await connectToDB();
+  app.listen(8000, function() {
+    console.log('Server is listening on port 8000');
+  });
+}
+
+start();
