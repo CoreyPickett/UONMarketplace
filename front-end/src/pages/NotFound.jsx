@@ -1,3 +1,4 @@
+//Custome error page, placeholder information
 export default function NotFound() {
   return (
     <>

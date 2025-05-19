@@ -1,3 +1,4 @@
+//Individual Listing page, currently with upvotes implemented
 import { useState } from 'react';
 import { useParams, useLoaderData } from 'react-router-dom';
 import axios from 'axios';

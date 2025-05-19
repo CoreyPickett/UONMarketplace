@@ -1,3 +1,4 @@
+//Backend server, currently integrated with MongoDb locally
 import express from 'express';
 import { MongoClient, ServerApiVersion } from 'mongodb';
 
@@ -23,12 +24,14 @@ async function connectToDB() {
   db = client.db('test-marketplace-db');
 }
 
+//Get request for a listing
 app.get('/api/marketplace/:name', async (req, res) => {
   const { name } = req.params;
   const listing = await db.collection('listings').findOne({ name });
   res.json(listing);
 });
 
+//Post request for updating upvotes
 app.post('/api/marketplace/:name/upvote', async (req, res) => {
   const { name } = req.params;
 
@@ -41,6 +44,7 @@ app.post('/api/marketplace/:name/upvote', async (req, res) => {
   res.json(updatedListing);
 });
 
+//Post request for adding comments
 app.post('/api/marketplace/:name/comments', async (req, res) => {
   const { name } = req.params;
   const { postedBy, text } = req.body;
@@ -55,6 +59,7 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
   res.json(updatedListing);
 });
 
+//Function for starting server
 async function start() {
   await connectToDB();
   app.listen(8000, function() {

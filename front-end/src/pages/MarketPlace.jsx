@@ -1,3 +1,4 @@
+//Main marketplace page, displays current listings
 import MarketPlaceList from "../MarketPlaceList";
 import listings from "../listing-content";
 

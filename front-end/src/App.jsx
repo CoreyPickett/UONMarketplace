@@ -1,3 +1,4 @@
+//Main App function with paths to webpages
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import axios from "axios";
 import './App.css';
@@ -9,10 +10,11 @@ import Listing, { loader as listingLoader} from "./pages/Listing";
 import NotFound from "./pages/NotFound";
 import Layout from './Layout';
 
+//Routes guided by url path
 const routes = [{
   path: '/',
   element: <Layout />,
-  errorElement: <NotFound />,
+  errorElement: <NotFound />, //Custom error page, will trigger if error occurs
   children: [{
     path: '/',
     element: <Dashboard />  
@@ -28,7 +30,7 @@ const routes = [{
   }, {
     path: '/marketplace/:name',
     element: <Listing />,
-    loader: listingLoader,
+    loader: listingLoader, //Custom loader for individual listing pages
   }]
 }]
 

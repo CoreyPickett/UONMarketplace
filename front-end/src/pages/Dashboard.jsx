@@ -1,4 +1,4 @@
-import React from "react";
+//Dashboard/Homepage page, with links to existing and future areas of marketplace
 import { Link } from "react-router-dom";
 import "./Dashboard.css"; // Make sure this path matches where the CSS file is saved
 

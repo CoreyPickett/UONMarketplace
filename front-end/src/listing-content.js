@@ -1,3 +1,5 @@
+//Placeholder Listings used for testing/ development
+//Each listing has a name, title, and content
 const listings = [
     {
         name: 'friends-1001',
