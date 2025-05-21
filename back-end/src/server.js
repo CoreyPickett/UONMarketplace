@@ -2,6 +2,13 @@
 import express from 'express';
 import { MongoClient, ServerApiVersion } from 'mongodb';
 
+
+//import path from 'path';
+
+//import {fileURLToPath } from 'url';
+//const __filename = fileURLToPath(import.meta.url);   // these are for when the front-end final build is ready
+//const __dirname = path.__dirname(__filename);        // the load the dist file when it is in the back-end once built 
+
 const app = express();
 
 app.use(express.json());
@@ -9,7 +16,9 @@ app.use(express.json());
 let db;
 
 async function connectToDB() {
-  const uri = 'mongodb://127.0.0.1:27017';
+  const uri = !process.env.MONGODB_USERNAME 
+  ? 'mongodb://127.0.0.1:27017'
+  : `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@cluster0.gc0c2sd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
   const client = new MongoClient(uri, {
     serverApi: {
@@ -23,6 +32,16 @@ async function connectToDB() {
 
   db = client.db('test-marketplace-db');
 }
+
+/*   
+// below is code for once the front-end is built and implemented as files in the back-end
+
+app.use(express.static(path.join(__dirname, '../dist')))
+
+app.get(/^(?!\/api).+/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+})
+*/
 
 //Get request for a listing
 app.get('/api/marketplace/:name', async (req, res) => {
@@ -59,11 +78,14 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
   res.json(updatedListing);
 });
 
+// this just allows for the enviroment to choose what port it runs on with the defult of 8000
+const PORT = process.env.PORT || 8000;
+
 //Function for starting server
 async function start() {
   await connectToDB();
-  app.listen(8000, function() {
-    console.log('Server is listening on port 8000');
+  app.listen(PORT, function() {
+    console.log('Server is listening on port ' + PORT);
   });
 }
 
