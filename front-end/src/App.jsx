@@ -1,48 +1,68 @@
-//Main App function with paths to webpages
+// Main App function with paths to webpages
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import axios from "axios";
-import './App.css';
-import Login from './pages/Login';
+
+import "./App.css";
+
+// Pages
+import Login from "./pages/Login";
 import Registration from "./pages/Registration";
 import Dashboard from "./pages/Dashboard";
 import MarketPlace from "./pages/MarketPlace";
-import Listing, { loader as listingLoader} from "./pages/Listing";
+import Listing, { loader as listingLoader } from "./pages/Listing";
+import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
-import Layout from './Layout';
+import Profile from "./pages/Profile";
 
-//Routes guided by url path
-const routes = [{
-  path: '/',
-  element: <Layout />,
-  errorElement: <NotFound />, //Custom error page, will trigger if error occurs
-  children: [{
-    path: '/',
-    element: <Dashboard />  
-  }, {
-    path: '/login',
-    element: <Login />
-  }, {
-    path: '/registration',
-    element: <Registration />
-  }, {
-    path: '/marketplace',
-    element: <MarketPlace />
-  }, {
-    path: '/marketplace/:name',
-    element: <Listing />,
-    loader: listingLoader, //Custom loader for individual listing pages
-  }]
-}]
+// Layout with Header
+import Layout from "./Layout";
 
+// Define routes
+const routes = [
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <NotFound />,
+    children: [
+      {
+        index: true,
+        element: <Dashboard />
+      },
+      {
+        path: "login",
+        element: <Login />
+      },
+      {
+        path: "registration",
+        element: <Registration />
+      },
+      {
+        path: "marketplace",
+        element: <MarketPlace />
+      },
+      {
+        path: "marketplace/:name",
+        element: <Listing />,
+        loader: listingLoader
+      },
+      {
+        path: "create-listing",
+        element: <CreateListing />
+      },
+      {
+        path: "profile",
+        element: <Profile />
+      }
+    ]
+  }
+];
+
+// Create the router
 const router = createBrowserRouter(routes);
 
+// App component
 function App() {
-  return (
-    <>
-    <RouterProvider router={router} />
-    </>
-  );
+  return <RouterProvider router={router} />;
 }
- 
-export default App;
 
+export default App;

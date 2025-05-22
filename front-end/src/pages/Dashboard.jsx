@@ -1,21 +1,47 @@
-//Dashboard/Homepage page, with links to existing and future areas of marketplace
 import { Link } from "react-router-dom";
-import "./Dashboard.css"; // Make sure this path matches where the CSS file is saved
+import "./Dashboard.css";
+import listings from "../listing-content"; // adjust if path is different
 
 const Dashboard = () => {
   return (
-    <div className="dashboard-container">
-      <h1>Welcome to UoN Community Marketplace</h1>
-      <p>Select an option below to get started:</p>
+    <div className="dashboard-wrapper">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <h2>Menu</h2>
+        <nav>
+          <ul>
+            <li><Link to="/dashboard">Dashboard Home</Link></li>
+            <li>
+              <details>
+                <summary>Listings</summary>
+                <ul>
+                  <li><Link to="/create-listing">Create Listing</Link></li>
+                  <li><Link to="/marketplace">Browse Marketplace</Link></li>
+                </ul>
+              </details>
+            </li>
+            <li><Link to="/messages">Messages</Link></li>
+            <li><Link to="/profile">Profile</Link></li>
+            <li><Link to="/admin">Admin</Link></li>
+          </ul>
+        </nav>
+      </aside>
 
-      <div className="dashboard-cards">
-        <Link to="/create-listing" className="dashboard-card">📦 Create New Listing</Link>
-        <Link to="/marketplace" className="dashboard-card">🛒 Browse Marketplace</Link>
-        <Link to="/messages" className="dashboard-card">💬 View Messages</Link>
-        <Link to="/my-listings" className="dashboard-card">📁 My Listings</Link>
-        <Link to="/profile" className="dashboard-card">👤 My Profile</Link>
-        <Link to="/admin" className="dashboard-card">🛠 Admin Dashboard</Link>
-      </div>
+      {/* Main Content */}
+      <main className="dashboard-content">
+        <h1>Welcome to UoN Community Marketplace</h1>
+        <p>Here are the latest listings from the community:</p>
+
+        <div className="listing-grid">
+          {listings.map((item) => (
+            <div key={item.name} className="listing-card">
+              <strong>{item.title}</strong>
+              <p>{item.price} — {item.location}</p>
+              <Link to={`/marketplace/${item.name}`}>View Listing</Link>
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   );
 };
