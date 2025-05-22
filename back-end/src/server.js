@@ -1,6 +1,8 @@
 //Backend server, currently integrated with MongoDb locally
 import express from 'express';
 import { MongoClient, ServerApiVersion } from 'mongodb';
+import admin from 'firebase-admin';
+import fs from 'fs';
 
 
 //import path from 'path';
@@ -8,6 +10,14 @@ import { MongoClient, ServerApiVersion } from 'mongodb';
 //import {fileURLToPath } from 'url';
 //const __filename = fileURLToPath(import.meta.url);   // these are for when the front-end final build is ready
 //const __dirname = path.__dirname(__filename);        // the load the dist file when it is in the back-end once built 
+
+const credentials = JSON.parse(
+  fs.readFileSync('./credentials.json')
+);
+
+admin.initializeApp({
+  credential: admin.credential.cert(credentials)
+});
 
 const app = express();
 
@@ -50,17 +60,43 @@ app.get('/api/marketplace/:name', async (req, res) => {
   res.json(listing);
 });
 
+//Verification for a logged in user
+app.use(async function(req, res, next) {
+  const { authtoken } = req.headers;
+
+  if (authtoken) {
+    const user = await admin.auth().verifyIdToken(authtoken);
+    req.user = user;
+  } else {
+    res.sendStatus(400);
+  }
+
+  next();
+});
+
 //Post request for updating upvotes
 app.post('/api/marketplace/:name/upvote', async (req, res) => {
   const { name } = req.params;
+  const { uid } = req.user;
 
-  const updatedListing = await db.collection('listings').findOneAndUpdate({ name }, {
-    $inc: { upvotes: 1 }
-  }, {
-    returnDocument: "after",
-  });
+  const Listing = await db.collection('listings').findOneAndUpdate({ name });
 
-  res.json(updatedListing);
+  const upvoteIds = listing.upvoteIds || [];
+  const canUpvote = uid && !upvoteIds.includes(uid);
+
+  if (canUpvote){
+    const updatedListing = await db.collection('listings').findOneAndUpdate({ name }, {
+        $inc: { upvotes: 1 },
+        $push: { upvoteIds: uid },
+    }, {
+      returnDocument: "after",
+    });
+
+    res.json(updatedListing);
+  }
+    else {
+    res.sendStatus(403);
+  }
 });
 
 //Post request for adding comments

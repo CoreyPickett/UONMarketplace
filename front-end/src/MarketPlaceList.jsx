@@ -8,7 +8,7 @@ export default function MarketPlaceList({ listings }) {
     {listings.map(a => ( //Mapping each listing, Linked by name, with Name of listing and Title displayed to user
       <Link key={a.name} to={'/marketplace/' + a.name}>
         <h3>{a.name}</h3>
-        <p>{a.title[0].substring(0, 150)}</p>
+        <p>{a.title}</p>
       </Link>
     ))}
     </>

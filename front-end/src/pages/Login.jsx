@@ -1,31 +1,45 @@
 //Login Page
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import "./login.css";
 
-const Login = () => {
+export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!email || !password) {
       alert("Please fill in all fields.");
       return;
     }
-    alert(`Logging in as ${username}`);
+    alert(`Logging in as ${email}`);
   };
+
+  const navigate = useNavigate();
+
+  async function Authenticate() {
+    try {
+      await signInWithEmailAndPassword(getAuth(), email, password);
+      navigate('/');
+    } catch (e) {
+      setError(e.message);
+    }
+  }
 
   return (
     <div className="login-container">
       <form onSubmit={handleSubmit}>
         <h2>Login</h2>
+        {error && <p>{error}</p>}
         <input
           type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
         <div className="password-group">
           <input
@@ -41,7 +55,11 @@ const Login = () => {
             {showPassword ? "Hide" : "Show"}
           </button>
         </div>
-        <button type="submit">Login</button>
+        <button 
+          type="submit"
+          onClick={Authenticate}>
+          Login
+        </button>
 
         {/* 👇 New user registration link */}
         <div className="register-link">
@@ -51,5 +69,3 @@ const Login = () => {
     </div>
   );
 };
-
-export default Login;

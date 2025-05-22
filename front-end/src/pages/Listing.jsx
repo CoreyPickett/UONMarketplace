@@ -3,16 +3,21 @@ import { useState } from 'react';
 import { useParams, useLoaderData } from 'react-router-dom';
 import axios from 'axios';
 import listings from '../listing-content';
+import useUser from '../useUser';
 
 export default function Listing() {
   const { name } = useParams();
   const { upvotes: initialUpvotes} = useLoaderData();
   const [upvotes, setUpvotes] = useState(initialUpvotes);
 
+  const { isLoading, user } = useUser();
+
   const listing = listings.find(a => a.name === name);
 
   async function onUpvoteClicked() {
-    const response = await axios.post('/api/marketplace/' + name + '/upvote');
+    const token = user && await user.getIdToken();
+    const headers = token ? { authtoken: token } : {};
+    const response = await axios.post('/api/marketplace/' + name + '/upvote', null, { headers });
     const updatedListingData = response.data;
     setUpvotes(updatedListingData.upvotes);
   }
@@ -24,7 +29,7 @@ export default function Listing() {
   return (
     <>
       <h1>{listing.title}</h1>
-      <button onClick={onUpvoteClicked}>Upvote</button>
+      {user && <button onClick={onUpvoteClicked}>Upvote</button>}
       <p>This listing has {upvotes} upvotes</p>
       {listing.content.map((p, index) => <p key={index}>{p}</p>)}
     </>
