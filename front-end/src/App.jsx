@@ -7,6 +7,7 @@ import "./App.css";
 // Pages
 import Login from "./pages/Login";
 import Registration from "./pages/Registration";
+import ForgotPswd from "./pages/forgotPswd";
 import Dashboard from "./pages/Dashboard";
 import MarketPlace from "./pages/MarketPlace";
 import Listing, { loader as listingLoader } from "./pages/Listing";
@@ -35,6 +36,10 @@ const routes = [
       {
         path: "registration",
         element: <Registration />
+      },
+      {
+        path: '/forgotpswd',
+        element: <ForgotPswd />
       },
       {
         path: "marketplace",

@@ -65,6 +65,11 @@ export default function Login() {
         <div className="register-link">
           <p>Don't have an account? <Link to="/registration">Create one</Link></p>
         </div>
+
+        {/* 👇 Forgot password link */}
+        <div className="forgot-password-link">
+          <p>Forgot your password? <Link to="/forgotPswd">Reset it</Link></p>
+        </div>
       </form>
     </div>
   );
