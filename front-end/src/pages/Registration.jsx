@@ -13,13 +13,14 @@ export default function Registration() {
   const navigate = useNavigate();
 
   async function createAccount() {
+    event.preventDefault(); // Prevent form submission refresh
     if (password !== confirmPassword) {
       setError('Password and Confirm Password do not match!');
       return;
     }
     try {
       await createUserWithEmailAndPassword(getAuth(), email, password);
-      navigate('/login'); //Doesn't navigate currently (Don't know why)
+      navigate('/'); //Navigate to Dashboard
     } catch (e) {
       setError(e.message);
     }
@@ -27,7 +28,7 @@ export default function Registration() {
 
   return (
     <div className="registration-wrapper">
-      <form className="registration-form">
+      <form className="registration-form" onSubmit={createAccount}>
         <h1>Register</h1>
 
         {error && <p>{error}</p>}
@@ -62,7 +63,6 @@ export default function Registration() {
         <button 
           type="submit" 
           className="submit-button"
-          onClick={createAccount}
         >
           Register Now!
         </button>
