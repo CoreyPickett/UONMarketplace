@@ -1,25 +1,7 @@
 //Placeholder Listings used for testing/ development
 //Each listing has a name, title, and content
-const listings = [
-    {
-        name: 'friends-1001',
-        title: 'The Fastest Way to make friends',
-        content: [
-            `Placeholder`,
-        ]
-    },    {
-        name: 'NuBot',
-        title: 'Old Bot needing a loving home',
-        content: [
-            `Placeholder`,
-        ]
-    },     {
-        name: 'parking-spot',
-        title: 'Use my old parking spot',
-        content: [
-            `Placeholder`,
-        ]
-    },  
-];
 
+
+import axios from "axios";
+const listings = [axios.get('/api/marketplace/')];
 export default listings;

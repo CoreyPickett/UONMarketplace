@@ -56,9 +56,17 @@ app.get(/^(?!\/api).+/, (req, res) => {
 //Get request for a listing
 app.get('/api/marketplace/:name', async (req, res) => {
   const { name } = req.params;
-  const listing = await db.collection('listings').findOne({ name });
+  const listing = await db.collection('items').findOne({ name });
   res.json(listing);
 });
+
+// for getting the entire collection of listings
+app.get('/api/marketplace/', async (req, res) => {
+  const listings = db.collection('items').find() // queries all in the collection 
+  res.json(listings);
+});
+
+
 
 //Verification for a logged in user
 app.use(async function(req, res, next) {
@@ -112,6 +120,55 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
   });
 
   res.json(updatedListing);
+});
+
+// I think this is the right tag
+// for vreating a new listing
+app.post('/api/marketplace/CreateListing', async (req, res) => { 
+
+
+  //Get all var and parameters
+  const {name} = ;
+  const {des} = ;
+  const {cat} = ;
+  const {AUD} = ;
+  const {quantity} = ;
+  const {condition} = ;
+  const {location} = ;
+  const {delivery} = ;
+  const {tag} = ;
+  const {image} = ;
+
+  await db. collection('item').insertOne(
+ 	{
+    name: {name},
+    description: {des},
+    category: {cat},
+    price: {AUD},
+    quantity: { quantity },
+    condition: {condition},
+    location: {location},
+    delivery_options: {delivery},
+		tagsOrKeywords: {tag},
+		image: {image},
+    name: {name},
+    upvotes: 0,
+    upvoteIds: [],
+    comments: []
+  });
+});
+
+app.post('/api/marketplace/:name', async (req, res) => { 
+
+  const {name} = req.params;
+
+  
+
+  try {
+  			 await db.collection('item').deleteOne( { name: {name} } )
+      } catch (e) {res.(e);}
+
+
 });
 
 // this just allows for the enviroment to choose what port it runs on with the defult of 8000
