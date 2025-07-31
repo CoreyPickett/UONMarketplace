@@ -126,7 +126,7 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
 // for vreating a new listing
 app.post('/api/marketplace/CreateListing', async (req, res) => { 
 
-
+/*
   //Get all var and parameters
   const {name} = ;
   const {des} = ;
@@ -138,6 +138,7 @@ app.post('/api/marketplace/CreateListing', async (req, res) => {
   const {delivery} = ;
   const {tag} = ;
   const {image} = ;
+  */
 
   await db. collection('item').insertOne(
  	{
@@ -162,12 +163,12 @@ app.post('/api/marketplace/:name', async (req, res) => {
 
   const {name} = req.params;
 
-  
 
+/*
   try {
   			 await db.collection('item').deleteOne( { name: {name} } )
       } catch (e) {res.(e);}
-
+*/
 
 });
 
