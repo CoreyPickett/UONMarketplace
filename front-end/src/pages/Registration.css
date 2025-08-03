@@ -1,0 +1,99 @@
+/* Wrapper to center form on screen */
+.registration-wrapper {
+  background-color: #f2f2f2;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Main form container */
+.registration-form {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  font-family: sans-serif;
+}
+
+/* Input fields */
+.inputbox input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* Submit button */
+.submit-button {
+  width: 100%;
+  padding: 12px;
+  background-color: #007bff;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.submit-button:hover {
+  background-color: #0056b3;
+}
+
+/* Link section */
+.login-link {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.login-link a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}
+
+/* Phone input wrapper */
+.phone-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 40px;
+  background-color: #fff;
+  gap: 8px;
+  margin-bottom: 16px; /* ensures spacing above button */
+}
+
+/* +61 label styling */
+.phone-prefix {
+  font-size: 14px;
+  color: #333;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.phone-input {
+  flex: 1;
+  border: none !important;
+  outline: none !important;
+  font-size: 14px;
+  height: 100%;
+  padding: 0 !important;
+  margin: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}

@@ -38,7 +38,6 @@ export default function Listing() {
 
 export async function loader({ params }) {
   const response = await axios.get('/api/marketplace/' + params.name);
-  const { upvotes, description, category, price, quantity, condition, location, delivery_options, tagsOrKeywords, image, name } = response.data;
- return { upvotes, description, category, price, quantity, condition, location, delivery_options, tagsOrKeywords, image, name };
-
+  const { upvotes } = response.data;
+  return { upvotes};
 }
