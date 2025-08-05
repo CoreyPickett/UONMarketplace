@@ -11,41 +11,24 @@ export default function CreateListing() {
   const [category, setCategory] = useState("General");
   const [location, setLocation] = useState("");
 
- async function handleSubmit(e) {
-  e.preventDefault();
+  function handleSubmit(e) {
+    e.preventDefault();
 
-  const listing = {
-    name: title,               
-    des: description,         
-    AUD: price,                
-    cat: category,             
-    quantity: 1,            
-    condition: "Unkown",    //default value    
-    location: location,        
-    delivery: "Pickup",     //default value   
-    image: ""                  
-  };
+    const listing = {
+      title,
+      description,
+      price,
+      category,
+      location,
+      createdAt: new Date().toISOString(),
+    };
 
-  try {
-    const response = await fetch("/api/marketplace/CreateListing", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(listing),
-    });
+    console.log("Created listing:", listing);
+    alert("Listing created (not saved — just logged to console).");
 
-    if (response.ok) {
-      alert("Listing created successfully!");
-      navigate("/marketplace");
-    } else {
-      alert("Failed to create listing");
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    alert("Something went wrong");
+    // Redirect to marketplace or another page
+    navigate("/marketplace");
   }
-}
 
   return (
     <div className="create-listing-wrapper">

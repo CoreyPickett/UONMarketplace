@@ -61,39 +61,3 @@
 .login-link a:hover {
   text-decoration: underline;
 }
-
-/* Phone input wrapper */
-.phone-input-wrapper {
-  display: flex;
-  align-items: center;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 0 12px;
-  height: 40px;
-  background-color: #fff;
-  gap: 8px;
-  margin-bottom: 16px; /* ensures spacing above button */
-}
-
-/* +61 label styling */
-.phone-prefix {
-  font-size: 14px;
-  color: #333;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  height: 100%;
-}
-
-.phone-input {
-  flex: 1;
-  border: none !important;
-  outline: none !important;
-  font-size: 14px;
-  height: 100%;
-  padding: 0 !important;
-  margin: 0 !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-}

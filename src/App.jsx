@@ -15,7 +15,6 @@ import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 
-
 // Layout with Header
 import Layout from "./Layout";
 
@@ -59,7 +58,6 @@ const routes = [
         path: "profile",
         element: <Profile />
       }
-      
     ]
   }
 ];
