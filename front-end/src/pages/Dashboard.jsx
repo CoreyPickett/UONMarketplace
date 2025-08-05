@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import "./Dashboard.css";
 import listings from "../listing-content"; // adjust if path is different
-
+import MarketPlaceList from "../MarketPlaceList";
 const Dashboard = () => {
   return (
     <div className="dashboard-wrapper">
@@ -32,15 +32,7 @@ const Dashboard = () => {
         <h1>Welcome to UoN Community Marketplace</h1>
         <p>Here are the latest listings from the community:</p>
 
-        <div className="listing-grid">
-          {listings.map((item) => (
-            <div key={item.name} className="listing-card">
-              <strong>{item.title}</strong>
-              <p>{item.price} — {item.location}</p>
-              <Link to={`/marketplace/${item.name}`}>View Listing</Link>
-            </div>
-          ))}
-        </div>
+        <MarketPlaceList listings={listings} />
       </main>
     </div>
   );
