@@ -12,7 +12,7 @@ import fs from 'fs';
 //const __dirname = path.__dirname(__filename);        // the load the dist file when it is in the back-end once built 
 
 const credentials = JSON.parse(
-  fs.readFileSync('./credentials.json')
+  fs.readFileSync('../credentials.json')
 );
 
 admin.initializeApp({
@@ -122,23 +122,25 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
   res.json(updatedListing);
 });
 
-// I think this is the right tag
-// for vreating a new listing
+
+// for creating a new listing
 app.post('/api/marketplace/CreateListing', async (req, res) => { 
 
-/*
+  //making a variable to request the listing body from CreateListing.jsx
+  const content = req.body
+
   //Get all var and parameters
-  const {name} = ;
-  const {des} = ;
-  const {cat} = ;
-  const {AUD} = ;
-  const {quantity} = ;
-  const {condition} = ;
-  const {location} = ;
-  const {delivery} = ;
-  const {tag} = ;
-  const {image} = ;
-  */
+  const {name} = content.name;
+  const {des} = content.des;
+  const {cat} = content.cat;
+  const {AUD} = content.AUD;
+  const {quantity} = content.quantity;
+  const {condition} = content.condition;
+  const {location} = content.location;
+  const {delivery} = content.delivery;
+  // const {tag} = content.;
+  const {image} = content.image;
+  
 
   await db. collection('item').insertOne(
  	{
@@ -150,26 +152,23 @@ app.post('/api/marketplace/CreateListing', async (req, res) => {
     condition: {condition},
     location: {location},
     delivery_options: {delivery},
-		tagsOrKeywords: {tag},
+		//tagsOrKeywords: {tag},
 		image: {image},
     name: {name},
     upvotes: 0,
     upvoteIds: [],
     comments: []
   });
+  res.sendStatus(201)
 });
 
 app.post('/api/marketplace/:name', async (req, res) => { 
 
   const {name} = req.params;
 
-
-/*
   try {
   			 await db.collection('item').deleteOne( { name: {name} } )
-      } catch (e) {res.(e);}
-*/
-
+      } catch (e) {res.sendStatus(400);}
 });
 
 // this just allows for the enviroment to choose what port it runs on with the defult of 8000
