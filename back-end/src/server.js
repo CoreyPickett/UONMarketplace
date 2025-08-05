@@ -12,7 +12,7 @@ import fs from 'fs';
 //const __dirname = path.__dirname(__filename);        // the load the dist file when it is in the back-end once built 
 
 const credentials = JSON.parse(
-  fs.readFileSync('../credentials.json')
+  fs.readFileSync('./credentials.json')
 );
 
 admin.initializeApp({
