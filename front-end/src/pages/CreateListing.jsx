@@ -27,7 +27,7 @@ export default function CreateListing() {
   };
 
   try {
-    const response = await fetch("/api/marketplace/CreateListing", {
+    const response = await fetch("/api/marketplace/create-listing", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

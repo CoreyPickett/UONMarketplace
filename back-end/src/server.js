@@ -124,42 +124,44 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
 
 
 // for creating a new listing
-app.post('/api/marketplace/CreateListing', async (req, res) => { 
+app.post('/api/marketplace/create-listing', async (req, res) => { 
 
   //making a variable to request the listing body from CreateListing.jsx
-  const content = req.body
+  //const content = req.body
 
   //Get all var and parameters
-  const {name} = content.name;
-  const {des} = content.des;
-  const {cat} = content.cat;
-  const {AUD} = content.AUD;
-  const {quantity} = content.quantity;
-  const {condition} = content.condition;
-  const {location} = content.location;
-  const {delivery} = content.delivery;
+  const {name} = req.body.name;
+  const {des} = req.body.des;
+  const {cat} = req.body.cat;
+  const {AUD} = req.body.AUD;
+  const {quantity} = req.body.quantity;
+  const {condition} = req.body.condition;
+  const {location} = req.body.location;
+  const {delivery} = req.body.delivery;
   // const {tag} = content.;
-  const {image} = content.image;
+  const {image} = req.body.image;
   
 
   await db. collection('item').insertOne(
  	{
-    name: {name},
-    description: {des},
-    category: {cat},
-    price: {AUD},
-    quantity: { quantity },
-    condition: {condition},
-    location: {location},
-    delivery_options: {delivery},
-		//tagsOrKeywords: {tag},
-		image: {image},
-    name: {name},
-    upvotes: 0,
-    upvoteIds: [],
-    comments: []
+    $push: {
+      name: {name},
+      description: {des},
+      category: {cat},
+      price: {AUD},
+      quantity: { quantity },
+      condition: {condition},
+      location: {location},
+      delivery_options: {delivery},
+      //tagsOrKeywords: {tag},
+      image: {image},
+      name: {name},
+      upvotes: 0,
+      upvoteIds: [],
+      comments: []
+    }
   });
-  res.sendStatus(201)
+  
 });
 
 app.post('/api/marketplace/:name', async (req, res) => { 
