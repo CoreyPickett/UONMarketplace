@@ -142,7 +142,7 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
   const {image} = req.body.image;
   
 
-  await db. collection('item').insertOne(
+  await db.collection('items').insertOne(
  	{
     $push: {
       name: {name},
@@ -169,7 +169,7 @@ app.post('/api/marketplace/:name', async (req, res) => {
   const {name} = req.params;
 
   try {
-  			 await db.collection('item').deleteOne( { name: {name} } )
+  			 await db.collection('items').deleteOne( { name: {name} } )
       } catch (e) {res.sendStatus(400);}
 });
 
