@@ -12,7 +12,7 @@ const Dashboard = () => {
         <h2>Menu</h2>
         <nav>
           <ul>
-            <li><Link to="/dashboard">Dashboard Home</Link></li>
+            <li><Link to="/">Dashboard Home</Link></li>
             <li>
               <details>
                 <summary>Listings</summary>
