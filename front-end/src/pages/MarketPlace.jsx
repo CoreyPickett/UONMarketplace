@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import useListings from "../useListings";
+import React, { useState, useEffect } from "react";
 import MarketPlaceList from "../MarketPlaceList";
 import "./MarketPlace.css";
 
@@ -8,21 +7,39 @@ const MarketPlace = () => {
   const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const { listings, loading } = useListings();
+  // Fetch filtered listings from the backend
+  useEffect(() => {
+    const fetchListings = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          query: search,
+          category,
+          minPrice,
+          maxPrice,
+        });
 
-  const filteredListings = listings.filter((listing) => {
-    const matchesSearch = listing.title.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category ? listing.category === category : true;
-    const matchesMinPrice = minPrice ? listing.price >= parseFloat(minPrice) : true;
-    const matchesMaxPrice = maxPrice ? listing.price <= parseFloat(maxPrice) : true;
-    return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice;
-  });
+        const res = await fetch(`/api/search?${params.toString()}`);
+        const data = await res.json();
+        setListings(data);
+      } catch (err) {
+        console.error("Failed to fetch listings:", err);
+        setListings([]);
+      }
+      setLoading(false);
+    };
+
+    fetchListings();
+  }, [search, category, minPrice, maxPrice]);
 
   return (
     <div className="marketplace-container">
       <aside className="sidebar">
         <h3>Advanced Filters</h3>
+
         <div className="filter-group">
           <label>Search</label>
           <input
@@ -68,7 +85,13 @@ const MarketPlace = () => {
 
       <main className="listing-section">
         <h2>Current Listings</h2>
-        {loading ? <p>Loading...</p> : <MarketPlaceList listings={filteredListings} />}
+        {loading ? (
+          <p>Loading...</p>
+        ) : listings.length === 0 ? (
+          <p>No listings found.</p>
+        ) : (
+          <MarketPlaceList listings={listings} />
+        )}
       </main>
     </div>
   );
