@@ -20,7 +20,7 @@ export default function CreateListing() {
     AUD: price,                
     cat: category,             
     quantity: 1,            
-    condition: "Unkown",    //default value    
+    condition: "Unknown",    //default value    
     location: location,        
     delivery: "Pickup",     //default value   
     image: ""                  

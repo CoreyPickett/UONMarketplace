@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import "./Dashboard.css";
-import listings from "../listing-content"; // adjust if path is different
+import useListings from "../useListings";
 import MarketPlaceList from "../MarketPlaceList";
 const Dashboard = () => {
+  const { listings, loading } = useListings();
+
   return (
     <div className="dashboard-wrapper">
       {/* Sidebar */}
@@ -31,8 +33,7 @@ const Dashboard = () => {
       <main className="dashboard-content">
         <h1>Welcome to UoN Community Marketplace</h1>
         <p>Here are the latest listings from the community:</p>
-
-        <MarketPlaceList listings={listings} />
+        {loading ? <p>Loading...</p> : <MarketPlaceList listings={listings} />}
       </main>
     </div>
   );

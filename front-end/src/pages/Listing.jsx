@@ -2,17 +2,13 @@
 import { useState } from 'react';
 import { useParams, useLoaderData } from 'react-router-dom';
 import axios from 'axios';
-import listings from '../listing-content';
 import useUser from '../useUser';
 
 export default function Listing() {
   const { name } = useParams();
-  const { upvotes: initialUpvotes} = useLoaderData();
-  const [upvotes, setUpvotes] = useState(initialUpvotes);
-
+  const listing = useLoaderData();
+  const [upvotes, setUpvotes] = useState(listing.upvotes);
   const { isLoading, user } = useUser();
-
-  const listing = listings.find(a => a.name === name);
 
   async function onUpvoteClicked() {
     const token = user && await user.getIdToken();
@@ -38,7 +34,5 @@ export default function Listing() {
 
 export async function loader({ params }) {
   const response = await axios.get('/api/marketplace/' + params.name);
-  const { upvotes, description, category, price, quantity, condition, location, delivery_options, tagsOrKeywords, image, name } = response.data;
- return { upvotes, description, category, price, quantity, condition, location, delivery_options, tagsOrKeywords, image, name };
-
+  return response.data;
 }

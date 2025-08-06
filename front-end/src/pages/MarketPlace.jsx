@@ -1,13 +1,16 @@
 //Main marketplace page, displays current listings
+import { useEffect, useState } from "react";
+import axios from "axios";
+import useListings from "../useListings";
 import MarketPlaceList from "../MarketPlaceList";
-import listings from "../listing-content";
-
 
 export default function MarketPlace() {
+  const { listings, loading } = useListings();
+
   return (
     <>
-    <h1>Current Listings</h1>
-    <MarketPlaceList listings={listings} />
+      <h1>Current Listings</h1>
+      {loading ? <p>Loading...</p> : <MarketPlaceList listings={listings} />}
     </>
   );
 }
