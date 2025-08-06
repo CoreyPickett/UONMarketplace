@@ -3,6 +3,7 @@ import express from 'express';
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import admin from 'firebase-admin';
 import fs from 'fs';
+import { ObjectId } from 'mongodb';
 
 
 //import path from 'path';
@@ -41,6 +42,7 @@ async function connectToDB() {
   await client.connect();
 
   db = client.db('test-marketplace-db');
+  console.log("Connected to MongoDB");
 }
 
 /*   
@@ -54,17 +56,22 @@ app.get(/^(?!\/api).+/, (req, res) => {
 */
 
 //Get request for a listing
-app.get('/api/marketplace/:name', async (req, res) => {
-  const { name } = req.params;
-  const listing = await db.collection('items').findOne({ name });
+app.get('/api/marketplace/:id', async (req, res) => {
+  const { id } = req.params;
+  const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
   res.json(listing);
 });
 
-// for getting the entire collection of listings
 app.get('/api/marketplace/', async (req, res) => {
-  const listings = db.collection('items').find() // queries all in the collection 
-  res.json(listings);
+  try {
+    const listings = await db.collection('items').find().toArray(); // convert cursor to array
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error("Error fetching listings:", error);
+    res.status(500).json({ error: "Failed to fetch listings" });
+  }
 });
+
 
 
 
@@ -124,45 +131,77 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
 
 
 // for creating a new listing
-app.post('/api/marketplace/create-listing', async (req, res) => { 
+app.post('/api/marketplace/create-listing', async (req, res) => {
+  console.log("Incoming listing data:", req.body);
+  try {
 
-  //making a variable to request the listing body from CreateListing.jsx
-  //const content = req.body
+    if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).json({ error: "Missing request body" });
+    }
 
-  //Get all var and parameters
-  const {name} = req.body.name;
-  const {des} = req.body.des;
-  const {cat} = req.body.cat;
-  const {AUD} = req.body.AUD;
-  const {quantity} = req.body.quantity;
-  const {condition} = req.body.condition;
-  const {location} = req.body.location;
-  const {delivery} = req.body.delivery;
-  // const {tag} = content.;
-  const {image} = req.body.image;
-  
 
-  await db.collection('items').insertOne(
- 	{
-    $push: {
-      name: {name},
-      description: {des},
-      category: {cat},
-      price: {AUD},
-      quantity: { quantity },
-      condition: {condition},
-      location: {location},
-      delivery_options: {delivery},
-      //tagsOrKeywords: {tag},
-      image: {image},
-      name: {name},
+    const {
+      title,
+      description,
+      category,
+      price,
+      quantity,
+      condition,
+      location,
+      delivery_options,
+      image,
+      seller,
+      content,
+      tagsOrKeywords
+    } = req.body;
+
+    const newListing = {
+      title,
+      description,
+      category,
+      price,
+      quantity,
+      condition,
+      location,
+      delivery_options,
+      image,
+      seller,
+      content,
+      tagsOrKeywords,
       upvotes: 0,
       upvoteIds: [],
       comments: []
+    };
+
+    console.log("Received listing:", newListing);
+
+
+    console.log("About to insert listing...");
+    const result = await db.collection('items').insertOne(newListing);
+    console.log("Insert result:", result);
+
+    if (!result.acknowledged) {
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "Insert failed" });
+      }
+      return;
     }
-  });
-  
+
+    if (!res.headersSent) {
+      return res.status(201).json({ 
+        success: true,
+        message: "Listing created successfully",
+        listingId: result.insertedId});
+    }
+  } catch (err) {
+    console.error("Error creating listing:", err);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: "Unexpected error" });
+    }
+  }
 });
+
+
 
 app.post('/api/marketplace/:name', async (req, res) => { 
 

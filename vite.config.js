@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://sdprnlqq-8000.aue.devtunnels.ms/',
+        target: 'https://dgscbpk8-8000.aue.devtunnels.ms/',
         changeOrigin: true,
       }
     }

@@ -8,7 +8,7 @@ export default function MarketPlaceList({ listings }) {
     <div className="marketplace-grid">
       {listings.map((listing) => (
         <div key={listing.name} className="listing-card">
-          <Link to={`/marketplace/${listing.name}`} className="listing-link">
+          <Link to={`/marketplace/${listing._id}`} className="listing-link">
             <div className="listing-image-wrapper">
               <img
                 src={listing.image}
