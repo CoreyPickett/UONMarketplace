@@ -41,7 +41,7 @@ async function connectToDB() {
 
   await client.connect();
 
-  db = client.db('test-marketplace-db');
+  db = client.db('uon-marketplace-db');
   console.log("Connected to MongoDB");
 }
 
