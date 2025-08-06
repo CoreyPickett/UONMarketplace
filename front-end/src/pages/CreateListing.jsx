@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { getAuth } from "firebase/auth";
 import "./CreateListing.css"; 
+
 
 const CreateListing = () => {
   const [formData, setFormData] = useState({
@@ -29,24 +31,44 @@ const CreateListing = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post('/api/marketplace/create-listing', formData);
-      alert('Listing created successfully!');
-      console.log("Listing created:", response.data);
-      console.log("Status code:", response.status);
-    } catch (error) {
-        console.error('Error creating listing:', error);
-        if (error.response) {
-          console.error("Status:", error.response.status);
-          console.error("Headers:", error.response.headers);
-          console.error("Data:", error.response.data);
-        } else {
-          console.error("No response received:", error.message);
-        }
-        alert('Failed to create listing.');
+  e.preventDefault();
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      alert("You must be logged in to create a listing.");
+      return;
+    }
+
+    const token = await user.getIdToken();
+
+    const response = await axios.post('/api/marketplace/create-listing', formData, {
+      headers: {
+        authtoken: token
       }
-  };
+    });
+
+    const data = response.data;
+
+    if (response.status === 201 && data.success) {
+      alert('Listing created successfully!');
+      console.log("Listing created:", data);
+    } else {
+      throw new Error('Unexpected response');
+    }
+  } catch (error) {
+    console.error('Error creating listing:', error);
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", error.response.data);
+    } else {
+      console.error("No response received:", error.message);
+    }
+    alert('Failed to create listing.');
+  }
+};
+
 
   return (
     <form onSubmit={handleSubmit}>

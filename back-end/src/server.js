@@ -41,7 +41,7 @@ async function connectToDB() {
 
   await client.connect();
 
-  db = client.db('test-marketplace-db');
+  db = client.db('uon-marketplace-db');
   console.log("Connected to MongoDB");
 }
 
@@ -55,16 +55,17 @@ app.get(/^(?!\/api).+/, (req, res) => {
 })
 */
 
-//Get request for a listing
+//GET request for a listing
 app.get('/api/marketplace/:id', async (req, res) => {
   const { id } = req.params;
   const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
   res.json(listing);
 });
 
+//GET request for Whole Marketplace
 app.get('/api/marketplace/', async (req, res) => {
   try {
-    const listings = await db.collection('items').find().toArray(); // convert cursor to array
+    const listings = await db.collection('items').find().toArray();
     res.status(200).json(listings);
   } catch (error) {
     console.error("Error fetching listings:", error);
@@ -79,17 +80,21 @@ app.get('/api/marketplace/', async (req, res) => {
 app.use(async function(req, res, next) {
   const { authtoken } = req.headers;
 
-  if (authtoken) {
-    const user = await admin.auth().verifyIdToken(authtoken);
-    req.user = user;
-  } else {
-    res.sendStatus(400);
+  if (!authtoken) {
+    return res.sendStatus(400);
   }
 
-  next();
+  try {
+    const user = await admin.auth().verifyIdToken(authtoken);
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error("Auth error:", err);
+    return res.sendStatus(401);
+  }
 });
 
-//Post request for updating upvotes
+//POST request for updating upvotes
 app.post('/api/marketplace/:name/upvote', async (req, res) => {
   const { name } = req.params;
   const { uid } = req.user;
@@ -114,7 +119,7 @@ app.post('/api/marketplace/:name/upvote', async (req, res) => {
   }
 });
 
-//Post request for adding comments
+//POST request for adding comments
 app.post('/api/marketplace/:name/comments', async (req, res) => {
   const { name } = req.params;
   const { postedBy, text } = req.body;
@@ -130,7 +135,7 @@ app.post('/api/marketplace/:name/comments', async (req, res) => {
 });
 
 
-// for creating a new listing
+//POST request for creating a new listing
 app.post('/api/marketplace/create-listing', async (req, res) => {
   console.log("Incoming listing data:", req.body);
   try {
@@ -174,6 +179,8 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
     };
 
     console.log("Received listing:", newListing);
+    console.log("Using DB:", db?.databaseName);
+
 
 
     console.log("About to insert listing...");
@@ -187,22 +194,20 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
       return;
     }
 
-    if (!res.headersSent) {
-      return res.status(201).json({ 
-        success: true,
-        message: "Listing created successfully",
-        listingId: result.insertedId});
-    }
+    return res.status(201).json({
+      success: true,
+      message: 'Listing created successfully',
+      insertedId: result.insertedId
+    });
   } catch (err) {
-    console.error("Error creating listing:", err);
-    if (!res.headersSent) {
-      return res.status(500).json({ error: "Unexpected error" });
-    }
+    console.error('Insert error:', err);
+    return res.status(500).json({ success: false, message: 'Unexpected error' });
   }
 });
 
 
 
+//POST request for deleting a listing
 app.post('/api/marketplace/:name', async (req, res) => { 
 
   const {name} = req.params;
@@ -212,8 +217,7 @@ app.post('/api/marketplace/:name', async (req, res) => {
       } catch (e) {res.sendStatus(400);}
 });
 
-// this just allows for the enviroment to choose what port it runs on with the defult of 8000
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the defult of 8000
 
 //Function for starting server
 async function start() {
