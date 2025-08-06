@@ -156,8 +156,6 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
       delivery_options,
       image,
       seller,
-      content,
-      tagsOrKeywords
     } = req.body;
 
     const newListing = {
@@ -171,8 +169,6 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
       delivery_options,
       image,
       seller,
-      content,
-      tagsOrKeywords,
       upvotes: 0,
       upvoteIds: [],
       comments: []

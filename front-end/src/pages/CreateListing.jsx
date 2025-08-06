@@ -17,8 +17,6 @@ const CreateListing = () => {
     delivery_options: [],
     image: '',
     seller: '',
-    content: [],
-    tagsOrKeywords: []
   });
 
   const handleChange = (e) => {
@@ -72,19 +70,80 @@ const CreateListing = () => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <input name="title" placeholder="Title" value={formData.title} onChange={handleChange} required />
-      <textarea name="description" placeholder="Description" value={formData.description} onChange={handleChange} required />
-      <input name="category" placeholder="Category" value={formData.category} onChange={handleChange} required />
-      <input name="price" type="number" placeholder="Price (AUD)" value={formData.price} onChange={handleChange} required />
-      <input name="quantity" type="number" placeholder="Quantity" value={formData.quantity} onChange={handleChange} required />
-      <input name="condition" placeholder="Condition" value={formData.condition} onChange={handleChange} required />
-      <input name="location" placeholder="Location" value={formData.location} onChange={handleChange} required />
-      <input name="delivery_options" placeholder="Delivery Options" onChange={(e) => handleArrayChange('delivery_options', e.target.value)} />
-      <input name="image" placeholder="Image URL" value={formData.image} onChange={handleChange} />
-      <input name="seller" placeholder="Seller Name" value={formData.seller} onChange={handleChange} />
-      <input name="content" placeholder="Content" onChange={(e) => handleArrayChange('content', e.target.value)} />
-      <input name="tagsOrKeywords" placeholder="Tags/Keywords" onChange={(e) => handleArrayChange('tagsOrKeywords', e.target.value)} />
+      <input name="title"
+       placeholder="Title" 
+       value={formData.title} 
+       onChange={handleChange} 
+       required />
+
+      <textarea name="description" 
+       placeholder="Description" 
+       value={formData.description} 
+       onChange={handleChange} 
+       required />
+
+      <input name="category" 
+       placeholder="Category" 
+       value={formData.category} 
+       onChange={handleChange} 
+       required />
+
+      <input name="price" 
+       type="number" 
+       placeholder="Price (AUD)" 
+       value={formData.price} 
+       onChange={handleChange} 
+       required />
+
+      <input name="quantity" 
+       type="number" 
+       placeholder="Quantity" 
+       value={formData.quantity} 
+       onChange={handleChange} 
+       required />
+
+      <select name="condition" 
+       placeholder="Condition" 
+       value={formData.condition} 
+       onChange={handleChange} 
+       required>
+        <option value="">Select Condition</option>
+        <option value="New">New</option>
+        <option value="Used - Like New">Used - Like New</option>
+        <option value="Used - Good">Used - Good</option>
+        <option value="Used - Fair">Used - Fair</option>
+      </select>
+
+      <input name="location" 
+       placeholder="Location" 
+       value={formData.location} 
+       onChange={handleChange} 
+       required />
+
+      <select name="delivery_options" 
+       placeholder="Delivery Options" 
+       onChange={(e) => handleArrayChange('delivery_options', e.target.value)}
+       required>
+        <option value="">Select Delivery Option</option>
+        <option value="Pickup">Pickup</option>
+        <option value="Local Delivery">Local Delivery</option>
+        <option value="Shipping">Shipping</option>
+      </select>
+
+
+      <input name="image" 
+       placeholder="Image URL" 
+       value={formData.image} 
+       onChange={handleChange} />
+
+      <input name="seller" 
+       placeholder="Seller Name" 
+       value={formData.seller} 
+       onChange={handleChange}
+       required />
+
       <button type="submit">Create Listing</button>
+
     </form>
   );
 };
