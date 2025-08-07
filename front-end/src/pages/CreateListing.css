@@ -1,10 +1,12 @@
 .create-listing-wrapper {
   padding: 30px;
   max-width: 600px;
-  margin: 0 auto;
-  background: #fff;
+  margin: 30px auto;
+  background: #ffffff;
   border-radius: 10px;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', sans-serif;
+  color: #1e1e1e;
 }
 
 .create-form {
@@ -16,18 +18,33 @@
 .create-form input,
 .create-form textarea,
 .create-form select {
-  padding: 10px;
+  padding: 12px;
   font-size: 16px;
   border-radius: 5px;
   border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  color: #1e1e1e;
+}
+
+.create-form input:focus,
+.create-form textarea:focus {
+  outline: none;
+  border-color: #0078ae;
+  box-shadow: 0 0 4px #0078ae66;
 }
 
 .create-form button {
-  background-color: #007bff;
+  background-color: #0078ae; /* Primary UoN blue */
   color: white;
   font-weight: bold;
-  padding: 12px;
+  padding: 14px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.create-form button:hover {
+  background-color: #005f8c;
 }

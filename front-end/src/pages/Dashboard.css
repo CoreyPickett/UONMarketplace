@@ -2,17 +2,19 @@
   display: flex;
   min-height: 100vh;
   font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
 }
 
 .sidebar {
   width: 220px;
-  background-color: #003366;
+  background-color: #1e1e1e; /* Charcoal */
   color: white;
   padding: 20px;
 }
 
 .sidebar h2 {
   margin-top: 0;
+  color: #ffffff;
 }
 
 .sidebar ul {
@@ -21,16 +23,22 @@
 }
 
 .sidebar a {
-  color: white;
+  color: #ffffff;
   text-decoration: none;
+  font-weight: bold;
 }
 
 .sidebar li {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .sidebar details summary {
   cursor: pointer;
+}
+
+.sidebar a:hover {
+  text-decoration: underline;
+  color: #00b5ef;
 }
 
 .dashboard-content {
