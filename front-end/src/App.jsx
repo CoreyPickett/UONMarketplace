@@ -14,6 +14,7 @@ import Listing, { loader as listingLoader } from "./pages/Listing";
 import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 
 
 // Layout with Header
@@ -58,6 +59,10 @@ const routes = [
       {
         path: "profile",
         element: <Profile />
+      },
+      {
+        path: "admin",
+        element: <Admin />
       }
       
     ]
