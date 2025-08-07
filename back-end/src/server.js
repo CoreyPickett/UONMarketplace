@@ -43,6 +43,8 @@ async function connectToDB() {
 
   db = client.db('uon-marketplace-db');
   console.log("Connected to MongoDB");
+  console.log("Using database:", db.databaseName);
+
 }
 
 /*   
@@ -95,37 +97,53 @@ app.use(async function(req, res, next) {
 });
 
 //POST request for updating upvotes
-app.post('/api/marketplace/:name/upvote', async (req, res) => {
-  const { name } = req.params;
+app.post('/api/marketplace/:id/upvote', async (req, res) => {
+  const { id } = req.params;
   const { uid } = req.user;
 
-  const Listing = await db.collection('listings').findOneAndUpdate({ name });
-
-  const upvoteIds = listing.upvoteIds || [];
-  const canUpvote = uid && !upvoteIds.includes(uid);
-
-  if (canUpvote){
-    const updatedListing = await db.collection('listings').findOneAndUpdate({ name }, {
-        $inc: { upvotes: 1 },
-        $push: { upvoteIds: uid },
-    }, {
-      returnDocument: "after",
-    });
-
-    res.json(updatedListing);
+  if (!uid) {
+    return res.status(401).json({ error: "User ID missing from request" });
   }
-    else {
-    res.sendStatus(403);
+
+  try {
+    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
+
+    if (!listing) {
+      return res.status(404).json({ error: "Listing not found" });
+    }
+
+    const upvoteIds = listing.upvoteIds || [];
+    const canUpvote = !upvoteIds.includes(uid);
+
+    if (!canUpvote) {
+      return res.status(403).json({ error: "User has already upvoted" });
+    }
+
+    const updatedListing = await db.collection('items').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      {
+        $inc: { upvotes: 1 },
+        $push: { upvoteIds: uid }
+      },
+      {
+        returnDocument: "after"
+      }
+    );
+
+    return res.status(200).json({ success: true, listing: updatedListing.value });
+  } catch (err) {
+    console.error("Upvote error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 //POST request for adding comments
-app.post('/api/marketplace/:name/comments', async (req, res) => {
-  const { name } = req.params;
+app.post('/api/marketplace/:id/comments', async (req, res) => {
+  const { id } = req.params;
   const { postedBy, text } = req.body;
   const newComment = { postedBy, text };
 
-  const updatedListing = await db.collection('listings').findOneAndUpdate({ name }, {
+  const updatedListing = await db.collection('items').findOneAndUpdate({ _id: new ObjectId(id) }, {
     $push: { comments: newComment }
   }, {
     returnDocument: 'after',
