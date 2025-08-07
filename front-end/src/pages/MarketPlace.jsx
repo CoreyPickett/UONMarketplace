@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import MarketPlaceList from "../MarketPlaceList";
+import useListings from "../useListings";
 import "./MarketPlace.css";
 
 const MarketPlace = () => {
+  const { listings, loading } = useListings();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   // Fetch filtered listings from the backend
   useEffect(() => {
