@@ -47,7 +47,7 @@ const routes = [
         element: <MarketPlace />
       },
       {
-        path: "marketplace/:name",
+        path: "marketplace/:id",
         element: <Listing />,
         loader: listingLoader
       },
