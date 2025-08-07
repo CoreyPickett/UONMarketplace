@@ -81,11 +81,9 @@ const CreateListing = () => {
           <input name="location" placeholder="Location (e.g. Callaghan Campus)" value={formData.location} onChange={handleChange} required />
         </div>
 
-        <input name="delivery_options" placeholder="Delivery Options (comma-separated)" onChange={(e) => handleArrayChange('delivery_options', e.target.value)} />
+        <input name="delivery_options" placeholder="Delivery Options" onChange={(e) => handleArrayChange('delivery_options', e.target.value)} />
         <input name="image" placeholder="Image URL" value={formData.image} onChange={handleChange} />
         <input name="seller" placeholder="Seller Name" value={formData.seller} onChange={handleChange} />
-        <input name="content" placeholder="Content (comma-separated)" onChange={(e) => handleArrayChange('content', e.target.value)} />
-        <input name="tagsOrKeywords" placeholder="Tags/Keywords (comma-separated)" onChange={(e) => handleArrayChange('tagsOrKeywords', e.target.value)} />
 
         <button type="submit">Create Listing</button>
       </form>
