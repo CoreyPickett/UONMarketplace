@@ -77,9 +77,6 @@ app.get('/api/marketplace/', async (req, res) => {
   }
 });
 
-
-
-
 //Verification for a logged in user
 app.use(async function(req, res, next) {
   const { authtoken } = req.headers;
@@ -154,7 +151,6 @@ app.post('/api/marketplace/:id/comments', async (req, res) => {
   res.json(updatedListing); //Update Listing
 });
 
-
 //POST request for creating a new listing
 app.post('/api/marketplace/create-listing', async (req, res) => {
   console.log("Incoming listing data:", req.body); //Dev check for correct incoming data
@@ -222,8 +218,6 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
   }
 });
 
-
-
 //DELETE request for deleting a listing
 app.delete('/api/marketplace/:id', async (req, res) => {
   const { id } = req.params;
@@ -241,6 +235,59 @@ app.delete('/api/marketplace/:id', async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal server error" }); //Delete failure return message
   }
 });
+
+//GET request to search user by email
+app.get('/api/admin/search-user', async (req, res) => {
+  const { email } = req.query;
+
+  if (!email) return res.status(400).json({ error: "Email is required" });
+
+  try {
+    const userRecord = await admin.auth().getUserByEmail(email);
+    res.json({
+      uid: userRecord.uid,
+      email: userRecord.email,
+      displayName: userRecord.displayName,
+      disabled: userRecord.disabled,
+      metadata: userRecord.metadata,
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(404).json({ error: "User not found" });
+  }
+});
+
+//POST request to disable user by IUD
+app.post('/api/admin/disable-user', async (req, res) => {
+  const { uid } = req.body;
+
+  if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+  try {
+    await admin.auth().updateUser(uid, { disabled: true });
+    res.json({ success: true, message: "User disabled" });
+  } catch (error) {
+    console.error("Disable error:", error);
+    res.status(500).json({ error: "Failed to disable user" });
+  }
+});
+
+//POST request to delete user by IUD
+app.post('/api/admin/delete-user', async (req, res) => {
+  const { uid } = req.body;
+
+  if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+  try {
+    await admin.auth().deleteUser(uid);
+    res.json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Delete error:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+
 
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the defult of 8000

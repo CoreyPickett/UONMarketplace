@@ -99,37 +99,97 @@ const ListingsSearch = () => {
 
 
 const UserSearch = () => {
-    const [searchTerm, setSearchTerm] = useState("");
-    const navigate = useNavigate();
-    const auth = getAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [user, setUser] = useState(null);
+  const [status, setStatus] = useState("");
+  const auth = getAuth();
 
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await axios.get(`/api/listings?search=${searchTerm}`);
-            // Handle the response data as needed
-            console.log(response.data);
-        } catch (error) {
-            console.error("Error fetching listings:", error);
-        }
-    };
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await axios.get(`/api/admin/search-user?email=${searchTerm}`, {
+      headers: { authtoken: token }
+      });
 
-    return (
-        <form onSubmit={handleSearch}>
-            
-            <h2>Search Users</h2>
-            
-            <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search Users..."
-            />
-            <button className="btn" type="submit">Search</button>
-            
-        </form>
-    );
-}
+      setUser(response.data);
+      setStatus("");
+    } catch (error) {
+      console.error("Search error:", error);
+      setUser(null);
+      setStatus("User not found.");
+    }
+  };
+
+  const handleDisable = async () => {
+    if (!user?.uid) return;
+    const token = await auth.currentUser.getIdToken();
+
+    if (!window.confirm("Disable this user account?")) return;
+
+    try {
+      await axios.post('/api/admin/disable-user', { uid: user.uid }, {
+        headers: { authtoken: token }
+      });
+      setStatus("User disabled successfully.");
+    } catch (error) {
+      console.error("Disable error:", error);
+      setStatus("Failed to disable user.");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user?.uid) return;
+    const token = await auth.currentUser.getIdToken();
+
+    if (!window.confirm("Are you sure you want to permanently delete this account?")) return;
+
+    try {
+      await axios.post('/api/admin/delete-user', { uid: user.uid }, {
+        headers: { authtoken: token }
+      });
+      setStatus("User deleted successfully.");
+      setUser(null); // Clear user from view
+    } catch (error) {
+      console.error("Delete error:", error);
+      setStatus("Failed to delete user.");
+   }
+  };
+
+
+  return (
+    <div>
+      <form onSubmit={handleSearch}>
+        <h2>Search Users</h2>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Enter email or UID"
+        />
+        <button className="btn" type="submit">Search</button>
+      </form>
+
+      {status && <p className="status-message">{status}</p>}
+
+      {user && (
+        <div className="user-card">
+          <p><strong>Email:</strong> {user.email}</p>
+          <p><strong>UID:</strong> {user.uid}</p>
+          <p><strong>Disabled:</strong> {user.disabled ? "Yes" : "No"}</p>
+          <button className="btn delete-btn" onClick={handleDisable}>
+            Disable Account
+          </button>
+          <button className="btn danger-btn" onClick={handleDelete}>
+            Delete Account
+          </button>
+
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 const Announcements = () => {
     const [title, setTitle] = useState(""); // <-- Add this line
