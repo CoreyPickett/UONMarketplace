@@ -1,48 +1,91 @@
-/* Overall container */
+/* Layout */
 .marketplace-container {
   display: flex;
-  background-color: #f5f5f5; /* Light UON background */
+  background-color: #f5f5f5;
   min-height: 100vh;
-  color: #1c1c1c; /* UON dark text */
+  color: #1c1c1c;
 }
 
-/* Sidebar */
+/* Sidebar: deep navy with readable controls */
 .sidebar {
   width: 260px;
-  background-color: #003057; /* UON dark navy blue */
-  color: white;
   padding: 1.5rem;
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+  background-color: #003865; /* deep UON navy */
+  color: #ffffff;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .sidebar h3 {
   font-size: 1.25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   color: #ffffff;
 }
 
-/* Filters inside sidebar */
+/* Filters */
 .filter-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.1rem;
   display: flex;
   flex-direction: column;
 }
 
 .filter-group label {
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-weight: 700;
+  margin-bottom: 0.45rem;
   color: #ffffff;
 }
 
 .filter-group input,
 .filter-group select {
+  width: 100%;
   padding: 10px;
-  border: 1px solid #cccccc;
-  border-radius: 6px;
+  border: 1px solid #d7dde5;
+  border-radius: 8px;
   font-size: 1rem;
   background-color: #ffffff;
   color: #1c1c1c;
+  margin-bottom: 10px;
 }
+
+/* Note under price fields */
+.range-note {
+  font-size: 0.85rem;
+  color: #e5e7eb;
+  margin-top: -2px;
+  margin-bottom: 10px;
+}
+
+/* Buttons stack */
+.filter-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Search button: white with navy text for readability */
+.search-btn {
+  background-color: #ffffff;
+  color: #003865;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.search-btn:hover { filter: brightness(0.98); }
+.search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Reset button: subtle */
+.reset-btn {
+  background: #e5e7eb;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reset-btn:hover { background: #dfe3e7; }
 
 /* Main listing section */
 .listing-section {
@@ -57,27 +100,7 @@
   color: #003057;
 }
 
-/* Marketplace header with search bar */
-.marketplace-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.search-bar {
-  padding: 10px;
-  border: 1px solid #cccccc;
-  border-radius: 6px;
-  width: 100%;
-  max-width: 300px;
-  font-size: 1rem;
-  background-color: #ffffff;
-  color: #1c1c1c;
-}
-
-/* Listing cards (adjust if needed in MarketPlaceList.css) */
+/* Card hover (kept if you use MarketPlaceList.css) */
 .listing-card {
   background-color: white;
   border: 1px solid #ccc;
@@ -86,7 +109,6 @@
   margin-bottom: 1.5rem;
   transition: box-shadow 0.2s ease;
 }
-
 .listing-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
