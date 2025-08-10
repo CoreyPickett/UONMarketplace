@@ -1,0 +1,109 @@
+
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f5f5; 
+  color: #1c1c1c;
+  font-family: Arial, sans-serif;
+}
+
+
+.admin-content {
+  flex: 1;
+  padding: 2rem;
+  background: #f5f5f5;
+}
+.page-title {
+  margin-bottom: 1.5rem;
+  font-size: 1.75rem;           /* match Marketplace h2 */
+  font-weight: 700;
+  color: #003057;               /* same navy heading */
+}
+.admin-sections {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.admin-card {
+  background-color: #ffffff;
+  border: 1px solid #ccc;       /* same as listing-card */
+  border-radius: 8px;
+  padding: 1rem;
+  transition: box-shadow 0.2s ease;
+}
+@media (min-width: 900px) {
+  .admin-sections {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* Make “Send Announcement” span full width */
+  .admin-sections .admin-card--wide {
+    grid-column: 1 / -1;
+  }
+}
+.admin-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.admin-card h3 {
+  margin: 0 0 12px;
+  color: #003057;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.input,
+.admin-card input,
+.admin-card select,
+.admin-card textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: #ffffff;
+  color: #1c1c1c;
+  outline: none;
+}
+
+.admin-card textarea {
+  resize: vertical;
+}
+.input:focus,
+.admin-card input:focus,    
+.admin-card select:focus,
+.admin-card textarea:focus {
+  border-color: #1e90ff;
+  box-shadow: 0 0 0 3px rgba(30,144,255,0.15);
+}
+
+.form-group {
+ font-weight: bold;
+ display: flex;
+ align-items: center;
+ gap: 20px;
+}
+
+.short-input {
+  width: 200px;
+}
+
+.btn {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #e6eef6;
+  color: #0d2b45;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:hover {
+  background: #d9e6f2;
+}
+.btn-primary {
+  background: #ffffff;
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #1678d2;
+}
+

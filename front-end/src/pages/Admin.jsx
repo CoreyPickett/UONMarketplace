@@ -4,15 +4,28 @@ import axios from "axios";
 import { getAuth } from "firebase/auth";
 import "./Admin.css";
 
+
 function Admin() {
 
-    return (
+   
+    return ( 
+    <main className="admin-content"> 
         <div>
-            <h2>Admin</h2>
+           
+            <h1 className="page-title">Admin</h1>
+            <div classname = "adminsections">
+            <div className="admin-card">
             <ListingsSearch />
+            </div>
+            <div className="admin-card">
             <UserSearch />
+            </div>
+            <div className="admin-card wide">
             <Announcements />
+            </div>
+            </div>
         </div>
+    </main>
     );
 
 }
@@ -35,13 +48,19 @@ const ListingsSearch = () => {
 
     return (
         <form onSubmit={handleSearch}>
+           
+            <h2>Search Listings</h2>
+            
             <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search listings..."
             />
-            <button type="submit">Search</button>
+            <button className="btn" type="submit">Search</button>
+           
+            
+           
         </form>
     );
 }
@@ -64,13 +83,17 @@ const UserSearch = () => {
 
     return (
         <form onSubmit={handleSearch}>
+            
+            <h2>Search Users</h2>
+            
             <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search Users..."
             />
-            <button type="submit">Search</button>
+            <button className="btn" type="submit">Search</button>
+            
         </form>
     );
 }
@@ -115,8 +138,11 @@ const Announcements = () => {
 
     return (
         <form onSubmit={handleSend}>
+           
             <h2>Send Announcement</h2>
+            
             <input
+            className="input"
                 type="text"
                 placeholder="Title"
                 value={title}
@@ -124,6 +150,7 @@ const Announcements = () => {
                 required
             />
             <textarea
+            className="input"
                 value={announcement}
                 onChange={(e) => setAnnouncement(e.target.value)}
                 placeholder="Write your announcement here..."
@@ -131,28 +158,35 @@ const Announcements = () => {
                 cols="50"
                 required
             />
-            <div>
-                <p>Severity:</p>
+           
+            <div className="form-group">
+                <div>
+                <label>Severity:</label>
+                
                 <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
                     <option value="info">Info</option>     
                     <option value="warning">Warning</option>
                     <option value="error">Error</option>
                     <option value="success">Success</option>
                 </select>
-                <p>Announcement expires at:</p>
+            </div>
+            <div>
+                <label>Announcement expires at:</label>
                 <input
-                
+                    className="short-input"
                     type="datetime-local"
                     value={expiresAt}
                     onChange={(e) => setExpiresAt(e.target.value)}
                     placeholder="Expires At (optional)"
                 />
+                </div>
             </div>
-            <button type="submit">Send Announcement</button>
-            {status && <p>{status}</p>}
+            <button className="btn" type="submit">Send Announcement</button>
+            {status && <p style={{ marginTop: 8}}>{status}</p>}
+            
+            
         </form>
     );
 }
-import React from 'react'; 
 
 export default Admin;
