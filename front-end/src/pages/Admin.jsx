@@ -31,39 +31,72 @@ function Admin() {
 }
 
 const ListingsSearch = () => {
-    const [searchTerm, setSearchTerm] = useState("");
-    const navigate = useNavigate();
-    const auth = getAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [listings, setListings] = useState([]);
+  const [status, setStatus] = useState("");
+  const auth = getAuth();
 
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await axios.get(`/api/listings?search=${searchTerm}`);
-            // Handle the response data as needed
-            console.log(response.data);
-        } catch (error) {
-            console.error("Error fetching listings:", error);
-        }
-    };
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    try { //Search function to find listings based on title
+      const response = await axios.get(`/api/marketplace/`);
+      const filtered = response.data.filter(item =>
+        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) //Filters title names, not case sensitive
+      );
+      setListings(filtered);
+    } catch (error) {
+      console.error("Error fetching listings:", error); //Error message
+    }
+  };
 
-    return (
-        <form onSubmit={handleSearch}>
-           
-            <h2>Search Listings</h2>
-            
-            <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search listings..."
-            />
-            <button className="btn" type="submit">Search</button>
-           
-            
-           
-        </form>
-    );
-}
+  const handleDelete = async (id) => {
+    const user = auth.currentUser;
+    if (!user) return alert("You must be logged in to delete listings."); //Error is user not logged in
+    const token = await user.getIdToken();
+
+    if (!window.confirm("Are you sure you want to delete this listing?")) return;
+
+    try { //Delete function
+      await axios.delete(`/api/marketplace/${id}`, {
+        headers: { authtoken: token }
+      });
+      setListings(listings.filter(listing => listing._id !== id));
+      setStatus("Listing deleted successfully.");
+    } catch (error) {
+      console.error("Error deleting listing:", error);
+      setStatus("Failed to delete listing.");
+    }
+  };
+
+  return ( //Search and Delete Admin form with Delete button
+    <div>
+      <form onSubmit={handleSearch}>
+        <h2>Search Listings</h2>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search listings..."
+        />
+        <button className="btn" type="submit">Search</button>
+      </form>
+
+      {status && <p className="status-message">{status}</p>}
+
+      <ul className="listing-results">
+        {listings.map(listing => (
+          <li key={listing._id} className="listing-item">
+            <span>{listing.title}</span>
+            <button className="btn delete-btn" onClick={() => handleDelete(listing._id)}>
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 
 const UserSearch = () => {
     const [searchTerm, setSearchTerm] = useState("");
