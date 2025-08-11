@@ -56,7 +56,15 @@ export default function Listing() {
     );
   }
 
-  const heroImg = listing.image || '/placeholder-listing.jpg';
+  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+  const region = import.meta.env.VITE_AWS_REGION;
+
+  const heroImg = listing.image?.startsWith('http')
+  ? listing.image
+  : `https://${bucket}.s3.${region}.amazonaws.com/${listing.image}`;
+ 
+  console.log("Image key:", listing.image)
+
   const priceText = formatAUD(listing.price);
 
   return (
@@ -159,9 +167,4 @@ export default function Listing() {
       </section>
     </div>
   );
-}
-
-export async function loader({ params }) {
-  const response = await axios.get('/api/marketplace/' + params.id);
-  return response.data;
 }

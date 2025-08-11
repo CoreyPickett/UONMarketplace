@@ -13,7 +13,7 @@ function Admin() {
         <div>
            
             <h1 className="page-title">Admin</h1>
-            <div classname = "adminsections">
+            <div className = "adminsections">
             <div className="admin-card">
             <ListingsSearch />
             </div>

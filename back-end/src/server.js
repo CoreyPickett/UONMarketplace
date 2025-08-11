@@ -4,6 +4,9 @@ import { MongoClient, ServerApiVersion } from 'mongodb';
 import admin from 'firebase-admin';
 import fs from 'fs';
 import { ObjectId } from 'mongodb';
+import AWS from 'aws-sdk';
+import dotenv from 'dotenv';
+dotenv.config();
 
 
 //import path from 'path';
@@ -19,6 +22,14 @@ const credentials = JSON.parse( //Reads firebase credentials
 admin.initializeApp({ //Start App with firebase credentials
   credential: admin.credential.cert(credentials)
 });
+
+const s3 = new AWS.S3({
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  signatureVersion: 'v4',
+});
+
 
 const app = express();
 
@@ -59,6 +70,11 @@ app.get(/^(?!\/api).+/, (req, res) => {
 })
 */
 
+app.use('/api', (req, res, next) => {
+  console.log(`[API] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 //GET request for a listing
 app.get('/api/marketplace/:id', async (req, res) => {
   const { id } = req.params;
@@ -78,7 +94,7 @@ app.get('/api/marketplace/', async (req, res) => {
 });
 
 //Verification for a logged in user
-app.use(async function(req, res, next) {
+const verifyUser = async (req, res, next) => {
   const { authtoken } = req.headers;
 
   if (!authtoken) {
@@ -93,10 +109,11 @@ app.use(async function(req, res, next) {
     console.error("Auth error:", err);
     return res.sendStatus(401);
   }
-});
+};
+
 
 //POST request for updating upvotes
-app.post('/api/marketplace/:id/upvote', async (req, res) => {
+app.post('/api/marketplace/:id/upvote', verifyUser, async (req, res) => {
   const { id } = req.params;
   const { uid } = req.user;
 
@@ -137,7 +154,7 @@ app.post('/api/marketplace/:id/upvote', async (req, res) => {
 });
 
 //POST request for adding comments
-app.post('/api/marketplace/:id/comments', async (req, res) => {
+app.post('/api/marketplace/:id/comments', verifyUser, async (req, res) => {
   const { id } = req.params;
   const { postedBy, text } = req.body;
   const newComment = { postedBy, text };
@@ -152,8 +169,7 @@ app.post('/api/marketplace/:id/comments', async (req, res) => {
 });
 
 //POST request for creating a new listing
-app.post('/api/marketplace/create-listing', async (req, res) => {
-  console.log("Incoming listing data:", req.body); //Dev check for correct incoming data
+app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
   try {
 
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -190,15 +206,7 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
       comments: []
     };
 
-    //Dev check for Parameters received and DB entered
-    console.log("Received listing:", newListing);
-    console.log("Using DB:", db?.databaseName);
-
-
-    //Dev check for correct insertion
-    console.log("About to insert listing...");
     const result = await db.collection('items').insertOne(newListing);
-    console.log("Insert result:", result);
 
     if (!result.acknowledged) {
       if (!res.headersSent) {
@@ -219,7 +227,7 @@ app.post('/api/marketplace/create-listing', async (req, res) => {
 });
 
 //DELETE request for deleting a listing
-app.delete('/api/marketplace/:id', async (req, res) => {
+app.delete('/api/marketplace/:id', verifyUser, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -235,6 +243,42 @@ app.delete('/api/marketplace/:id', async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal server error" }); //Delete failure return message
   }
 });
+
+//GET request for uploading images
+app.get('/api/marketplace/create-listing/s3-upload-url', async (req, res) => {
+  console.log("Received request for S3 upload URL");
+  const { filename, filetype } = req.query;
+
+  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!validTypes.includes(filetype)) {
+    return res.status(400).send("Invalid file type");
+  }
+
+  if (!filename || !filetype) {
+    return res.status(400).send("Missing filename or filetype");
+  }
+  console.log("Received:", filename, filetype);
+
+
+  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+  const key = `listings/${Date.now()}_${safeFilename}`;
+
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: key,
+    Expires: 30,
+    ContentType: filetype,
+  };
+
+  try {
+    const uploadURL = await s3.getSignedUrlPromise('putObject', params);
+    res.json({ uploadURL, key });
+  } catch (err) {
+    console.error("S3 URL error:", err);
+    res.status(500).json({ error: "Failed to generate upload URL" });
+  }
+});
+
 
 //GET request to search user by email
 app.get('/api/admin/search-user', async (req, res) => {

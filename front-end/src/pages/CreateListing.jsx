@@ -188,20 +188,41 @@ export default function CreateListing() {
 
         <input
           name="delivery_options"
-          placeholder="Delivery Options (comma separated: Pickup, Post, On-campus)"
+          placeholder="Delivery Options"
           onChange={(e) => handleArrayChange("delivery_options", e.target.value)}
         />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
           <input
-            name="image"
-            placeholder="Image URL"
-            value={formData.image}
-            onChange={(e) => {
-              // reset fallbacks whenever user edits the URL
-              setThumbFallback(false);
-              setPreviewFallback(false);
-              handleChange(e);
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={async (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+
+              const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+              const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg"; // fallback
+
+              const filename = encodeURIComponent(file.name);
+
+              try {
+                console.log("Uploading:", file.name, file.type);
+                const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url", {
+                  params: { filename, filetype },
+                });
+
+                await axios.put(data.uploadURL, file, {
+                  headers: { "Content-Type": filetype },
+                });
+
+                const imageUrl = `https://${import.meta.env.VITE_S3_BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${data.key}`;
+                setFormData((prev) => ({ ...prev, image: imageUrl }));
+                setThumbFallback(false);
+                setPreviewFallback(false);
+              } catch (err) {
+                console.error("Image upload failed:", err);
+                alert("Image upload failed. Please try again.");
+              }
             }}
           />
           <div

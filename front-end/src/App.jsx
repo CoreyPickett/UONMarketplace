@@ -10,7 +10,8 @@ import Registration from "./pages/Registration";
 import ForgotPswd from "./pages/forgotPswd";
 import Dashboard from "./pages/Dashboard";
 import MarketPlace from "./pages/MarketPlace";
-import Listing, { loader as listingLoader } from "./pages/Listing";
+import Listing from "./pages/Listing";
+import { loader as listingLoader } from "./listingLoader";
 import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
@@ -50,7 +51,7 @@ const routes = [
       {
         path: "marketplace/:id",
         element: <Listing />,
-        loader: listingLoader
+        loader: listingLoader,
       },
       {
         path: "create-listing",

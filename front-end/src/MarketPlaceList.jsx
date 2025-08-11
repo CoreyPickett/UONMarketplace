@@ -7,15 +7,18 @@ export default function MarketPlaceList({ listings }) {
     <div className="marketplace-grid">
       {Array.isArray(listings) && listings.length > 0 ? (
         listings.map((listing) => (
-          <div key={listing.name} className="listing-card">
+          <div key={listing._id} className="listing-card">
             <Link to={`/marketplace/${listing._id}`} className="listing-link">
               <div className="listing-image-wrapper">
-                <img
-                  src={listing.image}
-                  alt={listing.title}
-                  className="listing-image"
-                />
+                {listing.image && (
+                  <img
+                    src={listing.image}
+                    alt={listing.title}
+                    className="listing-image"
+                  />
+                )}
               </div>
+
               <div className="listing-info">
                 <h3 className="listing-title">{listing.title}</h3>
                 <p className="listing-category">Condition: {listing.condition}</p>
