@@ -246,21 +246,19 @@ app.delete('/api/marketplace/:id', verifyUser, async (req, res) => {
 
 //GET request for uploading images
 app.get('/api/marketplace/create-listing/s3-upload-url', async (req, res) => {
-  console.log("Received request for S3 upload URL");
   const { filename, filetype } = req.query;
 
-  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]; //Sanity check for valid image types
   if (!validTypes.includes(filetype)) {
     return res.status(400).send("Invalid file type");
   }
 
-  if (!filename || !filetype) {
+  if (!filename || !filetype) { //Sanity check for incomplete query
     return res.status(400).send("Missing filename or filetype");
   }
-  console.log("Received:", filename, filetype);
 
 
-  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, ''); //Remove unwanted characters
   const key = `listings/${Date.now()}_${safeFilename}`;
 
   const params = {
@@ -270,11 +268,11 @@ app.get('/api/marketplace/create-listing/s3-upload-url', async (req, res) => {
     ContentType: filetype,
   };
 
-  try {
+  try { //Connect to AWS for image upload to bucket
     const uploadURL = await s3.getSignedUrlPromise('putObject', params);
     res.json({ uploadURL, key });
-  } catch (err) {
-    console.error("S3 URL error:", err);
+  } catch (error) {
+    console.error("S3 URL error:", error);
     res.status(500).json({ error: "Failed to generate upload URL" });
   }
 });

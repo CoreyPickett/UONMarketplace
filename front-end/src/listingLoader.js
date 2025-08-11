@@ -1,3 +1,4 @@
+//Custom Listings loader used to fetch listings in Create Listing
 import axios from "axios";
 
 export async function loader({ params }) {

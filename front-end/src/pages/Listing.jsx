@@ -1,4 +1,4 @@
-// src/pages/Listing.jsx
+//Individual Listing 
 import { useMemo, useState, useEffect } from 'react';
 import { useParams, useLoaderData } from 'react-router-dom';
 import axios from 'axios';
@@ -59,11 +59,9 @@ export default function Listing() {
   const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
   const region = import.meta.env.VITE_AWS_REGION;
 
-  const heroImg = listing.image?.startsWith('http')
+  const heroImg = listing.image?.startsWith('http') //Allows hero image with direct url and key
   ? listing.image
   : `https://${bucket}.s3.${region}.amazonaws.com/${listing.image}`;
- 
-  console.log("Image key:", listing.image)
 
   const priceText = formatAUD(listing.price);
 

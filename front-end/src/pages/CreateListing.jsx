@@ -1,4 +1,4 @@
-// src/pages/CreateListing.jsx
+//Create Listing Form
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -195,18 +195,17 @@ export default function CreateListing() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
           <input
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/jpeg, image/png, image/webp, image/gif" //Accepts only these types of files
             onChange={async (e) => {
               const file = e.target.files[0];
               if (!file) return;
 
               const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-              const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg"; // fallback
+              const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg"; // fallback to jpeg if none work
 
               const filename = encodeURIComponent(file.name);
 
-              try {
-                console.log("Uploading:", file.name, file.type);
+              try { //Upload image
                 const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url", {
                   params: { filename, filetype },
                 });
@@ -219,8 +218,8 @@ export default function CreateListing() {
                 setFormData((prev) => ({ ...prev, image: imageUrl }));
                 setThumbFallback(false);
                 setPreviewFallback(false);
-              } catch (err) {
-                console.error("Image upload failed:", err);
+              } catch (error) {
+                console.error("Image upload failed:", error);
                 alert("Image upload failed. Please try again.");
               }
             }}
