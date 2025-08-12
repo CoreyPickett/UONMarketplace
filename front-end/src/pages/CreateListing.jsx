@@ -42,13 +42,13 @@ export default function CreateListing() {
     setFormData((p) => ({ ...p, [name]: type === "number" ? Number(value) : value }));
   };
 
-  const handleArrayChange = (name, value) => {
-    const list = value
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean);
-    setFormData((p) => ({ ...p, [name]: list }));
+  const handleArrayChange = (name, valueArray) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: valueArray,
+    }));
   };
+
 
   const priceAUD = useMemo(() => {
     const n = Number(formData.price);
@@ -137,13 +137,22 @@ export default function CreateListing() {
           required
         />
 
-        <input
+        <select
           name="category"
-          placeholder="Category (e.g. Electronics, Books)"
           value={formData.category}
           onChange={handleChange}
           required
-        />
+        >
+          <option value="" disabled>
+            Category
+          </option>
+          <option value="Electronics">Electronics</option>
+          <option value="Books">Books</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Furniture">Furniture</option>
+          <option value="Other">Other</option>
+        </select>
+
 
         <div style={{ display: "flex", gap: 15 }}>
           <input
@@ -170,13 +179,21 @@ export default function CreateListing() {
         )}
 
         <div style={{ display: "flex", gap: 15 }}>
-          <input
-            name="condition"
-            placeholder="Condition (e.g. New, Used)"
-            value={formData.condition}
-            onChange={handleChange}
-            required
-          />
+          <select
+          name="condition"
+          value={formData.condition}
+          onChange={handleChange}
+          required
+        >
+          <option value="" disabled>
+            Current Condition
+          </option>
+          <option value="Brand New">Brand New</option>
+          <option value="New">New</option>
+          <option value="Barely Used">Barely Used</option>
+          <option value="Used">Used</option>
+          <option value="Well Used">Well Used</option>
+        </select>
           <input
             name="location"
             placeholder="Location (e.g. Callaghan Campus)"
@@ -186,11 +203,21 @@ export default function CreateListing() {
           />
         </div>
 
-        <input
+        <select
           name="delivery_options"
-          placeholder="Delivery Options"
-          onChange={(e) => handleArrayChange("delivery_options", e.target.value)}
-        />
+          multiple
+          value={formData.delivery_options}
+          onChange={(e) => {
+            const selectedOptions = Array.from(e.target.selectedOptions, (option) => option.value);
+            handleArrayChange("delivery_options", selectedOptions);
+          }}
+          required
+        >
+          <option value="Pickup">Pickup</option>
+          <option value="Local Delivery">Local Delivery</option>
+          <option value="Postal Delivery">Postal Delivery</option>
+        </select>
+
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
           <input

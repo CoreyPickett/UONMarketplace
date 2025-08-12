@@ -54,10 +54,6 @@ async function connectToDB() { //Connect to global DB with username and password
 
   db = client.db('uon-marketplace-db');
 
-  //Logs to check connection and DB
-  console.log("Connected to MongoDB");
-  console.log("Using database:", db.databaseName);
-
 }
 
 /*   
@@ -70,10 +66,6 @@ app.get(/^(?!\/api).+/, (req, res) => {
 })
 */
 
-app.use('/api', (req, res, next) => {
-  console.log(`[API] ${req.method} ${req.originalUrl}`);
-  next();
-});
 
 //GET request for a listing
 app.get('/api/marketplace/:id', async (req, res) => {
@@ -118,7 +110,7 @@ app.post('/api/marketplace/:id/upvote', verifyUser, async (req, res) => {
   const { uid } = req.user;
 
   if (!uid) {
-    return res.status(401).json({ error: "User ID missing from request" }); //Error if no USer ID is present
+    return res.status(401).json({ error: "User ID missing from request" }); //Error if no User ID is present
   }
 
   try {
@@ -210,7 +202,7 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
 
     if (!result.acknowledged) {
       if (!res.headersSent) {
-        return res.status(500).json({ error: "Insert failed" }); //Error is incorrect insertion
+        return res.status(500).json({ error: "Insert failed" }); //Error if incorrect insertion
       }
       return;
     }
@@ -332,7 +324,7 @@ app.post('/api/admin/delete-user', async (req, res) => {
 
 
 
-const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the defult of 8000
+const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
 
 //Function for starting server
 async function start() {
