@@ -16,6 +16,7 @@ import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import Messages from "./pages/messages";
 
 
 // Layout with Header
@@ -64,6 +65,10 @@ const routes = [
       {
         path: "admin",
         element: <Admin />
+      },
+      {
+        path: "messages",
+        element: <Messages />
       }
       
     ]
