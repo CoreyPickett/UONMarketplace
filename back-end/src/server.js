@@ -321,7 +321,84 @@ app.post('/api/admin/delete-user', async (req, res) => {
   }
 });
 
+// POST request for creating a new listing
+app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
+  try {
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ error: "Missing request body" });
+    }
 
+    
+    const { uid, email } = req.user || {};
+
+    const {
+      title,
+      description,
+      category,
+      price,
+      quantity,
+      condition,
+      location,
+      delivery_options,
+      image,
+      seller,
+    } = req.body;
+
+    const newListing = {
+      title,
+      description,
+      category,
+      price,
+      quantity,
+      condition,
+      location,
+      delivery_options,
+      image,
+      seller,
+      //  ownership fields for Profile "My Listings"
+      ownerUid: uid || null,
+      ownerEmail: email || null,
+
+      upvotes: 0,
+      upvoteIds: [],
+      comments: [],
+      //  createdAt to help sort later
+      createdAt: new Date(),
+    };
+
+    const result = await db.collection('items').insertOne(newListing);
+
+    if (!result.acknowledged) {
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "Insert failed" });
+      }
+      return;
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Listing created successfully',
+      insertedId: result.insertedId
+    });
+  } catch (err) {
+    console.error('Insert error:', err);
+    return res.status(500).json({ success: false, message: 'Unexpected error' });
+  }
+});
+
+// GET request for Whole Marketplace
+app.get('/api/marketplace/', async (req, res) => {
+  try {
+    const listings = await db.collection('items')
+      .find()
+      .sort({ createdAt: -1 })       // <- optional
+      .toArray();
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error("Error fetching listings:", error);
+    res.status(500).json({ error: "Failed to fetch listings" });
+  }
+});
 
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
