@@ -85,6 +85,59 @@ app.get('/api/marketplace/', async (req, res) => {
   }
 });
 
+//GET for requested search critera in Marketplace
+app.get(`/api/search`, async (req, res) => {
+
+  //peramiter values
+  const {
+    query,
+    category,
+    minPrice,
+    maxPrice
+  } = req.data;
+
+  console.log('Received search:', { query, category, minPrice, maxPrice });
+
+  // filter for the handling the search string
+  const filter = "";
+
+  //double checking that title not empty
+  if (query !== "" && query !== undefined && query !== null) {
+      // adding to filter
+      filter = filter + "title: " + query + ",";
+    }
+  
+  //double checking that category not empty
+  if (category !== "" && category !== undefined && category !== null) {
+      // adding to filter
+      filter = filter + "category: " + category + ",";
+    }
+  
+  //double checking that max and min not empty
+  if (
+    minPrice !== undefined &&
+    maxPrice !== undefined &&
+    !Number.isNaN(minPrice) &&
+    !Number.isNaN(maxPrice) &&
+    maxPrice < minPrice
+    ) {
+
+      // adding to filter
+      filter = filter + "price: { $gte: " + minPrice + ", $lte: " + maxPrice + "," ;
+
+    }
+  
+  try {
+    //Lists all items in 'items' array that adhear to the filter requirments 
+    const searchListings = await db.collection('items').find({filter}).toArray();  
+    res.status(200).json(searchListings);
+  } catch (error) {
+    console.error("Error fetching searched listings:", error);
+    res.status(500).json({ error: "Failed to fetch searched listings" });
+  }
+
+})
+
 //Verification for a logged in user
 const verifyUser = async (req, res, next) => {
   const { authtoken } = req.headers;
