@@ -11,7 +11,6 @@ export default function CreateListing() {
     description: "",
     category: "",
     price: "",
-    quantity: 1,
     condition: "",
     location: "",
     delivery_options: [],
@@ -164,15 +163,6 @@ export default function CreateListing() {
             onChange={handleChange}
             required
           />
-          <input
-            name="quantity"
-            type="number"
-            min={1}
-            placeholder="Quantity"
-            value={formData.quantity}
-            onChange={handleChange}
-            required
-          />
         </div>
         {priceAUD && (
           <div style={{ color: "#4b5563", fontSize: 14 }}>Preview price: {priceAUD}</div>
@@ -205,14 +195,11 @@ export default function CreateListing() {
 
         <select
           name="delivery_options"
-          multiple
           value={formData.delivery_options}
-          onChange={(e) => {
-            const selectedOptions = Array.from(e.target.selectedOptions, (option) => option.value);
-            handleArrayChange("delivery_options", selectedOptions);
-          }}
+          onChange={(e) => handleChange(e)}
           required
         >
+          <option value="" disabled>Select a delivery option</option>
           <option value="Pickup">Pickup</option>
           <option value="Local Delivery">Local Delivery</option>
           <option value="Postal Delivery">Postal Delivery</option>
