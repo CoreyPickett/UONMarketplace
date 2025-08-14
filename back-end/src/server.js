@@ -94,7 +94,7 @@ app.get(`/api/search`, async (req, res) => {
     category,
     minPrice,
     maxPrice
-  } = req.data;
+  } = req.params;
 
   console.log('Received search:', { query, category, minPrice, maxPrice });
 
@@ -123,7 +123,7 @@ app.get(`/api/search`, async (req, res) => {
     ) {
 
       // adding to filter
-      filter = filter + "price: { $gte: " + minPrice + ", $lte: " + maxPrice + "," ;
+      filter = filter + "price: { $gte: " + minPrice + ", $lte: " + maxPrice + "}," ;
 
     }
   
