@@ -1,285 +1,272 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
+// src/Admin.jsx
+import { useEffect, useMemo, useState } from "react";
 import { getAuth } from "firebase/auth";
+import axios from "axios";
 import "./Admin.css";
 
-
-function Admin() {
-
-   
-    return ( 
-    <main className="admin-content"> 
-        <div>
-           
-            <h1 className="page-title">Admin</h1>
-            <div className = "adminsections">
-            <div className="admin-card">
-            <ListingsSearch />
-            </div>
-            <div className="admin-card">
-            <UserSearch />
-            </div>
-            <div className="admin-card wide">
-            <Announcements />
-            </div>
-            </div>
-        </div>
-    </main>
-    );
-
-}
-
-const ListingsSearch = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+export default function Admin() {
   const [listings, setListings] = useState([]);
-  const [status, setStatus] = useState("");
-  const auth = getAuth();
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [category, setCategory] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sort, setSort] = useState("recent"); // recent | priceAsc | priceDesc | titleAsc
+  const [confirmId, setConfirmId] = useState(null);
+  const [error, setError] = useState("");
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    try { //Search function to find listings based on title
-      const response = await axios.get(`/api/marketplace/`);
-      const filtered = response.data.filter(item =>
-        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) //Filters title names, not case sensitive
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/marketplace/");
+        const data = await res.json();
+        if (alive) setListings(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (alive) setError("Failed to load listings.");
+        console.error(e);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const filtered = useMemo(() => {
+    let out = [...listings];
+
+    // text search
+    const qq = q.trim().toLowerCase();
+    if (qq) {
+      out = out.filter((l) =>
+        [l.title, l.description, l.category, l.location, l.seller]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(qq))
       );
-      setListings(filtered);
-    } catch (error) {
-      console.error("Error fetching listings:", error); //Error message
     }
+
+    // category
+    if (category) {
+      out = out.filter((l) => String(l.category) === category);
+    }
+
+    // price range
+    const min = minPrice !== "" ? Number(minPrice) : undefined;
+    const max = maxPrice !== "" ? Number(maxPrice) : undefined;
+    if (!Number.isNaN(min) && min !== undefined) {
+      out = out.filter((l) => typeof l.price === "number" ? l.price >= min : true);
+    }
+    if (!Number.isNaN(max) && max !== undefined) {
+      out = out.filter((l) => typeof l.price === "number" ? l.price <= max : true);
+    }
+
+    // sort
+    out.sort((a, b) => {
+      if (sort === "priceAsc") return (a.price ?? Infinity) - (b.price ?? Infinity);
+      if (sort === "priceDesc") return (b.price ?? -Infinity) - (a.price ?? -Infinity);
+      if (sort === "titleAsc") return String(a.title || "").localeCompare(String(b.title || ""));
+      // "recent" fallback: by _id timestamp if present, else by title
+      const aId = String(a._id || "");
+      const bId = String(b._id || "");
+      return bId.localeCompare(aId);
+    });
+
+    return out;
+  }, [listings, q, category, minPrice, maxPrice, sort]);
+
+  const resetFilters = () => {
+    setQ("");
+    setCategory("");
+    setMinPrice("");
+    setMaxPrice("");
+    setSort("recent");
   };
 
-  const handleDelete = async (id) => {
-    const user = auth.currentUser;
-    if (!user) return alert("You must be logged in to delete listings."); //Error is user not logged in
-    const token = await user.getIdToken();
+  const onDelete = (id) => setConfirmId(id);
 
-    if (!window.confirm("Are you sure you want to delete this listing?")) return;
-
-    try { //Delete function
-      await axios.delete(`/api/marketplace/${id}`, {
-        headers: { authtoken: token }
-      });
-      setListings(listings.filter(listing => listing._id !== id));
-      setStatus("Listing deleted successfully.");
-    } catch (error) {
-      console.error("Error deleting listing:", error);
-      setStatus("Failed to delete listing.");
-    }
-  };
-
-  return ( //Search and Delete Admin form with Delete button
-    <div>
-      <form onSubmit={handleSearch}>
-        <h2>Search Listings</h2>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search listings..."
-        />
-        <button className="btn" type="submit">Search</button>
-      </form>
-
-      {status && <p className="status-message">{status}</p>}
-
-      <ul className="listing-results">
-        {listings.map(listing => (
-          <li key={listing._id} className="listing-item">
-            <span>{listing.title}</span>
-            <button className="btn delete-btn" onClick={() => handleDelete(listing._id)}>
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-
-const UserSearch = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [user, setUser] = useState(null);
-  const [status, setStatus] = useState("");
-  const auth = getAuth();
-
-  const handleSearch = async (e) => {
-    e.preventDefault();
+  const confirmDelete = async () => {
+    if (!confirmId) return;
     try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await axios.get(`/api/admin/search-user?email=${searchTerm}`, {
-      headers: { authtoken: token }
-      });
-
-      setUser(response.data);
-      setStatus("");
-    } catch (error) {
-      console.error("Search error:", error);
-      setUser(null);
-      setStatus("User not found.");
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        alert("You must be signed in as an admin to delete.");
+        return;
+      }
+      const token = await user.getIdToken();
+      await axios.delete(`/api/marketplace/${confirmId}`, { headers: { authtoken: token } });
+      setListings((xs) => xs.filter((l) => String(l._id) !== String(confirmId)));
+      setConfirmId(null);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete listing.");
+      setConfirmId(null);
     }
   };
-
-  const handleDisable = async () => {
-    if (!user?.uid) return;
-    const token = await auth.currentUser.getIdToken();
-
-    if (!window.confirm("Disable this user account?")) return;
-
-    try {
-      await axios.post('/api/admin/disable-user', { uid: user.uid }, {
-        headers: { authtoken: token }
-      });
-      setStatus("User disabled successfully.");
-    } catch (error) {
-      console.error("Disable error:", error);
-      setStatus("Failed to disable user.");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!user?.uid) return;
-    const token = await auth.currentUser.getIdToken();
-
-    if (!window.confirm("Are you sure you want to permanently delete this account?")) return;
-
-    try {
-      await axios.post('/api/admin/delete-user', { uid: user.uid }, {
-        headers: { authtoken: token }
-      });
-      setStatus("User deleted successfully.");
-      setUser(null); // Clear user from view
-    } catch (error) {
-      console.error("Delete error:", error);
-      setStatus("Failed to delete user.");
-   }
-  };
-
 
   return (
-    <div>
-      <form onSubmit={handleSearch}>
-        <h2>Search Users</h2>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Enter email or UID"
-        />
-        <button className="btn" type="submit">Search</button>
-      </form>
+    <main className="admin">
+      <header className="admin-header">
+        <div>
+          <h1>Admin Console</h1>
+          <p className="muted">Moderate listings, manage content, and keep the marketplace tidy.</p>
+        </div>
+      </header>
 
-      {status && <p className="status-message">{status}</p>}
+      <section className="admin-card">
+        <div className="toolbar">
+          <div className="inputs">
+            <div className="searchbox">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search title, description, seller, location…"
+                aria-label="Search listings"
+              />
+              {q && (
+                <button className="icon-btn" onClick={() => setQ("")} title="Clear">✕</button>
+              )}
+            </div>
 
-      {user && (
-        <div className="user-card">
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>UID:</strong> {user.uid}</p>
-          <p><strong>Disabled:</strong> {user.disabled ? "Yes" : "No"}</p>
-          <button className="btn delete-btn" onClick={handleDisable}>
-            Disable Account
-          </button>
-          <button className="btn danger-btn" onClick={handleDelete}>
-            Delete Account
-          </button>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter by category">
+              <option value="">All categories</option>
+              <option value="Books">Books</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Clothing">Clothing</option>
+              <option value="Furniture">Furniture</option>
+              <option value="Other">Other</option>
+            </select>
 
+            <div className="range">
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                placeholder="Min $"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+              />
+              <span>–</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                placeholder="Max $"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+              />
+            </div>
+
+            <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
+              <option value="recent">Sort: Recent</option>
+              <option value="priceAsc">Price ↑</option>
+              <option value="priceDesc">Price ↓</option>
+              <option value="titleAsc">Title A–Z</option>
+            </select>
+          </div>
+
+          <div className="actions">
+            <button className="btn" onClick={resetFilters}>Reset</button>
+          </div>
+        </div>
+
+        {error && <div className="alert error">{error}</div>}
+
+        {loading ? (
+          <div className="skeleton-table" aria-busy="true">
+            <div className="row" />
+            <div className="row" />
+            <div className="row" />
+          </div>
+        ) : (
+          <>
+            <div className="table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th className="hide-sm">Category</th>
+                    <th>Price (AUD)</th>
+                    <th className="hide-md">Seller</th>
+                    <th>Upvotes</th>
+                    <th style={{ width: 1 }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center" }}>
+                        <div className="empty">No results. Try adjusting filters.</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((l) => (
+                      <tr key={String(l._id)}>
+                        <td>
+                          <div className="item-cell">
+                            <div className="thumb">
+                              <img
+                                src={
+                                  l.image?.startsWith("http")
+                                    ? l.image
+                                    : l.image
+                                    ? `/image/${l.image}`
+                                    : "/placeholder-listing.jpg"
+                                }
+                                alt={l.title || "Listing"}
+                                onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                              />
+                            </div>
+                            <div className="meta">
+                              <div className="title">{l.title || "Untitled"}</div>
+                              <div className="sub muted">{l.location || "Location N/A"}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="hide-sm">{l.category || "—"}</td>
+                        <td>
+                          {typeof l.price === "number"
+                            ? l.price.toLocaleString("en-AU", { style: "currency", currency: "AUD" })
+                            : "—"}
+                        </td>
+                        <td className="hide-md">{l.seller || "—"}</td>
+                        <td>{l.upvotes ?? 0}</td>
+                        <td>
+                          <button className="icon-btn danger" title="Delete listing" onClick={() => onDelete(l._id)}>
+                            🗑
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="table-footer">
+              <span className="muted">
+                Showing {filtered.length} of {listings.length}
+              </span>
+            </div>
+          </>
+        )}
+      </section>
+
+      {confirmId && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal">
+            <h3>Delete listing?</h3>
+            <p className="muted">
+              This action can’t be undone. The listing will be removed permanently.
+            </p>
+            <div className="modal-actions">
+              <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+              <button className="btn" onClick={() => setConfirmId(null)}>Cancel</button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </main>
   );
-};
-
-
-const Announcements = () => {
-    const [title, setTitle] = useState(""); // <-- Add this line
-    const [announcement, setAnnouncement] = useState("");   
-    const [status, setStatus] = useState("");
-    const auth = getAuth();
-    const [severity, setSeverity] = useState("info");
-    const [expiresAt, setExpiresAt] = useState("");
-
-    const handleSend = async (e) => {
-        e.preventDefault();
-        if (!title.trim() || !announcement.trim()) {
-            alert("Please fill in all fields.");
-            return; // <-- Add this line
-        }
-        try {
-            setStatus("");
-            const user = auth.currentUser;
-            if (!user) {
-                alert("You must be logged in to send an announcement.");
-                return;
-            }
-            const token = await user.getIdToken();
-            await axios.post('/api/announcements', { 
-                title,
-                announcement,
-                severity,
-                expiresAt: expiresAt || null,
-            }, {headers: { authtoken: token }});
-            setStatus("Announcement sent successfully!");
-            setTitle("");
-            setAnnouncement("");
-            setSeverity("info");
-        } catch (error) {
-            console.error("Error sending announcement:", error);
-            setStatus("Failed to send announcement.");
-        }
-    };
-
-    return (
-        <form onSubmit={handleSend}>
-           
-            <h2>Send Announcement</h2>
-            
-            <input
-            className="input"
-                type="text"
-                placeholder="Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-            />
-            <textarea
-            className="input"
-                value={announcement}
-                onChange={(e) => setAnnouncement(e.target.value)}
-                placeholder="Write your announcement here..."
-                rows="4"
-                cols="50"
-                required
-            />
-           
-            <div className="form-group">
-                <div>
-                <label>Severity:</label>
-                
-                <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
-                    <option value="info">Info</option>     
-                    <option value="warning">Warning</option>
-                    <option value="error">Error</option>
-                    <option value="success">Success</option>
-                </select>
-            </div>
-            <div>
-                <label>Announcement expires at:</label>
-                <input
-                    className="short-input"
-                    type="datetime-local"
-                    value={expiresAt}
-                    onChange={(e) => setExpiresAt(e.target.value)}
-                    placeholder="Expires At (optional)"
-                />
-                </div>
-            </div>
-            <button className="btn" type="submit">Send Announcement</button>
-            {status && <p style={{ marginTop: 8}}>{status}</p>}
-            
-            
-        </form>
-    );
 }
-
-export default Admin;
