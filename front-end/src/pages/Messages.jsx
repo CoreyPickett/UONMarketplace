@@ -8,7 +8,6 @@ function Messages() {
         <main className="messages-content">
             <h1 className="page-title">Messages</h1>
             <div className="messages-wrapper">
-                <p>Here you can manage your messages.</p>
                 <div className="messages-card">
                     <ProfileSearch />
                 </div>
@@ -59,81 +58,112 @@ const ProfileSearch = () => {
 
 const SampleMessages = () => {
     const navigate = useNavigate();
-    const [selected, setSelected] = useState(null);
-    const messages = [
+    const [messages, setMessages] = useState([
         {
             id : 1,
             sender: "John Doe",
-             avatar: "/images/default-avatar.png",
-            content: "Hello! How are you?",
+            avatar: "/images/default-avatar.png",
+            content: "When are my books coming I am still waiting for them.",
             date: "2023-10-01",
-            status: "unread"
+            status: "Unread"
         },
         {
             id: 2,
             sender: "Jane Smith",
-             avatar: "/images/default-avatar.png",
-            content: "Are you coming to the event?",
+            avatar: "/images/default-avatar.png",
+            content: "Thankyou for the delivery, it was fast!",
             date: "2023-10-02",
-            status: "read"
+            status: "Read"
         },
         {
             id: 3,
             sender: "Alice Johnson",
-             avatar: "/images/default-avatar.png",
-            content: "Don't forget our meeting tomorrow.",
+            avatar: "/images/default-avatar.png",
+            content: "Thanks for purchasing my pencil case, I hope you like it!",
             date: "2023-10-03",
-            status: "unread"
+            status: "Unread"
         }
-        
-        
+    ]);
+    const [openDropdown, setOpenDropdown] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-    ];
-
-     if (selected) {
-        return (
-            <div className="dm-view">
-                <button className="btn" onClick={() => setSelected(null)}>← Back</button>
-                <div style={{display: "flex", alignItems: "center", margin: "1rem 0"}}>
-                    <img src={selected.avatar} alt={selected.sender} width={48} style={{borderRadius: "50%", marginRight: 16}} />
-                    <h2 style={{margin: 0}}>{selected.sender}</h2>
-                </div>
-                <div className="dm-message" style={{marginBottom: "1rem"}}>
-                    <strong>{selected.status}</strong> {selected.content}
-                    <div style={{fontSize: "0.9em", color: "#888"}}>{selected.date}</div>
-                </div>
-                {/* You can add a chat history and input box here */}
-                <input className="dm-input" type="text" placeholder="Type a message..." style={{width: "100%", padding: 8, borderRadius: 6, border: "1px solid #ccc"}} />
-            </div>
+    const markAsRead = (id) => {
+        setMessages(msgs =>
+            msgs.map(msg =>
+                msg.id === id ? { ...msg, status: "Read" } : msg
+            )
         );
-    }
+        setOpenDropdown(null);
+    };
 
+    // Show confirmation dialog
+    const handleDeleteClick = (id) => {
+        setConfirmDeleteId(id);
+        setOpenDropdown(null);
+    };
 
+    // Confirm delete
+    const confirmDelete = () => {
+        setMessages(msgs => msgs.filter(msg => msg.id !== confirmDeleteId));
+        setConfirmDeleteId(null);
+    };
 
-    return(
+    // Cancel delete
+    const cancelDelete = () => {
+        setConfirmDeleteId(null);
+    };
+
+    return (
         <div>
             <h2>Messages:</h2>
             <table className="messages-table">
                 <tbody>
                 {messages.map((msg) => (
-                    <tr key={msg.id}
-                    onClick={() => navigate(`/messages/${msg.id}`)}
-                    tabIndex={0}
-                    onKeyDown={(e) => {}}
-                    style={{cursor: "pointer"}}
-                    aria-label={`Message from ${msg.sender} on ${msg.date}`}>
-                        <td>
-                             <img src={msg.avatar} alt={msg.sender} width={40} style={{borderRadius: "50%"}} />
+                    <tr key={msg.id}>
+                        <td
+                            onClick={() => navigate(`/messages/${msg.id}`)}
+                            style={{cursor: "pointer"}}
+                        >
+                            <img src={msg.avatar} alt={msg.sender} width={40} style={{borderRadius: "50%"}} />
                             <span className="sender">{msg.sender}</span>
                         </td>
-                        <td>
+                        <td
+                            onClick={() => navigate(`/messages/${msg.id}`)}
+                            style={{cursor: "pointer"}}
+                        >
                             <strong>{msg.status}</strong> {msg.content}
                         </td>
                         <td>{msg.date}</td>
+                        <td style={{position: "relative"}}>
+                            <button
+                                onClick={e => {
+                                    e.stopPropagation();
+                                    setOpenDropdown(openDropdown === msg.id ? null : msg.id);
+                                }}
+                                style={{background: "none", border: "none", cursor: "pointer"}}
+                                aria-label="Open message menu"
+                            >⋮</button>
+                            {openDropdown === msg.id && (
+                                <div className="dropdown">
+                                    <button onClick={() => markAsRead(msg.id)} style={{display: "block", width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", cursor: "pointer"}}>Mark as read</button>
+                                    <button onClick={() => handleDeleteClick(msg.id)} style={{display: "block", width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", color: "red", cursor: "pointer"}}>Delete</button>
+                                </div>
+                            )}
+                        </td>
                     </tr>
                 ))}
                 </tbody>
             </table>
+            {/* Confirmation Popup */}
+            {confirmDeleteId !== null && (
+                <div className="delete-confirm-popup">
+                    <div>
+                        <p>Are you sure you want to delete this conversation?</p>
+                        <button className="btn" onClick={confirmDelete} style={{marginRight: 10}}>Delete</button>
+                        <button className="btn" onClick={cancelDelete}>Cancel</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

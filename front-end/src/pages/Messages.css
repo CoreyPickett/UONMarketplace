@@ -23,3 +23,57 @@
 .messages-table strong {
   margin-right: 8px;
 }
+
+/* Example for dropdown menu button and menu */
+.messages-table td button[aria-label="Open message menu"] {
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+/* Overlay for popup */
+.delete-confirm-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* Popup box */
+.delete-confirm-popup>div {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+.dropdown{
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  z-index: 200;
+}
+.delete-confirm-popup .btn {
+  background: #003057;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7em 2em;
+  font-size: 1rem;
+  margin: 0 0.5em;
+  cursor: pointer;
+}
+
+.delete-confirm-popup .btn:hover {
+  background: #00509e;
+}
