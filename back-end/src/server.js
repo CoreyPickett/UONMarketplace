@@ -85,58 +85,7 @@ app.get('/api/marketplace/', async (req, res) => {
   }
 });
 
-//GET for requested search critera in Marketplace
-app.get(`/api/search`, async (req, res) => {
 
-  //peramiter values
-  const {
-    query,
-    category,
-    minPrice,
-    maxPrice
-  } = req.params;
-
-  console.log('Received search:', { query, category, minPrice, maxPrice });
-
-  // filter for the handling the search string
-  const filter = "";
-
-  //double checking that title not empty
-  if (query !== "" && query !== undefined && query !== null) {
-      // adding to filter
-      filter = filter + "title: " + query + ",";
-    }
-  
-  //double checking that category not empty
-  if (category !== "" && category !== undefined && category !== null) {
-      // adding to filter
-      filter = filter + "category: " + category + ",";
-    }
-  
-  //double checking that max and min not empty
-  if (
-    minPrice !== undefined &&
-    maxPrice !== undefined &&
-    !Number.isNaN(minPrice) &&
-    !Number.isNaN(maxPrice) &&
-    maxPrice < minPrice
-    ) {
-
-      // adding to filter
-      filter = filter + "price: { $gte: " + minPrice + ", $lte: " + maxPrice + "}," ;
-
-    }
-  
-  try {
-    //Lists all items in 'items' array that adhear to the filter requirments 
-    const searchListings = await db.collection('items').find({filter}).toArray();  
-    res.status(200).json(searchListings);
-  } catch (error) {
-    console.error("Error fetching searched listings:", error);
-    res.status(500).json({ error: "Failed to fetch searched listings" });
-  }
-
-})
 
 //Verification for a logged in user
 const verifyUser = async (req, res, next) => {
@@ -213,61 +162,7 @@ app.post('/api/marketplace/:id/comments', verifyUser, async (req, res) => {
   res.json(updatedListing); //Update Listing
 });
 
-//POST request for creating a new listing
-app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
-  try {
 
-    if (!req.body || Object.keys(req.body).length === 0) {
-    return res.status(400).json({ error: "Missing request body" }); //Checks if all required parameters aren't zero
-    }
-
-
-    const { //Parameters
-      title,
-      description,
-      category,
-      price,
-      condition,
-      location,
-      delivery_options,
-      image,
-      seller,
-    } = req.body;
-
-    const newListing = {
-      title,
-      description,
-      category,
-      price,
-      condition,
-      location,
-      delivery_options,
-      image,
-      seller,
-      upvotes: 0,
-      upvoteIds: [],
-      comments: []
-    };
-
-    const result = await db.collection('items').insertOne(newListing);
-
-    if (!result.acknowledged) {
-      if (!res.headersSent) {
-        return res.status(500).json({ error: "Insert failed" }); //Error if incorrect insertion
-      }
-      return;
-    }
-
-    return res.status(201).json({ //Return message for correct insertion
-      success: true,
-      message: 'Listing created successfully',
-      insertedId: result.insertedId
-    });
-  } catch (err) {
-    console.error('Insert error:', err);
-    return res.status(500).json({ success: false, message: 'Unexpected error' });
-  }
-});
 
 //DELETE request for deleting a listing
 app.delete('/api/marketplace/:id', verifyUser, async (req, res) => {
@@ -449,6 +344,73 @@ app.get('/api/marketplace/', async (req, res) => {
   }
 });
 
+// GET request for Advanced Seacrh Function
+app.get('/api/search', async (req, res) => {
+  try {
+    const {
+      query: rawQuery,
+      category,
+      minPrice,
+      maxPrice,
+      sort = "recent",
+    } = req.query;
+
+    console.log("Received search:", { rawQuery, category, minPrice, maxPrice, sort });
+
+    const query = rawQuery?.trim() || "";
+
+    console.log("Full request URL:", req.originalUrl);
+
+
+    const filters = {};
+
+    // Text search across multiple fields
+    if (query.trim()) {
+      const regex = new RegExp(query.trim(), "i");
+      filters.$or = [
+        { title: regex },
+        { description: regex },
+        { category: regex },
+        { location: regex },
+        { seller: regex },
+      ];
+    }
+
+    // Category filter
+    if (category) {
+      filters.category = category;
+    }
+
+    // Price range filter
+    const min = Number(minPrice);
+    const max = Number(maxPrice);
+    if (!Number.isNaN(min)) {
+      filters.price = { ...filters.price, $gte: min };
+    }
+    if (!Number.isNaN(max)) {
+      filters.price = { ...filters.price, $lte: max };
+    }
+
+    // Sorting logic
+    let sortOption = { createdAt: -1 }; // default: recent
+    if (sort === "priceAsc") sortOption = { price: 1 };
+    if (sort === "priceDesc") sortOption = { price: -1 };
+    if (sort === "titleAsc") sortOption = { title: 1 };
+
+    console.log("Applied sort option:", sortOption);
+
+
+    const listings = await db.collection("items")
+      .find(filters)
+      .sort(sortOption)
+      .toArray();
+
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ error: "Failed to perform search" });
+  }
+});
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
 

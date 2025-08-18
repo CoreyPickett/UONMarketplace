@@ -19,6 +19,7 @@ export default function MarketPlace() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [rangeNote, setRangeNote] = useState("");
+  const [sort, setSort] = useState("recent");
 
   // initial load (all listings)
   useEffect(() => {
@@ -38,6 +39,15 @@ export default function MarketPlace() {
     })();
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      handleSearch();
+    }, 400); // 400ms debounce
+
+    return () => clearTimeout(timeout);
+  }, [search, category, minPrice, maxPrice, sort]);
+
 
   // validate prices; if max < min, auto-correct and show note
   const validatePrices = () => {
@@ -75,6 +85,7 @@ export default function MarketPlace() {
             category,
             minPrice: minAdj || "",
             maxPrice: maxAdj || "",
+            sort,
           })}`
         : "/api/marketplace/";
 
@@ -160,6 +171,17 @@ export default function MarketPlace() {
             <option value="Other">Other</option>
           </select>
         </div>
+
+        <div className="filter-group">
+          <label>Sort By</label>
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="recent">Most Recent</option>
+            <option value="priceAsc">Price: Low to High</option>
+            <option value="priceDesc">Price: High to Low</option>
+            <option value="titleAsc">Title A–Z</option>
+          </select>
+        </div>
+
 
         {/* Min above Max (stacked) */}
         <div className="filter-group">
