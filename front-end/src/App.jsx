@@ -17,8 +17,7 @@ import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Messages from "./pages/messages";
-import DirectMessage from "./pages/DirectMessage";
-
+import DirectMessage from "./pages/DirectMessage"; 
 
 
 // Layout with Header

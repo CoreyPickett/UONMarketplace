@@ -1,77 +1,93 @@
-import { useEffect, useState } from "react";  
-import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import MessageMaker from "../components/MessageMaker";
+import MessageList from "../components/MessageList";
+import { api } from "../api";
 import "./DirectMessage.css";
 
-export default function DirectMessage() {
-    const { id } = useParams();
-    const [thread, setThread] = useState(null);
-    const [text, setText] = useState("");
-    const navigate = useNavigate();
-
-    useEffect(() => {
-    console.log("DM id param:", id);
-  }, [id]);
-
-    const demo = [
-         { id: "1", sender: "John Doe", avatar: "/images/default-avatar.png", messages: [
-        { from: "John Doe", at: "2023-10-01 10:00", body: "Hello! How are you?" }
-      ]},
-      { id: "2", sender: "Jane Smith", avatar: "/images/default-avatar.png", messages: [
-        { from: "Jane Smith", at: "2023-10-02 09:13", body: "Are you coming to the event?" }
-      ]},
-        { id: "3", sender: "Alice Johnson", avatar: "/images/default-avatar.png", messages: [
-            { from: "Alice Johnson", at: "2023-10-03 14:45", body: "Let's catch up soon!" }
-        ]}
-];
-
-useEffect(() => {
-    const match = demo.find(t => String(t.id) === String(id));
-  setThread(match || null);
-}, [id]);
-
-if (!thread) return <main style={{ padding: "20px" }}>Loading...</main>;
-
-const sendMessage = async (e) => {
-    e.preventDefault();
-    if (text.trim() === "") return;
-    setThread(t => ({
-        ...t,
-        messages: [...t.messages, { from: "You", at: new Date().toISOString(), body: text }]
-    }));
-    setText("");
+// Demo if API fails
+const DEMO_MESSAGES = {
+  "demo-1": [
+    { _id: "m1", from: "u_jane", body: "Have you delivered the textbooks yet?", at: "2025-08-19T09:19:00Z" },
+    { _id: "m2", from: "me",     body: "Yes",          at: "2025-08-19T09:20:37Z" },
+  ],
 };
 
-return (
-    <main className="direct-message-content" style={{ padding: "20px" }}>
-        <button onClick={() => navigate("/messages")}>Back to Messages</button>
-        <div style={{display: "flex", alignItems: "center", gap: 12, margin: "12px 0"}}>
-            <img src={thread.avatar} alt={thread.sender} width={50} style={{borderRadius: "50%"}} />
-            <h2 style={{margin: 0}}>{thread.sender}</h2>
-            </div>
+export default function DirectMessage() {
+  const { id } = useParams(); // Get convo ID from URL
+  const navigate = useNavigate();
+  const { state } = useLocation();
+  const preview = state?.preview; // Info from previous page
+  const me = "me"; // Replace with real user ID later on i guess
 
-            <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12, maxHeight: 400, overflow: "auto" }}>
-                {thread.messages.map((msg, index) => (
-                    <div key={index} style={{ marginBottom: 12 }}>
-                        <div style={{ fontWeight: "bold" }}>{msg.from}</div>
-                        <div> {msg.body}</div>
-                        <div style={{ fontSize: "0.8em", color: "#888" }}>{msg.at}\</div>
-                    </div>
-                ))}
-            </div>
+  const [loading, setLoading] = useState(true);
+  const [thread, setThread] = useState(preview || null);
+  const [messages, setMessages] = useState([]);
 
-        <form onSubmit={sendMessage} style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <input
-                className="dm-input"
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder="Type your message..."
-            />
-            <button type="submit" className="btn">Send</button>           
-             
-        </form>
+  // Load messages 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        // Try to get message from the backend
+        const { data } = await api.get(`/messages/${id}`);
+        if (cancelled) return;
+
+        const t = data?.thread || {};
+        setThread({
+          sender: t.otherUserName || t.name || preview?.sender || "User",
+          avatar: t.avatar || preview?.avatar || "/images/default-avatar.png",
+        });
+        setMessages(data?.messages || []);
+        // Mark as read in backend
+        try { await api.post(`/messages/${id}/read`); } catch {}
+      } catch (e) {
+        // If API fails use demo 
+        console.warn(`GET /api/messages/${id} failed; using demo/preview`, e);
+        if (!cancelled) {
+          setThread(preview || { sender: "User", avatar: "/images/default-avatar.png" });
+          setMessages(DEMO_MESSAGES[id] || []);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id, preview]);
+
+  // Send new message
+  const handleSend = async (body) => {
+    // Add message 
+    const temp = { _id: `tmp_${Date.now()}`, from: me, body, at: new Date().toISOString() };
+    setMessages((prev) => [...prev, temp]);
+    try {
+      // Try to send to backend
+      const { data } = await api.post(`/messages/${id}/messages`, { body });
+      const real = data?.message || temp;
+      // Replace temp message with real one from backend
+      setMessages((prev) => prev.map((m) => (m._id === temp._id ? real : m)));
+    } catch (e) {
+      // If send fails, keep the temp message
+      console.warn("Send failed; keeping optimistic message", e);
+      // (optionally rollback instead)
+    }
+  };
+
+  if (loading) return <main style={{ padding: 20 }}>Loading…</main>;
+  if (!thread)  return <main style={{ padding: 20 }}>Conversation not found</main>;
+
+  return (
+    <main className="direct-message-content" style={{ padding: 20 }}>
+      <button onClick={() => navigate("/messages")}>Back to Messages</button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
+        <img src={thread.avatar} alt={thread.sender} width={50} style={{ borderRadius: "50%" }} />
+        <h2 style={{ margin: 0 }}>{thread.sender}</h2>
+      </div>
+
+      <MessageList messages={messages} me={me} />
+      <MessageMaker onSend={handleSend} />
     </main>
-    );
-}            
-
-
+  );
+}

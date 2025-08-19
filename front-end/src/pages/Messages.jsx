@@ -1,46 +1,29 @@
-import { useState } from "react";
-import axios from "axios";
-import { getAuth } from "firebase/auth";
-import "./Messages.css";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-function Messages() {
-    return (
-        <main className="messages-content">
-            <h1 className="page-title">Messages</h1>
-            <div className="messages-wrapper">
-                <div className="messages-card">
-                    <ProfileSearch />
-                </div>
-                <div className="messages-card">
-                    <SampleMessages/>
-                    </div>
-            </div>
-        </main>
-    );
-}    
+import { api } from "../api";        
+import "./Messages.css";
 
-
-
+// Lets users search for profiles 
 const ProfileSearch = () => {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [profiles, setProfiles] = useState([]);
-    const auth = getAuth();
-   
+  const [searchTerm, setSearchTerm] = useState("");
+  const [profiles, setProfiles] = useState([]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    try { //Search function to find profiles based on name
-      const response = await axios.get(`/api/marketplace/`);
-      const filtered = response.data.filter(item =>
-        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) //Filters title names, not case sensitive
+    try {
+      // Fetch all marketplace items 
+      const { data } = await api.get("/marketplace/"); 
+      // Filter results
+      const filtered = (data || []).filter(item =>
+        item.title?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setProfiles(filtered);
-    } catch (error) {
-      console.error("Error fetching profiles:", error); //Error message
+    } catch (err) {
+      console.error("Error fetching profiles:", err);
     }
   };
 
-  return ( //Search and Delete Admin form with Delete button
+  return (
     <div>
       <form onSubmit={handleSearch}>
         <h2>Search Profiles</h2>
@@ -52,121 +35,168 @@ const ProfileSearch = () => {
         />
         <button className="btn" type="submit">Search</button>
       </form>
-      </div>
+    </div>
+  );
+};
+
+// just as a demo
+const DEMO_THREADS = [
+  {
+    _id: "demo-1",
+    otherUserName: "Jane Smith",
+    lastMessage: "Have you delivered the textbooks yet?",
+    lastMessageAt: new Date().toISOString(),
+    unread: { me: 1 },
+    avatar: "/images/default-avatar.png",
+  },
+];
+
+// Shows all message threads for logged-in user
+const ConversationList = () => {
+  const navigate = useNavigate();
+  const [threads, setThreads] = useState([]); // all conversations
+  const [loading, setLoading] = useState(true); // Loading state
+  const [menuFor, setMenuFor] = useState(null); // Which thread menu is open
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null); // Which thread is being deleted
+
+  // fetch all message threads for the user
+  useEffect(() => {
+    (async () => {
+      try {
+        // fetch all conversations for user
+        const { data } = await api.get("/messages");
+        const list = data?.threads ?? data ?? [];
+        // If no threads demo it
+        setThreads(list.length ? list : DEMO_THREADS);
+      } catch (e) {
+        // If API fails demo it and log error
+        console.warn("GET /api/messages failed; showing demo:", e);
+        setThreads(DEMO_THREADS);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Mark conversation as read 
+  const handleMarkAsRead = async (id) => {
+    // API call is commented out for demo will uncomment when backend is ready
+    // try {
+    //   await api.post(`/messages/${id}/read`);
+    // } catch (e) {
+    //   console.error("Failed to mark as read", e);
+    // }
+    // Update local state so UI reflects the change immediately
+    setThreads((prev) =>
+      prev.map((t) =>
+        t._id === id ? { ...t, unread: { ...t.unread, me: 0 } } : t
+      )
+    );
+    setMenuFor(null);
+  };
+
+  // Delete conversation 
+  const handleDelete = async (id) => {
+    // API call is commented out for demo will uncomment when backend is ready
+    // try {
+    //   await api.delete(`/messages/${id}`);
+    // } catch (e) {
+    //   console.error("Failed to delete conversation", e);
+    // }
+    // Remove the thread from local state
+    setThreads((prev) => prev.filter((t) => t._id !== id));
+    setConfirmDeleteId(null);
+    setMenuFor(null);
+  };
+
+  // loading message 
+  if (loading) return <div>Loading messages…</div>;
+  // No convos message
+  if (!threads.length) return <div>No conversations yet.</div>;
+
+  return (
+    <div>
+      <h2>Conversations:</h2>
+      <table className="messages-table">
+        <tbody>
+          {threads.map((t) => (
+            <tr key={t._id}>
+              <td
+                onClick={() =>
+                  navigate(`/messages/${t._id}`, {
+                    state: {
+                      preview: {
+                        sender: t.otherUserName ?? "User",
+                        avatar: t.avatar ?? "/images/default-avatar.png",
+                      },
+                    },
+                  })
+                }
+                style={{ cursor: "pointer" }}
+              >
+                <img src={t.avatar ?? "/images/default-avatar.png"} alt="" width={40} style={{ borderRadius: "50%" }} />
+                <span className="sender">{t.otherUserName ?? "User"}</span>
+              </td>
+              <td
+                onClick={() =>
+                  navigate(`/messages/${t._id}`, {
+                    state: {
+                      preview: {
+                        sender: t.otherUserName ?? "User",
+                        avatar: t.avatar ?? "/images/default-avatar.png",
+                      },
+                    },
+                  })
+                }
+                style={{ cursor: "pointer" }}
+              >
+                <strong>{(t.unread?.me ?? 0) > 0 ? "Unread" : "Read"}</strong> {t.lastMessage}
+              </td>
+              <td>{t.lastMessageAt ? new Date(t.lastMessageAt).toLocaleString() : ""}</td>
+              <td style={{ position: "relative" }}>
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    setMenuFor(menuFor === t._id ? null : t._id);
+                  }}
+                  style={{ background: "none", border: "none", cursor: "pointer" }}
+                  aria-label="Open message menu"
+                >
+                  ⋮
+                </button>
+                {menuFor === t._id && (
+                  <div className="dropdown">
+                    <button onClick={() => handleMarkAsRead(t._id)}>Mark as read</button>
+                    <button style={{ color: "red" }} onClick={() => setConfirmDeleteId(t._id)}>
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {confirmDeleteId && (
+        <div className="delete-confirm-popup">
+          <div>
+            <p>Delete this conversation?</p>
+            <button className="btn" onClick={() => handleDelete(confirmDeleteId)} style={{ marginRight: 10 }}>Delete</button>
+            <button className="btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+//  convo list
+export default function Messages() {
+  return (
+    <main className="messages-content">
+      <h1 className="page-title">Messages</h1>
+
+      <ConversationList />
+    </main>
   );
 }
-
-const SampleMessages = () => {
-    const navigate = useNavigate();
-    const [messages, setMessages] = useState([
-        {
-            id : 1,
-            sender: "John Doe",
-            avatar: "/images/default-avatar.png",
-            content: "When are my books coming I am still waiting for them.",
-            date: "2023-10-01",
-            status: "Unread"
-        },
-        {
-            id: 2,
-            sender: "Jane Smith",
-            avatar: "/images/default-avatar.png",
-            content: "Thankyou for the delivery, it was fast!",
-            date: "2023-10-02",
-            status: "Read"
-        },
-        {
-            id: 3,
-            sender: "Alice Johnson",
-            avatar: "/images/default-avatar.png",
-            content: "Thanks for purchasing my pencil case, I hope you like it!",
-            date: "2023-10-03",
-            status: "Unread"
-        }
-    ]);
-    const [openDropdown, setOpenDropdown] = useState(null);
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-
-    const markAsRead = (id) => {
-        setMessages(msgs =>
-            msgs.map(msg =>
-                msg.id === id ? { ...msg, status: "Read" } : msg
-            )
-        );
-        setOpenDropdown(null);
-    };
-
-    // Show confirmation dialog
-    const handleDeleteClick = (id) => {
-        setConfirmDeleteId(id);
-        setOpenDropdown(null);
-    };
-
-    // Confirm delete
-    const confirmDelete = () => {
-        setMessages(msgs => msgs.filter(msg => msg.id !== confirmDeleteId));
-        setConfirmDeleteId(null);
-    };
-
-    // Cancel delete
-    const cancelDelete = () => {
-        setConfirmDeleteId(null);
-    };
-
-    return (
-        <div>
-            <h2>Messages:</h2>
-            <table className="messages-table">
-                <tbody>
-                {messages.map((msg) => (
-                    <tr key={msg.id}>
-                        <td
-                            onClick={() => navigate(`/messages/${msg.id}`)}
-                            style={{cursor: "pointer"}}
-                        >
-                            <img src={msg.avatar} alt={msg.sender} width={40} style={{borderRadius: "50%"}} />
-                            <span className="sender">{msg.sender}</span>
-                        </td>
-                        <td
-                            onClick={() => navigate(`/messages/${msg.id}`)}
-                            style={{cursor: "pointer"}}
-                        >
-                            <strong>{msg.status}</strong> {msg.content}
-                        </td>
-                        <td>{msg.date}</td>
-                        <td style={{position: "relative"}}>
-                            <button
-                                onClick={e => {
-                                    e.stopPropagation();
-                                    setOpenDropdown(openDropdown === msg.id ? null : msg.id);
-                                }}
-                                style={{background: "none", border: "none", cursor: "pointer"}}
-                                aria-label="Open message menu"
-                            >⋮</button>
-                            {openDropdown === msg.id && (
-                                <div className="dropdown">
-                                    <button onClick={() => markAsRead(msg.id)} style={{display: "block", width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", cursor: "pointer"}}>Mark as read</button>
-                                    <button onClick={() => handleDeleteClick(msg.id)} style={{display: "block", width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", color: "red", cursor: "pointer"}}>Delete</button>
-                                </div>
-                            )}
-                        </td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-            {/* Confirmation Popup */}
-            {confirmDeleteId !== null && (
-                <div className="delete-confirm-popup">
-                    <div>
-                        <p>Are you sure you want to delete this conversation?</p>
-                        <button className="btn" onClick={confirmDelete} style={{marginRight: 10}}>Delete</button>
-                        <button className="btn" onClick={cancelDelete}>Cancel</button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-
-export default Messages;
