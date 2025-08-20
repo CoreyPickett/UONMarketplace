@@ -412,6 +412,106 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// \/\/\/\/ Stuff for messages below \/\/\/\/ -------------------------------------------------------------------------
+
+//GET request for a messages
+app.get('/api/messages/:id', async (req, res) => {
+  const { id } = req.params;
+  const messages = await db.collection('messages').findOne({ _id: new ObjectId(id) }); //Gets idividual messages based on unique ID
+  res.json(messages);
+});
+
+//GET request for all messages
+app.get('/api/messages/', async (req, res) => {
+  try {
+    const messages = await db.collection('messages').find().toArray(); //Lists all messages in 'messages' array
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
+// POST request for creating a new messages
+app.post('/api/messages/create-message', verifyUser, async (req, res) => {
+  try {
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ error: "Missing request body" });
+    }
+
+    const { uid, email } = req.user || {};
+
+    const {
+      reciverIds,
+      reciverEmails,
+      messages,
+    } = req.body;
+
+    const newMessages = {
+      reciverIds,
+      reciverEmails,
+      messages,
+      //  ownership fields for Profile "messages"
+      ownerUid: uid || null,
+      ownerEmail: email || null,
+
+      //  createdAt to help sort later
+      createdAt: new Date(),
+    };
+
+    const result = await db.collection('messages').insertOne(newMessages);
+
+    if (!result.acknowledged) {
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "Insert failed" });
+      }
+      return;
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Messages created successfully',
+      insertedId: result.insertedId
+    });
+  } catch (err) {
+    console.error('Insert error:', err);
+    return res.status(500).json({ success: false, message: 'Unexpected error' });
+  }
+});
+
+//DELETE request for deleting a listing
+app.delete('/api/messages/:id', verifyUser, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await db.collection('messages').deleteOne({ _id: new ObjectId(id) }); //Delete messages based on unique ID
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: "Messages not found" }); //Sanity check
+    }
+
+    return res.status(200).json({ success: true, message: "Messages deleted successfully" }); //Delete success return message
+  } catch (error) {
+    console.error("Delete error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" }); //Delete failure return message
+  }
+});
+
+//POST request for adding message to messages page
+app.post('/api/messages/:id/comments', verifyUser, async (req, res) => {
+  const { id } = req.params;
+  const { postedBy, text } = req.body;
+  const newmessage = { postedBy, text };
+
+  const updatedMessages = await db.collection('messages').findOneAndUpdate({ _id: new ObjectId(id) }, { //Get messages based on unique ID
+    $push: { messages: newmessage }
+  }, {
+    returnDocument: 'after',
+  });
+
+  res.json(updatedMessages); //Update Messages
+});
+
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
 
 //Function for starting server
