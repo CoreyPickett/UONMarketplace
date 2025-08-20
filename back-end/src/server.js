@@ -104,7 +104,116 @@ const verifyUser = async (req, res, next) => {
     return res.sendStatus(401);
   }
 };
+// --- add near your other middleware ---
+const requireAdmin = (req, res, next) => {
+  // If you set a custom claim like { isAdmin: true } on the user,
+  // it will appear on the decoded token as req.user.isAdmin
+  if (req.user?.isAdmin === true || req.user?.admin === true) {
+    return next();
+  }
+  return res.status(403).json({ error: "Admin privileges required" });
+};
 
+// --- add this route ---
+app.delete("/api/admin/users/:uid", verifyUser, requireAdmin, async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    // safety: don't let admins delete themselves by accident
+    if (uid === req.user.uid) {
+      return res.status(400).json({ error: "You cannot delete your own account." });
+    }
+
+    // OPTIONAL: block deleting another admin unless you want to allow it
+    const target = await admin.auth().getUser(uid);
+    if (target.customClaims?.isAdmin === true) {
+      return res.status(403).json({ error: "Cannot delete another admin user." });
+    }
+
+    // 1) Delete auth account
+    await admin.auth().deleteUser(uid);
+
+    // 2) (Optional) Clean up marketplace data owned by that user
+    //    Examples (adjust to your schema/fields):
+    // await db.collection("items").deleteMany({ sellerUid: uid });
+    // or soft-delete:
+    // await db.collection("items").updateMany({ sellerUid: uid }, { $set: { sellerDeleted: true } });
+
+    return res.status(204).send(); // No Content
+  } catch (err) {
+    console.error("Admin delete user error:", err);
+    return res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+
+//GET request for a listing
+app.get('/api/marketplace/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    res.json(listing);
+  } catch (e) {
+    console.error("Fetch listing error:", e);
+    res.status(400).json({ error: "Invalid listing id" });
+  }
+});
+
+// GET request for Whole Marketplace (single source of truth)
+app.get('/api/marketplace/', async (req, res) => {
+  try {
+    const listings = await db.collection('items')
+      .find()
+      .sort({ createdAt: -1 })       // <- optional sort by newest
+      .toArray(); //Lists all items in 'items' array
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error("Error fetching listings:", error);
+    res.status(500).json({ error: "Failed to fetch listings" });
+  }
+});
+
+//GET for requested search critera in Marketplace (fixed: uses req.query + Mongo object filter)
+app.get('/api/search', async (req, res) => {
+  //parameter values
+  const { query, category, minPrice, maxPrice } = req.query;
+
+  console.log('Received search:', { query, category, minPrice, maxPrice });
+
+  // build Mongo filter object
+  const filter = {};
+
+  //double checking that title not empty
+  if (query !== "" && query !== undefined && query !== null) {
+    // case-insensitive regex match on title
+    filter.title = { $regex: String(query), $options: 'i' };
+  }
+
+  //double checking that category not empty
+  if (category !== "" && category !== undefined && category !== null) {
+    filter.category = String(category);
+  }
+
+  //double checking that max and min not empty
+  const min = minPrice !== undefined && minPrice !== "" ? Number(minPrice) : undefined;
+  const max = maxPrice !== undefined && maxPrice !== "" ? Number(maxPrice) : undefined;
+
+  if (Number.isFinite(min) || Number.isFinite(max)) {
+    filter.price = {};
+    if (Number.isFinite(min)) filter.price.$gte = min;
+    if (Number.isFinite(max)) filter.price.$lte = max;
+  }
+
+  try {
+    //Lists all items in 'items' array that adhere to the filter requirements 
+    const searchListings = await db.collection('items').find(filter).toArray();  
+    res.status(200).json(searchListings);
+  } catch (error) {
+    console.error("Error fetching searched listings:", error);
+    res.status(500).json({ error: "Failed to fetch searched listings" });
+  }
+});
 
 //POST request for updating upvotes
 app.post('/api/marketplace/:id/upvote', verifyUser, async (req, res) => {
@@ -217,7 +326,7 @@ app.get('/api/marketplace/create-listing/s3-upload-url', async (req, res) => {
 
 
 //GET request to search user by email
-app.get('/api/admin/search-user', async (req, res) => {
+app.get('/api/admin/search-user', verifyUser, requireAdmin, async (req, res) => {
   const { email } = req.query;
 
   if (!email) return res.status(400).json({ error: "Email is required" });
@@ -230,6 +339,7 @@ app.get('/api/admin/search-user', async (req, res) => {
       displayName: userRecord.displayName,
       disabled: userRecord.disabled,
       metadata: userRecord.metadata,
+      customClaims: userRecord.customClaims || {},
     });
   } catch (error) {
     console.error("Error fetching user:", error);

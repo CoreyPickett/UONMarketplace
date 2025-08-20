@@ -5,10 +5,12 @@ import axios from "axios";
 import "./Admin.css";
 
 export default function Admin() {
-  // ----- TABS -----
+  // ----- Tabs -----
   const [tab, setTab] = useState("listings"); // "listings" | "users"
 
-  // ----- LISTINGS (existing) -----
+  // =======================
+  // LISTINGS (existing)
+  // =======================
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -34,7 +36,9 @@ export default function Admin() {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -53,19 +57,20 @@ export default function Admin() {
     const min = minPrice !== "" ? Number(minPrice) : undefined;
     const max = maxPrice !== "" ? Number(maxPrice) : undefined;
     if (!Number.isNaN(min) && min !== undefined) {
-      out = out.filter((l) => typeof l.price === "number" ? l.price >= min : true);
+      out = out.filter((l) => (typeof l.price === "number" ? l.price >= min : true));
     }
     if (!Number.isNaN(max) && max !== undefined) {
-      out = out.filter((l) => typeof l.price === "number" ? l.price <= max : true);
+      out = out.filter((l) => (typeof l.price === "number" ? l.price <= max : true));
     }
 
     out.sort((a, b) => {
       if (sort === "priceAsc") return (a.price ?? Infinity) - (b.price ?? Infinity);
       if (sort === "priceDesc") return (b.price ?? -Infinity) - (a.price ?? -Infinity);
-      if (sort === "titleAsc") return String(a.title || "").localeCompare(String(b.title || ""));
+      if (sort === "titleAsc")
+        return String(a.title || "").localeCompare(String(b.title || ""));
       const aId = String(a._id || "");
       const bId = String(b._id || "");
-      return bId.localeCompare(aId);
+      return bId.localeCompare(aId); // "recent" by id desc if createdAt missing
     });
 
     return out;
@@ -79,9 +84,9 @@ export default function Admin() {
     setSort("recent");
   };
 
-  const onDelete = (id) => setConfirmId(id);
+  const onDeleteListing = (id) => setConfirmId(id);
 
-  const confirmDelete = async () => {
+  const confirmDeleteListing = async () => {
     if (!confirmId) return;
     try {
       const auth = getAuth();
@@ -91,7 +96,9 @@ export default function Admin() {
         return;
       }
       const token = await user.getIdToken();
-      await axios.delete(`/api/marketplace/${confirmId}`, { headers: { authtoken: token } });
+      await axios.delete(`/api/marketplace/${confirmId}`, {
+        headers: { authtoken: token },
+      });
       setListings((xs) => xs.filter((l) => String(l._id) !== String(confirmId)));
       setConfirmId(null);
     } catch (e) {
@@ -101,16 +108,26 @@ export default function Admin() {
     }
   };
 
-  // ----- USERS (new) -----
-  const [users, setUsers] = useState([]);
-  const [uQuery, setUQuery] = useState("");
+  // =======================
+  // USERS (new)
+  // =======================
+  const [uQuery, setUQuery] = useState(""); // email to search
+  const [users, setUsers] = useState([]); // results array (we’ll put the single result in an array)
   const [uLoading, setULoading] = useState(false);
   const [uError, setUError] = useState("");
+  const [deleteUid, setDeleteUid] = useState(null); // uid we’re about to delete
+  const [deleting, setDeleting] = useState(false);
 
-  const searchUsers = async () => {
-    try {
+  const searchUsersByEmail = async () => {
+    const email = uQuery.trim();
+    if (!email) {
+      setUsers([]);
       setUError("");
+      return;
+    }
+    try {
       setULoading(true);
+      setUError("");
       const auth = getAuth();
       const current = auth.currentUser;
       if (!current) {
@@ -119,25 +136,80 @@ export default function Admin() {
         return;
       }
       const token = await current.getIdToken();
-
-      // Adjust this endpoint to match your backend if different:
-      // expects backend to support /api/users?query=...
-      const res = await axios.get(`/api/users`, {
-        params: { query: uQuery },
+      const res = await axios.get(`/api/admin/search-user`, {
+        params: { email },
         headers: { authtoken: token },
       });
-
-      const data = Array.isArray(res.data) ? res.data : (res.data?.users ?? []);
-      setUsers(data);
+      const u = res.data;
+      // normalize to array for table
+      setUsers(
+        u && (u.uid || u.id || u._id)
+          ? [
+              {
+                uid: u.uid || u.id || u._id,
+                email: u.email,
+                displayName: u.displayName,
+                disabled: u.disabled,
+                isAdmin: u.customClaims?.isAdmin === true,
+              },
+            ]
+          : []
+      );
+      if (!u || !(u.uid || u.id || u._id)) {
+        setUError("No user found with that email.");
+      }
     } catch (err) {
       console.error(err);
-      setUError("Failed to fetch users.");
+      setUsers([]);
+      setUError(
+        err?.response?.data?.error || "Failed to fetch user. Check email and permissions."
+      );
     } finally {
       setULoading(false);
     }
   };
 
-  const clearUsers = () => { setUQuery(""); setUsers([]); setUError(""); };
+  const requestDeleteUser = (uid) => setDeleteUid(uid);
+  const cancelDeleteUser = () => setDeleteUid(null);
+
+  const confirmDeleteUser = async () => {
+    if (!deleteUid) return;
+    try {
+      setDeleting(true);
+      const auth = getAuth();
+      const token = await auth.currentUser.getIdToken();
+
+      // Try RESTful delete first
+      try {
+        await axios.delete(`/api/admin/users/${deleteUid}`, {
+          headers: { authtoken: token },
+        });
+      } catch (delErr) {
+        // fallback to legacy POST route if DELETE not present/allowed
+        await axios.post(
+          `/api/admin/delete-user`,
+          { uid: deleteUid },
+          { headers: { authtoken: token } }
+        );
+      }
+
+      // Remove from UI
+      setUsers((prev) =>
+        prev.filter((u) => (u.uid || u.id || u._id) !== deleteUid)
+      );
+      setDeleteUid(null);
+    } catch (e) {
+      console.error(e);
+      alert(
+        e?.response?.data?.error ||
+          "Failed to delete user. Ensure your account has admin privileges."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const currentUid = getAuth().currentUser?.uid;
 
   return (
     <main className="admin">
@@ -164,7 +236,7 @@ export default function Admin() {
         </button>
       </div>
 
-      {/* LISTINGS TAB */}
+      {/* ================= LISTINGS TAB ================= */}
       {tab === "listings" && (
         <section className="admin-card">
           <div className="toolbar">
@@ -177,11 +249,21 @@ export default function Admin() {
                   aria-label="Search listings"
                 />
                 {q && (
-                  <button className="icon-btn" onClick={() => setQ("")} title="Clear">✕</button>
+                  <button
+                    className="icon-btn"
+                    onClick={() => setQ("")}
+                    title="Clear"
+                  >
+                    ✕
+                  </button>
                 )}
               </div>
 
-              <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter by category">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                aria-label="Filter by category"
+              >
                 <option value="">All categories</option>
                 <option value="Books">Books</option>
                 <option value="Electronics">Electronics</option>
@@ -210,7 +292,11 @@ export default function Admin() {
                 />
               </div>
 
-              <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                aria-label="Sort by"
+              >
                 <option value="recent">Sort: Recent</option>
                 <option value="priceAsc">Price ↑</option>
                 <option value="priceDesc">Price ↓</option>
@@ -219,7 +305,9 @@ export default function Admin() {
             </div>
 
             <div className="actions">
-              <button className="btn" onClick={resetFilters}>Reset</button>
+              <button className="btn" onClick={resetFilters}>
+                Reset
+              </button>
             </div>
           </div>
 
@@ -249,7 +337,9 @@ export default function Admin() {
                     {filtered.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={{ textAlign: "center" }}>
-                          <div className="empty">No results. Try adjusting filters.</div>
+                          <div className="empty">
+                            No results. Try adjusting filters.
+                          </div>
                         </td>
                       </tr>
                     ) : (
@@ -267,25 +357,39 @@ export default function Admin() {
                                       : "/placeholder-listing.jpg"
                                   }
                                   alt={l.title || "Listing"}
-                                  onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                                  onError={(e) =>
+                                    (e.currentTarget.src =
+                                      "/placeholder-listing.jpg")
+                                  }
                                 />
                               </div>
                               <div className="meta">
-                                <div className="title">{l.title || "Untitled"}</div>
-                                <div className="sub muted">{l.location || "Location N/A"}</div>
+                                <div className="title">
+                                  {l.title || "Untitled"}
+                                </div>
+                                <div className="sub muted">
+                                  {l.location || "Location N/A"}
+                                </div>
                               </div>
                             </div>
                           </td>
                           <td className="hide-sm">{l.category || "—"}</td>
                           <td>
                             {typeof l.price === "number"
-                              ? l.price.toLocaleString("en-AU", { style: "currency", currency: "AUD" })
+                              ? l.price.toLocaleString("en-AU", {
+                                  style: "currency",
+                                  currency: "AUD",
+                                })
                               : "—"}
                           </td>
                           <td className="hide-md">{l.seller || "—"}</td>
                           <td>{l.upvotes ?? 0}</td>
                           <td>
-                            <button className="icon-btn danger" title="Delete listing" onClick={() => onDelete(l._id)}>
+                            <button
+                              className="icon-btn danger"
+                              title="Delete listing"
+                              onClick={() => onDeleteListing(l._id)}
+                            >
                               🗑
                             </button>
                           </td>
@@ -306,7 +410,7 @@ export default function Admin() {
         </section>
       )}
 
-      {/* USERS TAB */}
+      {/* ================= USERS TAB ================= */}
       {tab === "users" && (
         <section className="admin-card">
           <div className="toolbar">
@@ -315,18 +419,25 @@ export default function Admin() {
                 <input
                   value={uQuery}
                   onChange={(e) => setUQuery(e.target.value)}
-                  placeholder="Search users by name or email…"
-                  aria-label="Search users"
+                  placeholder="Search user by email…"
+                  aria-label="Search users by email"
                 />
                 {uQuery && (
-                  <button className="icon-btn" onClick={() => setUQuery("")} title="Clear">✕</button>
+                  <button
+                    className="icon-btn"
+                    onClick={() => {
+                      setUQuery("");
+                      setUsers([]);
+                      setUError("");
+                    }}
+                    title="Clear"
+                  >
+                    ✕
+                  </button>
                 )}
               </div>
-              <button className="btn" onClick={searchUsers} disabled={uLoading}>
+              <button className="btn" onClick={searchUsersByEmail} disabled={uLoading}>
                 {uLoading ? "Searching…" : "Search"}
-              </button>
-              <button className="btn" onClick={clearUsers} disabled={uLoading}>
-                Reset
               </button>
             </div>
           </div>
@@ -340,37 +451,62 @@ export default function Admin() {
                   <th>User</th>
                   <th className="hide-sm">Email</th>
                   <th>Role</th>
+                  <th className="hide-sm">Status</th>
+                  <th style={{ width: 1 }} />
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: "center" }}>
-                      <div className="empty">No users. Try a different search.</div>
+                    <td colSpan={5} style={{ textAlign: "center" }}>
+                      <div className="empty">No users. Try a different email.</div>
                     </td>
                   </tr>
                 ) : (
-                  users.map((u) => (
-                    <tr key={u.id || u._id || u.uid}>
-                      <td>
-                        <div className="item-cell">
-                          <div className="thumb user">
-                            <img
-                              src={u.photoURL || "/avatar-placeholder.png"}
-                              alt={u.displayName || u.name || "User"}
-                              onError={(e) => (e.currentTarget.src = "/avatar-placeholder.png")}
-                            />
+                  users.map((u) => {
+                    const uid = u.uid || u.id || u._id;
+                    const isSelf = currentUid && uid === currentUid;
+                    return (
+                      <tr key={uid}>
+                        <td>
+                          <div className="item-cell">
+                            <div className="thumb user">
+                              <img
+                                src={"/avatar-placeholder.png"}
+                                alt={u.displayName || "User"}
+                                onError={(e) =>
+                                  (e.currentTarget.src = "/avatar-placeholder.png")
+                                }
+                              />
+                            </div>
+                            <div className="meta">
+                              <div className="title">
+                                {u.displayName || "Unnamed User"}
+                              </div>
+                              <div className="sub muted">{uid}</div>
+                            </div>
                           </div>
-                          <div className="meta">
-                            <div className="title">{u.displayName || u.name || "Unnamed User"}</div>
-                            <div className="sub muted">{u.uid || u._id || u.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hide-sm">{u.email || "—"}</td>
-                      <td>{u.isAdmin ? "Admin" : "User"}</td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="hide-sm">{u.email || "—"}</td>
+                        <td>{u.isAdmin ? "Admin" : "User"}</td>
+                        <td className="hide-sm">{u.disabled ? "Disabled" : "Active"}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            className="icon-btn danger"
+                            title={
+                              isSelf
+                                ? "You cannot delete your own account"
+                                : "Delete user"
+                            }
+                            onClick={() => !isSelf && requestDeleteUser(uid)}
+                            disabled={isSelf}
+                          >
+                            🗑
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -378,7 +514,7 @@ export default function Admin() {
         </section>
       )}
 
-      {/* Delete modal */}
+      {/* Listing delete modal */}
       {confirmId && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal">
@@ -387,8 +523,36 @@ export default function Admin() {
               This action can’t be undone. The listing will be removed permanently.
             </p>
             <div className="modal-actions">
-              <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
-              <button className="btn" onClick={() => setConfirmId(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={confirmDeleteListing}>
+                Delete
+              </button>
+              <button className="btn" onClick={() => setConfirmId(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User delete modal */}
+      {deleteUid && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal">
+            <h3>Delete this user?</h3>
+            <p className="muted">
+              This removes their account. You can’t undo this.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="btn btn-danger"
+                onClick={confirmDeleteUser}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+              <button className="btn" onClick={cancelDeleteUser} disabled={deleting}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
