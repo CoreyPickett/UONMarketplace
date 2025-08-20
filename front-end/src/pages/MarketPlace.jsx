@@ -40,15 +40,6 @@ export default function MarketPlace() {
     return () => { alive = false; };
   }, []);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      handleSearch();
-    }, 400); // 400ms debounce
-
-    return () => clearTimeout(timeout);
-  }, [search, category, minPrice, maxPrice, sort]);
-
-
   // validate prices; if max < min, auto-correct and show note
   const validatePrices = () => {
     const min = minPrice === "" ? undefined : Number(minPrice);
@@ -126,7 +117,7 @@ export default function MarketPlace() {
     }
   };
 
-  // disable Search when numbers are invalid
+  // Disable Search when numbers are invalid
   const buttonDisabled = useMemo(() => {
     const min = Number(minPrice);
     const max = Number(maxPrice);

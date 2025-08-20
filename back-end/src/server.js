@@ -67,6 +67,9 @@ app.get(/^(?!\/api).+/, (req, res) => {
 */
 
 
+
+
+
 //GET request for a listing
 app.get('/api/marketplace/:id', async (req, res) => {
   const { id } = req.params;
@@ -85,19 +88,46 @@ app.get('/api/marketplace/', async (req, res) => {
   }
 });
 
+// List of current admin emails
+const adminEmails = ['admin@uon.edu', 'tester@uon.edu', 'demo2@uon.edu', 'tester100@uon.edu.au'];
 
+// Function to check if email is admin verified
+function checkIfAdmin(req, res, next) {
+  console.log("checkIfAdmin triggered");
+
+  const userEmail = req.user?.email;
+  const isVerified = req.user?.email_verified;
+
+  if (!userEmail) {
+    console.warn("Missing email in decoded token");
+    return res.status(401).json({ error: "Invalid token: no email" });
+  }
+
+  console.log("Checking admin status for:", userEmail);
+
+  if (adminEmails.includes(userEmail)) {
+    req.user.isAdmin = true;
+    console.log(`Admin verified: ${userEmail}`);
+  } else {
+    console.log(`Not an admin: ${userEmail}`);
+  }
+
+  next();
+}
 
 //Verification for a logged in user
 const verifyUser = async (req, res, next) => {
   const { authtoken } = req.headers;
+  
+
 
   if (!authtoken) {
     return res.sendStatus(400);
   }
 
   try {
-    const user = await admin.auth().verifyIdToken(authtoken);
-    req.user = user;
+    const decodedToken = await admin.auth().verifyIdToken(authtoken);
+    req.user = decodedToken;
     next();
   } catch (err) {
     console.error("Auth error:", err);
@@ -115,7 +145,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 // --- add this route ---
-app.delete("/api/admin/users/:uid", verifyUser, requireAdmin, async (req, res) => {
+app.delete("/api/admin/users/:uid", verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
 
@@ -326,7 +356,7 @@ app.get('/api/marketplace/create-listing/s3-upload-url', async (req, res) => {
 
 
 //GET request to search user by email
-app.get('/api/admin/search-user', verifyUser, requireAdmin, async (req, res) => {
+app.get('/api/admin/search-user', verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
   const { email } = req.query;
 
   if (!email) return res.status(400).json({ error: "Email is required" });
