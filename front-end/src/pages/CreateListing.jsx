@@ -116,165 +116,164 @@ export default function CreateListing() {
 
   return (
     <div className="create-listing-wrapper">
-      <h1 style={{ textAlign: "center", marginBottom: 20 }}>Create New Listing</h1>
-
-      <form onSubmit={onSubmit} className="create-form">
-        <input
-          name="title"
-          placeholder="Title"
-          value={formData.title}
-          onChange={handleChange}
-          required
-        />
-
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-          rows={4}
-          required
-        />
-
-        <select
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          required
-        >
-          <option value="" disabled>
-            Category
-          </option>
-          <option value="Electronics">Electronics</option>
-          <option value="Books">Books</option>
-          <option value="Clothing">Clothing</option>
-          <option value="Furniture">Furniture</option>
-          <option value="Other">Other</option>
-        </select>
-
-
-        <div style={{ display: "flex", gap: 15 }}>
+      <div>
+        <h1 style={{ textAlign: "center", marginBottom: 20 }}>Create New Listing</h1>
+        <form onSubmit={onSubmit} className="create-form">
           <input
-            name="price"
-            type="text"
-            inputMode="decimal"
-            placeholder="Price (AUD)"
-            value={formData.price}
+            name="title"
+            placeholder="Title"
+            value={formData.title}
             onChange={handleChange}
             required
           />
-        </div>
-        {priceAUD && (
-          <div style={{ color: "#4b5563", fontSize: 14 }}>Preview price: {priceAUD}</div>
-        )}
 
-        <div style={{ display: "flex", gap: 15 }}>
+          <textarea
+            name="description"
+            placeholder="Description"
+            value={formData.description}
+            onChange={handleChange}
+            rows={4}
+            required
+          />
+
           <select
-          name="condition"
-          value={formData.condition}
-          onChange={handleChange}
-          required
-        >
-          <option value="" disabled>
-            Current Condition
-          </option>
-          <option value="Brand New">Brand New</option>
-          <option value="New">New</option>
-          <option value="Barely Used">Barely Used</option>
-          <option value="Used">Used</option>
-          <option value="Well Used">Well Used</option>
-        </select>
-          <input
-            name="location"
-            placeholder="Location (e.g. Callaghan Campus)"
-            value={formData.location}
+            name="category"
+            value={formData.category}
             onChange={handleChange}
             required
-          />
-        </div>
-
-        <select
-          name="delivery_options"
-          value={formData.delivery_options}
-          onChange={(e) => handleChange(e)}
-          required
-        >
-          <option value="" disabled>Select a delivery option</option>
-          <option value="Pickup">Pickup</option>
-          <option value="Local Delivery">Local Delivery</option>
-          <option value="Postal Delivery">Postal Delivery</option>
-        </select>
-
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
-          <input
-            type="file"
-            accept="image/jpeg, image/png, image/webp, image/gif" //Accepts only these types of files
-            onChange={async (e) => {
-              const file = e.target.files[0];
-              if (!file) return;
-
-              const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-              const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg"; // fallback to jpeg if none work
-
-              const filename = encodeURIComponent(file.name);
-
-              try { //Upload image
-                const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url", {
-                  params: { filename, filetype },
-                });
-
-                await axios.put(data.uploadURL, file, {
-                  headers: { "Content-Type": filetype },
-                });
-
-                const imageUrl = `https://${import.meta.env.VITE_S3_BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${data.key}`;
-                setFormData((prev) => ({ ...prev, image: imageUrl }));
-                setThumbFallback(false);
-                setPreviewFallback(false);
-              } catch (error) {
-                console.error("Image upload failed:", error);
-                alert("Image upload failed. Please try again.");
-              }
-            }}
-          />
-          <div
-            style={{
-              width: 72,
-              height: 48,
-              borderRadius: 6,
-              overflow: "hidden",
-              background: "#e5e7eb",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "1px solid #ddd",
-            }}
           >
-            <img
-              src={thumbSrc}
-              alt="thumb"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              onError={() => setThumbFallback(true)}
+            <option value="" disabled>
+              Category
+            </option>
+            <option value="Electronics">Electronics</option>
+            <option value="Books">Books</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Other">Other</option>
+          </select>
+
+
+          <div style={{ display: "flex", gap: 15 }}>
+            <input
+              name="price"
+              type="text"
+              inputMode="decimal"
+              placeholder="Price (AUD)"
+              value={formData.price}
+              onChange={handleChange}
+              required
             />
           </div>
-        </div>
+          {priceAUD && (
+            <div style={{ color: "#4b5563", fontSize: 14 }}>Preview price: {priceAUD}</div>
+          )}
 
-        <input
-          name="seller"
-          placeholder="Seller Name"
-          value={formData.seller}
-          onChange={handleChange}
-        />
+          <div style={{ display: "flex", gap: 15 }}>
+            <select
+            name="condition"
+            value={formData.condition}
+            onChange={handleChange}
+            required
+          >
+            <option value="" disabled>
+              Current Condition
+            </option>
+            <option value="Brand New">Brand New</option>
+            <option value="New">New</option>
+            <option value="Barely Used">Barely Used</option>
+            <option value="Used">Used</option>
+            <option value="Well Used">Well Used</option>
+          </select>
+            <input
+              name="location"
+              placeholder="Location (e.g. Callaghan Campus)"
+              value={formData.location}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Creating…" : "Create Listing"}
-        </button>
-      </form>
+          <select
+            name="delivery_options"
+            value={formData.delivery_options}
+            onChange={(e) => handleChange(e)}
+            required
+          >
+            <option value="" disabled>Select a delivery option</option>
+            <option value="Pickup">Pickup</option>
+            <option value="Local Delivery">Local Delivery</option>
+            <option value="Postal Delivery">Postal Delivery</option>
+          </select>
 
-      <div style={{ marginTop: 24 }}>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
+            <input
+              type="file"
+              accept="image/jpeg, image/png, image/webp, image/gif" //Accepts only these types of files
+              onChange={async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+                const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg"; // fallback to jpeg if none work
+
+                const filename = encodeURIComponent(file.name);
+
+                try { //Upload image
+                  const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url", {
+                    params: { filename, filetype },
+                  });
+
+                  await axios.put(data.uploadURL, file, {
+                    headers: { "Content-Type": filetype },
+                  });
+
+                  const imageUrl = `https://${import.meta.env.VITE_S3_BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${data.key}`;
+                  setFormData((prev) => ({ ...prev, image: imageUrl }));
+                  setThumbFallback(false);
+                  setPreviewFallback(false);
+                } catch (error) {
+                  console.error("Image upload failed:", error);
+                  alert("Image upload failed. Please try again.");
+                }
+              }}
+            />
+            <div
+              style={{
+                width: 72,
+                height: 48,
+                borderRadius: 6,
+                overflow: "hidden",
+                background: "#e5e7eb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid #ddd",
+              }}
+            >
+              <img
+                src={thumbSrc}
+                alt="thumb"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={() => setThumbFallback(true)}
+              />
+            </div>
+          </div>
+
+          <input
+            name="seller"
+            placeholder="Seller Name"
+            value={formData.seller}
+            onChange={handleChange}
+          />
+
+          <button type="submit" disabled={submitting}>
+            {submitting ? "Creating…" : "Create Listing"}
+          </button>
+        </form>
+      </div>
+      <div style={{ marginTop: 0 }}>
         <h3 style={{ margin: "0 0 12px" }}>Preview</h3>
-
         <div className="listing-card" style={{ width: 280 }}>
           <div className="listing-image-wrapper">
             <img

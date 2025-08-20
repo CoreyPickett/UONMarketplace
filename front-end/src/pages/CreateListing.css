@@ -162,8 +162,7 @@
 
   .create-listing-wrapper > div:last-child {
     align-self: start;
-    position: sticky;
-    top: 24px;
+    top: 0;
   }
 }
 
