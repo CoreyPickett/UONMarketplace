@@ -1,9 +1,10 @@
 //Create Listing Form
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "./CreateListing.css";
+import NotLoggedIn from "./NotLoggedIn";
 
 export default function CreateListing() {
   const [formData, setFormData] = useState({
@@ -13,18 +14,31 @@ export default function CreateListing() {
     price: "",
     condition: "",
     location: "",
-    delivery_options: [],
+    delivery_options: "",   
     image: "",
     seller: "",
+    quantity: 1,            
   });
 
   const [submitting, setSubmitting] = useState(false);
 
-  // Fallback flags to avoid endless re-requests of the placeholder image
+  // preview fallbacks
   const [thumbFallback, setThumbFallback] = useState(false);
   const [previewFallback, setPreviewFallback] = useState(false);
 
+  // render-level, not inside onSubmit
+  const [user, setUser] = useState(null);
+  const [checkingUser, setCheckingUser] = useState(true);
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(getAuth(), (u) => {
+      setUser(u || null);
+      setCheckingUser(false);
+    });
+    return () => unsub();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -33,21 +47,22 @@ export default function CreateListing() {
       const cleaned = value.replace(/[^\d.]/g, "");
       return setFormData((p) => ({ ...p, price: cleaned }));
     }
+
     if (name === "quantity") {
       const q = Math.max(1, Number(value || 1));
       return setFormData((p) => ({ ...p, quantity: q }));
     }
 
-    setFormData((p) => ({ ...p, [name]: type === "number" ? Number(value) : value }));
-  };
-
-  const handleArrayChange = (name, valueArray) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: valueArray,
+    setFormData((p) => ({
+      ...p,
+      [name]: type === "number" ? Number(value) : value,
     }));
   };
 
+  // If you later add multi-select fields, keep this helper
+  const handleArrayChange = (name, valueArray) => {
+    setFormData((prev) => ({ ...prev, [name]: valueArray }));
+  };
 
   const priceAUD = useMemo(() => {
     const n = Number(formData.price);
@@ -58,15 +73,17 @@ export default function CreateListing() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
+    if (submitting) return;
 
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
+      setSubmitting(true);
 
-      if (!user) {
-        alert("You must be logged in to create a listing.");
-        setSubmitting(false);
+      const auth = getAuth();
+      const current = auth.currentUser;
+
+      // return JSX here—just redirect 
+      if (!current) {
+        navigate("/login", { replace: true, state: { from: "/create-listing" } });
         return;
       }
 
@@ -76,7 +93,7 @@ export default function CreateListing() {
         return;
       }
 
-      const token = await user.getIdToken(true); // force refresh
+      const token = await current.getIdToken(true); // force refresh OK
       const payload = {
         ...formData,
         price: Number(formData.price || 0),
@@ -107,12 +124,23 @@ export default function CreateListing() {
     }
   };
 
-  // Image sources that respect the fallback flags
+  // image preview sources
   const thumbSrc =
     thumbFallback || !formData.image ? "/placeholder-listing.jpg" : formData.image;
 
   const previewSrc =
     previewFallback || !formData.image ? "/placeholder-listing.jpg" : formData.image;
+
+  // route to not logged in page if not logged in
+  if (checkingUser) return null; 
+  if (!user) {
+    return (
+      <NotLoggedIn
+        title="You’re not logged in"
+        message="You must be logged in to create a listing."
+      />
+    );
+  }
 
   return (
     <div className="create-listing-wrapper">
@@ -152,7 +180,6 @@ export default function CreateListing() {
             <option value="Other">Other</option>
           </select>
 
-
           <div style={{ display: "flex", gap: 15 }}>
             <input
               name="price"
@@ -165,25 +192,28 @@ export default function CreateListing() {
             />
           </div>
           {priceAUD && (
-            <div style={{ color: "#4b5563", fontSize: 14 }}>Preview price: {priceAUD}</div>
+            <div style={{ color: "#4b5563", fontSize: 14 }}>
+              Preview price: {priceAUD}
+            </div>
           )}
 
           <div style={{ display: "flex", gap: 15 }}>
             <select
-            name="condition"
-            value={formData.condition}
-            onChange={handleChange}
-            required
-          >
-            <option value="" disabled>
-              Current Condition
-            </option>
-            <option value="Brand New">Brand New</option>
-            <option value="New">New</option>
-            <option value="Barely Used">Barely Used</option>
-            <option value="Used">Used</option>
-            <option value="Well Used">Well Used</option>
-          </select>
+              name="condition"
+              value={formData.condition}
+              onChange={handleChange}
+              required
+            >
+              <option value="" disabled>
+                Current Condition
+              </option>
+              <option value="Brand New">Brand New</option>
+              <option value="New">New</option>
+              <option value="Barely Used">Barely Used</option>
+              <option value="Used">Used</option>
+              <option value="Well Used">Well Used</option>
+            </select>
+
             <input
               name="location"
               placeholder="Location (e.g. Callaghan Campus)"
@@ -196,7 +226,7 @@ export default function CreateListing() {
           <select
             name="delivery_options"
             value={formData.delivery_options}
-            onChange={(e) => handleChange(e)}
+            onChange={handleChange}   
             required
           >
             <option value="" disabled>Select a delivery option</option>
@@ -205,24 +235,28 @@ export default function CreateListing() {
             <option value="Postal Delivery">Postal Delivery</option>
           </select>
 
-
           <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
             <input
               type="file"
-              accept="image/jpeg, image/png, image/webp, image/gif" //Accepts only these types of files
+              accept="image/jpeg, image/png, image/webp, image/gif"
               onChange={async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
 
                 const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-                const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg"; // fallback to jpeg if none work
-
+                const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg";
                 const filename = encodeURIComponent(file.name);
 
-                try { //Upload image
-                  const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url", {
-                    params: { filename, filetype },
-                  });
+                try {
+                  // If protected, include authtoken:
+                  // const token = await getAuth().currentUser?.getIdToken();
+                  // const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url",
+                  //   { params: { filename, filetype }, headers: { authtoken: token } });
+
+                  const { data } = await axios.get(
+                    "/api/marketplace/create-listing/s3-upload-url",
+                    { params: { filename, filetype } }
+                  );
 
                   await axios.put(data.uploadURL, file, {
                     headers: { "Content-Type": filetype },
@@ -272,6 +306,7 @@ export default function CreateListing() {
           </button>
         </form>
       </div>
+
       <div style={{ marginTop: 0 }}>
         <h3 style={{ margin: "0 0 12px" }}>Preview</h3>
         <div className="listing-card" style={{ width: 280 }}>
