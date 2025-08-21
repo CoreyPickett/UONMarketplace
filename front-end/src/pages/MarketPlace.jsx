@@ -59,63 +59,52 @@ export default function MarketPlace() {
     return { minPrice, maxPrice };
   };
 
-  const handleSearch = async () => {
-    const { minPrice: minAdj, maxPrice: maxAdj } = validatePrices();
-    try {
-      setLoading(true);
+  const filteredListings = useMemo(() => {
+    let out = [...listings];
+    const qq = search.trim().toLowerCase();
 
-      const hasFilters =
-        (search && search.trim()) ||
-        category ||
-        (minAdj !== "" && !Number.isNaN(Number(minAdj))) ||
-        (maxAdj !== "" && !Number.isNaN(Number(maxAdj)));
-
-      const url = hasFilters
-        ? `/api/search?${toParams({
-            query: search.trim(),
-            category,
-            minPrice: minAdj || "",
-            maxPrice: maxAdj || "",
-            sort,
-          })}`
-        : "/api/marketplace/";
-
-      const res = await fetch(url);
-      const data = await res.json();
-      setListings(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error("Search failed:", e);
-      setListings([]);
-    } finally {
-      setLoading(false);
+    if (qq) {
+      out = out.filter((l) =>
+        [l.title, l.description, l.category, l.location, l.seller]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(qq))
+      );
     }
-  };
 
-  const handleReset = async () => {
+    if (category) out = out.filter((l) => String(l.category) === category);
+
+    const min = minPrice !== "" ? Number(minPrice) : undefined;
+    const max = maxPrice !== "" ? Number(maxPrice) : undefined;
+
+    if (!Number.isNaN(min) && min !== undefined) {
+      out = out.filter((l) => typeof l.price === "number" && l.price >= min);
+    }
+
+    if (!Number.isNaN(max) && max !== undefined) {
+      out = out.filter((l) => typeof l.price === "number" && l.price <= max);
+    }
+
+    out.sort((a, b) => {
+      if (sort === "priceAsc") return (a.price ?? Infinity) - (b.price ?? Infinity);
+      if (sort === "priceDesc") return (b.price ?? -Infinity) - (a.price ?? -Infinity);
+      if (sort === "titleAsc") return String(a.title || "").localeCompare(String(b.title || ""));
+      return String(b._id || "").localeCompare(String(a._id || "")); // recent fallback
+    });
+
+    return out;
+  }, [listings, search, category, minPrice, maxPrice, sort]);
+
+
+  const handleReset = () => {
     setSearch("");
     setCategory("");
     setMinPrice("");
     setMaxPrice("");
     setRangeNote("");
-    try {
-      setLoading(true);
-      const res = await fetch("/api/marketplace/");
-      const data = await res.json();
-      setListings(Array.isArray(data) ? data : []);
-    } catch {
-      setListings([]);
-    } finally {
-      setLoading(false);
-    }
   };
 
-  // Enter-to-search in the text field
-  const onSearchKey = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSearch();
-    }
-  };
+
+  
 
   // Disable Search when numbers are invalid
   const buttonDisabled = useMemo(() => {
@@ -146,7 +135,6 @@ export default function MarketPlace() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={onSearchKey}
             placeholder="Search by title..."
           />
         </div>
@@ -198,14 +186,6 @@ export default function MarketPlace() {
         {rangeNote && <div className="range-note">{rangeNote}</div>}
 
         <div className="filter-buttons">
-          <button
-            className="search-btn"
-            onClick={handleSearch}
-            disabled={buttonDisabled}
-            type="button"
-          >
-            Search
-          </button>
           <button className="reset-btn" onClick={handleReset} type="button">
             Reset
           </button>
@@ -219,7 +199,7 @@ export default function MarketPlace() {
         ) : listings.length === 0 ? (
           <p>No listings found.</p>
         ) : (
-          <MarketPlaceList listings={listings} />
+          <MarketPlaceList listings={filteredListings} />
         )}
       </main>
     </div>
