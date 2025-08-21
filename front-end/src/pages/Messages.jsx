@@ -1,18 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api";        
+import { api } from "../api";  
+import { getAuth } from "firebase/auth";
 import "./Messages.css";
 
 // Lets users search for profiles 
 const ProfileSearch = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [profiles, setProfiles] = useState([]);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [starting, setStarting] = useState("");
+  const navigate = useNavigate();
+  const me = getAuth().currentUser;
 
   const handleSearch = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      // Fetch all marketplace items 
-      const { data } = await api.get("/marketplace/"); 
+      const { data } = await api.get("/marketplace/");
       // Filter results
       const filtered = (data || []).filter(item =>
         item.title?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -20,21 +27,31 @@ const ProfileSearch = () => {
       setProfiles(filtered);
     } catch (err) {
       console.error("Error fetching profiles:", err);
+      setProfiles([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div>
-      <form onSubmit={handleSearch}>
         <h2>Search Profiles</h2>
+        <form onSubmit={handleSearch}>
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search profiles..."
         />
-        <button className="btn" type="submit">Search</button>
+        <button className="btn" type="submit" disabled={!searchTerm.trim() || loading}> {loading ? "Searching…" : "Search"}</button>
       </form>
+      {profiles.length > 0 && (
+        <ul style={{ marginTop: 10 }}>
+          {profiles.map((p) => (
+            <li key={p._id || p.id || p.title}>{p.title}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
@@ -81,11 +98,11 @@ const ConversationList = () => {
   // Mark conversation as read 
   const handleMarkAsRead = async (id) => {
     // API call is commented out for demo will uncomment when backend is ready
-    // try {
-    //   await api.post(`/messages/${id}/read`);
-    // } catch (e) {
-    //   console.error("Failed to mark as read", e);
-    // }
+    try {
+    await api.post(`/messages/${id}/read`);
+    } catch (e) {
+      console.error("Failed to mark as read", e);
+     }
     // Update local state so UI reflects the change immediately
     setThreads((prev) =>
       prev.map((t) =>
@@ -98,11 +115,11 @@ const ConversationList = () => {
   // Delete conversation 
   const handleDelete = async (id) => {
     // API call is commented out for demo will uncomment when backend is ready
-    // try {
-    //   await api.delete(`/messages/${id}`);
-    // } catch (e) {
-    //   console.error("Failed to delete conversation", e);
-    // }
+     try {
+      await api.delete(`/messages/${id}`);
+   } catch (e) {
+      console.error("Failed to delete conversation", e);
+   }
     // Remove the thread from local state
     setThreads((prev) => prev.filter((t) => t._id !== id));
     setConfirmDeleteId(null);
@@ -195,7 +212,7 @@ export default function Messages() {
   return (
     <main className="messages-content">
       <h1 className="page-title">Messages</h1>
-
+      <ProfileSearch />
       <ConversationList />
     </main>
   );

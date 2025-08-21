@@ -16,7 +16,7 @@ import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
-import Messages from "./pages/Messages";
+import Messages from "./pages/messages";
 import DirectMessage from "./pages/DirectMessage"; 
 
 
