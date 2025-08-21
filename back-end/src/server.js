@@ -54,6 +54,11 @@ async function connectToDB() { //Connect to global DB with username and password
 
   db = client.db('uon-marketplace-db');
 
+  if (!db) {
+    console.error('Database not connected');
+    return res.status(500).send('DB not initialized');
+  }
+
 }
 
 /*   
@@ -67,6 +72,12 @@ app.get(/^(?!\/api).+/, (req, res) => {
 */
 
 
+
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).send('Internal Server Error');
+});
 
 
 
