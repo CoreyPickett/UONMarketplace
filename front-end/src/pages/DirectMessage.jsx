@@ -79,7 +79,7 @@ export default function DirectMessage() {
 
   return (
     <main className="direct-message-content" style={{ padding: 20 }}>
-      <button onClick={() => navigate("/messages")}>Back to Messages</button>
+      <button className="back-button" onClick={() => navigate("/messages")}>Back to Messages</button>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
         <img src={thread.avatar} alt={thread.sender} width={50} style={{ borderRadius: "50%" }} />

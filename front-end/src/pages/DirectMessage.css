@@ -1,0 +1,92 @@
+/* Main container for the direct message page */
+.direct-message-content {
+  width: 100%;
+  max-width: 1100px;
+  margin: 32px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Header with avatar and name */
+.direct-message-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+/* Message list area */
+.message-list {
+  margin: 24px 0;
+  padding: 0 8px;
+  min-height: 200px;
+}
+
+/* Chat bubbles */
+.bubble {
+  max-width: 70%;
+  margin-bottom: 12px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: #f0f6ff;
+  font-size: 1rem;
+  position: relative;
+  word-break: break-word;
+}
+.bubble.me {
+  background: #003057;
+  color: #fff;
+  margin-left: auto;
+}
+.bubble.them {
+  background: #e5e7eb;
+  color: #1e1e1e;
+  margin-right: auto;
+}
+.bubble .metadata {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* Message input area */
+.message-maker {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.message-maker input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 1rem;
+}
+.message-maker .btn {
+  background: #003057;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.message-maker .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.back-button {
+  background: #003057;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.back-button:hover {
+  background: #00509e;
+}

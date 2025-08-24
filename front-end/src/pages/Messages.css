@@ -1,4 +1,26 @@
+/* Main container */
+.messages-content {
+  max-width: 900px;
+  margin: 32px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Page title */
+.page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #003057;
+  margin-bottom: 18px;
+}
+
+/* Conversation table tweaks */
 .messages-table {
+  background: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
@@ -53,7 +75,7 @@
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
   text-align: center;
 }
-.dropdown{
+.dropdown {
   position: absolute;
   right: 0;
   top: 100%;
@@ -61,7 +83,8 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
-  z-index: 200;
+  z-index: 9999; /* Make sure it's above everything */
+  min-width: 120px;
 }
 .delete-confirm-popup .btn {
   background: #003057;
@@ -76,4 +99,98 @@
 
 .delete-confirm-popup .btn:hover {
   background: #00509e;
+}
+
+/* Message bubbles in DirectMessage */
+.message-list {
+  margin: 24px 0;
+  padding: 0 8px;
+}
+.bubble {
+  max-width: 70%;
+  margin-bottom: 12px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: #f0f6ff;
+  font-size: 1rem;
+  position: relative;
+}
+.bubble.me {
+  background: #003057;
+  color: #fff;
+  margin-left: auto;
+}
+.bubble.them {
+  background: #e5e7eb;
+  color: #1e1e1e;
+  margin-right: auto;
+}
+.bubble .metadata {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* Message input area */
+.message-maker {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.message-maker input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 1rem;
+}
+.message-maker .btn {
+  background: #003057;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.message-maker .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.read {
+  color: #6b7280;
+}
+
+.unread {
+  color: #003057;
+}
+
+/* Style for dropdown menu buttons */
+.dropdown button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+}
+
+.dropdown button:hover {
+  background: #f0f6ff;
+}
+
+.dropdown button:first-child {
+  color: #003057; /* Mark as read: blue */
+  font-weight: 600;
+}
+
+.dropdown button:last-child {
+  color: #b91c1c; /* Delete: red */
+  font-weight: 600;
 }

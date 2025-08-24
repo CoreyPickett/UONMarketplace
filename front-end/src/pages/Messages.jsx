@@ -43,7 +43,7 @@ const ProfileSearch = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search profiles..."
         />
-        <button className="btn" type="submit" disabled={!searchTerm.trim() || loading}> {loading ? "Searching…" : "Search"}</button>
+        <button className="btn" type="submit">Search</button>
       </form>
       {profiles.length > 0 && (
         <ul style={{ marginTop: 10 }}>
@@ -167,7 +167,7 @@ const ConversationList = () => {
                 }
                 style={{ cursor: "pointer" }}
               >
-                <strong>{(t.unread?.me ?? 0) > 0 ? "Unread" : "Read"}</strong> {t.lastMessage}
+                <strong>  {(t.unread?.me ?? 0) > 0 ? "Unread" : "Read" }</strong> {t.lastMessage}
               </td>
               <td>{t.lastMessageAt ? new Date(t.lastMessageAt).toLocaleString() : ""}</td>
               <td style={{ position: "relative" }}>
