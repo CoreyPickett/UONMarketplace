@@ -580,9 +580,25 @@ app.get('/api/search', async (req, res) => {
 
 //GET request for a messages
 app.get('/api/messages/:id', async (req, res) => {
-  const { id } = req.params;
-  const messages = await db.collection('messages').findOne({ _id: new ObjectId(id) }); //Gets idividual messages based on unique ID
-  res.json(messages);
+  
+   const { id } = req.params;
+  
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ error: 'Invalid message ID format.' });
+  }
+
+  try {
+    const message = await db.collection('messages').findOne({ _id: new ObjectId(id) });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    res.json(message);
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
 });
 
 //GET request for all messages
