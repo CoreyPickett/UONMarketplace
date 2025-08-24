@@ -117,6 +117,8 @@ export default function Admin() {
   const [uError, setUError] = useState("");
   const [deleteUid, setDeleteUid] = useState(null); // uid we’re about to delete
   const [deleting, setDeleting] = useState(false);
+const [busyUid, setBusyUid] = useState(null); // uid currently being toggled (disable/enable)
+
 
   const searchUsersByEmail = async () => {
     const email = uQuery.trim();
@@ -208,6 +210,41 @@ export default function Admin() {
       setDeleting(false);
     }
   };
+  
+// Disable or enable a user by uid
+const setUserDisabled = async (uid, disabled) => {
+  try {
+    // safety: don't let the admin lock themselves
+    const me = getAuth().currentUser?.uid;
+    if (me && uid === me) {
+      alert("You cannot change your own disable/enable status.");
+      return;
+    }
+
+    setBusyUid(uid);
+
+    const token = await getAuth().currentUser.getIdToken();
+    const url = disabled ? "/api/admin/disable-user" : "/api/admin/enable-user";
+
+    await axios.post(
+      url,
+      { uid },
+      { headers: { authtoken: token } }
+    );
+
+    // update the row locally
+    setUsers(prev =>
+      prev.map(u =>
+        (u.uid || u.id || u._id) === uid ? { ...u, disabled } : u
+      )
+    );
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.error || "Failed to update user status.");
+  } finally {
+    setBusyUid(null);
+  }
+};
 
   const currentUid = getAuth().currentUser?.uid;
 
@@ -410,109 +447,123 @@ export default function Admin() {
         </section>
       )}
 
-      {/* ================= USERS TAB ================= */}
-      {tab === "users" && (
-        <section className="admin-card">
-          <div className="toolbar">
-            <div className="inputs">
-              <div className="searchbox">
-                <input
-                  value={uQuery}
-                  onChange={(e) => setUQuery(e.target.value)}
-                  placeholder="Search user by email…"
-                  aria-label="Search users by email"
-                />
-                {uQuery && (
-                  <button
-                    className="icon-btn"
-                    onClick={() => {
-                      setUQuery("");
-                      setUsers([]);
-                      setUError("");
-                    }}
-                    title="Clear"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-              <button className="btn" onClick={searchUsersByEmail} disabled={uLoading}>
-                {uLoading ? "Searching…" : "Search"}
-              </button>
-            </div>
-          </div>
+{/* ================= USERS TAB ================= */}
+{tab === "users" && (
+  <section className="admin-card">
+    <div className="toolbar">
+      <div className="inputs">
+        <div className="searchbox">
+          <input
+            value={uQuery}
+            onChange={(e) => setUQuery(e.target.value)}
+            placeholder="Search user by email…"
+            aria-label="Search users by email"
+          />
+          {uQuery && (
+            <button
+              className="icon-btn"
+              onClick={() => {
+                setUQuery("");
+                setUsers([]);
+                setUError("");
+              }}
+              title="Clear"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <button className="btn" onClick={searchUsersByEmail} disabled={uLoading}>
+          {uLoading ? "Searching…" : "Search"}
+        </button>
+      </div>
+    </div>
 
-          {uError && <div className="alert error">{uError}</div>}
+    {uError && <div className="alert error">{uError}</div>}
 
-          <div className="table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th className="hide-sm">Email</th>
-                  <th>Role</th>
-                  <th className="hide-sm">Status</th>
-                  <th style={{ width: 1 }} />
+    <div className="table-wrap">
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th className="hide-sm">Email</th>
+            <th>Role</th>
+            <th className="hide-sm">Status</th>
+            <th style={{ width: 1 }} />
+            <th style={{ width: 1 }} />
+          </tr>
+        </thead>
+
+        <tbody>
+          {users.length === 0 ? (
+            <tr>
+              {/* 🔧 was 5; header has 6 columns */}
+              <td colSpan={6} style={{ textAlign: "center" }}>
+                <div className="empty">No users. Try a different email.</div>
+              </td>
+            </tr>
+          ) : (
+            users.map((u) => {
+              const uid = u.uid || u.id || u._id;
+              const isSelf = currentUid && uid === currentUid;
+              return (
+                <tr key={uid}>
+                  <td>
+                    <div className="item-cell">
+                      <div className="thumb user">
+                        <img
+                          src={"/avatar-placeholder.png"}
+                          alt={u.displayName || "User"}
+                          onError={(e) =>
+                            (e.currentTarget.src = "/avatar-placeholder.png")
+                          }
+                        />
+                      </div>
+                      <div className="meta">
+                        <div className="title">
+                          {u.displayName || "Unnamed User"}
+                        </div>
+                        <div className="sub muted">{uid}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="hide-sm">{u.email || "—"}</td>
+                  <td>{u.isAdmin ? "Admin" : "User"}</td>
+                  <td className="hide-sm">{u.disabled ? "Disabled" : "Active"}</td>
+
+                  {/* Toggle Disable/Enable */}
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      className="icon-btn"
+                      title={u.disabled ? "Enable user" : "Disable user"}
+                      onClick={() => setUserDisabled(uid, !u.disabled)}
+                      disabled={busyUid === uid || isSelf}
+                    >
+                      {busyUid === uid ? "…" : (u.disabled ? "Enable" : "Disable")}
+                    </button>
+                  </td>
+
+                  {/* Delete */}
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      className="icon-btn danger"
+                      title={isSelf ? "You cannot delete your own account" : "Delete user"}
+                      onClick={() => !isSelf && requestDeleteUser(uid)}
+                      disabled={isSelf}
+                    >
+                      🗑
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: "center" }}>
-                      <div className="empty">No users. Try a different email.</div>
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((u) => {
-                    const uid = u.uid || u.id || u._id;
-                    const isSelf = currentUid && uid === currentUid;
-                    return (
-                      <tr key={uid}>
-                        <td>
-                          <div className="item-cell">
-                            <div className="thumb user">
-                              <img
-                                src={"/avatar-placeholder.png"}
-                                alt={u.displayName || "User"}
-                                onError={(e) =>
-                                  (e.currentTarget.src = "/avatar-placeholder.png")
-                                }
-                              />
-                            </div>
-                            <div className="meta">
-                              <div className="title">
-                                {u.displayName || "Unnamed User"}
-                              </div>
-                              <div className="sub muted">{uid}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="hide-sm">{u.email || "—"}</td>
-                        <td>{u.isAdmin ? "Admin" : "User"}</td>
-                        <td className="hide-sm">{u.disabled ? "Disabled" : "Active"}</td>
-                        <td style={{ textAlign: "right" }}>
-                          <button
-                            className="icon-btn danger"
-                            title={
-                              isSelf
-                                ? "You cannot delete your own account"
-                                : "Delete user"
-                            }
-                            onClick={() => !isSelf && requestDeleteUser(uid)}
-                            disabled={isSelf}
-                          >
-                            🗑
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}
+
 
       {/* Listing delete modal */}
       {confirmId && (

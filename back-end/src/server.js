@@ -145,7 +145,7 @@ const verifyUser = async (req, res, next) => {
     return res.sendStatus(401);
   }
 };
-// --- add near your other middleware ---
+
 const requireAdmin = (req, res, next) => {
   // If you set a custom claim like { isAdmin: true } on the user,
   // it will appear on the decoded token as req.user.isAdmin
@@ -171,19 +171,30 @@ app.delete("/api/admin/users/:uid", verifyUser, checkIfAdmin, requireAdmin, asyn
       return res.status(403).json({ error: "Cannot delete another admin user." });
     }
 
-    // 1) Delete auth account
+    //  Delete auth account
     await admin.auth().deleteUser(uid);
 
-    // 2) (Optional) Clean up marketplace data owned by that user
+    //  Clean up marketplace data owned by that user
     //    Examples (adjust to your schema/fields):
-    // await db.collection("items").deleteMany({ sellerUid: uid });
-    // or soft-delete:
-    // await db.collection("items").updateMany({ sellerUid: uid }, { $set: { sellerDeleted: true } });
 
     return res.status(204).send(); // No Content
   } catch (err) {
     console.error("Admin delete user error:", err);
     return res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+// Enable user (admin only)
+app.post('/api/admin/enable-user', verifyUser, requireAdmin, async (req, res) => {
+  const { uid } = req.body;
+  if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+  try {
+    await admin.auth().updateUser(uid, { disabled: false });
+    res.json({ success: true, message: "User enabled" });
+  } catch (error) {
+    console.error("Enable error:", error);
+    res.status(500).json({ error: "Failed to enable user" });
   }
 });
 
@@ -461,6 +472,8 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
       createdAt: new Date(),
     };
 
+
+    
     const result = await db.collection('items').insertOne(newListing);
 
     if (!result.acknowledged) {
