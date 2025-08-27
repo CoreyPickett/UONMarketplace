@@ -32,32 +32,15 @@ function timeAgo(dateLike) {
 export default function Dashboard() {
   const { user, isLoading } = useUser();
   const [loading, setLoading] = useState(true);
-
-  // marketplace
-  const [allListings, setAllListings] = useState([]);
-
-  // messages
-  const [allThreads, setAllThreads] = useState([]);
-
-  // small UI bit
-  const [refreshing, setRefreshing] = useState(false);
-
-  // gated: must be logged in
-  if (!isLoading && !user) {
-    return (
-      <NotLoggedIn
-        title="You’re not logged in"
-        message="Please sign in to view your dashboard."
-      />
-    );
-  }
+  const [allListings, setAllListings] = useState([]);  // marketplace
+  const [allThreads, setAllThreads] = useState([]); // messages
+  const [refreshing, setRefreshing] = useState(false); // small UI bit
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         setLoading(true);
-
         // fetch all listings (backend already sorts by createdAt desc)
         const [listingsRes, msgsRes] = await Promise.all([
           fetch("/api/marketplace/"),
@@ -88,9 +71,7 @@ export default function Dashboard() {
     if (!user) return { listings: [], threads: [] };
     const uid = user.uid;
     const email = user.email?.toLowerCase();
-
-    // My listings
-    const myListings = allListings.filter(
+    const myListings = allListings.filter( // My listings
       (l) => l.ownerUid === uid || (email && l.ownerEmail?.toLowerCase() === email)
     );
 
@@ -194,6 +175,15 @@ export default function Dashboard() {
   };
 
   return (
+    <>
+      {isLoading ? (
+        <div className="loading">Loading...</div>
+      ) : !user ? (
+        <NotLoggedIn
+          title="You’re not logged in"
+          message="Please sign in to view your dashboard."
+        />
+      ) : (
     <main className="dash">
       {/* Header */}
       <header className="dash__header">
@@ -364,5 +354,7 @@ export default function Dashboard() {
         </div>
       </section>
     </main>
+    )}
+  </>
   );
 }
