@@ -678,13 +678,13 @@ app.delete('/api/messages/:id', verifyUser, async (req, res) => {
 });
 
 //POST request for adding message to messages page
-app.post('/api/messages/:id/comments', verifyUser, async (req, res) => {
+app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
   const { id } = req.params;
-  const { postedBy, text } = req.body;
-  const newmessage = { postedBy, text };
+  const { postedBy, text } = req.body;                  // reciving wrong data 
+                                                        // what I need passed through the "body" are the values for 'from' and 'messages text'
 
   const updatedMessages = await db.collection('messages').findOneAndUpdate({ _id: new ObjectId(id) }, { //Get messages based on unique ID
-    $push: { messages: newmessage }
+    $push: { messages: { from: postedBy, body: text, at: new Date().toISOString() }} 
   }, {
     returnDocument: 'after',
   });
