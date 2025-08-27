@@ -1,26 +1,29 @@
-//Create Listing Form
+//Edit Listing Form
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import "./CreateListing.css";
+import "./EditListing.css";
 import NotLoggedIn from "./NotLoggedIn";
 
-export default function CreateListing() {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    category: "",
-    price: "",
-    condition: "",
-    location: "",
-    delivery_options: "",   
-    image: "",
-    seller: "",
-    quantity: 1,            
-  });
 
-  const [submitting, setSubmitting] = useState(false);
+
+export default function EditListing () {
+    const{ id } = useParams();
+    const [formData, setFormData] = useState({
+        title: "",
+        description: "",
+        category: "",
+        price: "",
+        condition: "",
+        location: "",
+        delivery_options: "",   
+        image: "",
+        seller: "",
+        quantity: 1,            
+      });
+    
+      const [submitting, setSubmitting] = useState(false);
 
   // preview fallbacks
   const [thumbFallback, setThumbFallback] = useState(false);
@@ -31,6 +34,24 @@ export default function CreateListing() {
   const [checkingUser, setCheckingUser] = useState(true);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchListing = async () => {
+        try {
+        const res = await axios.get(`/api/marketplace/${id}`);
+        if (res.status === 200 && res.data) {
+            setFormData(res.data);
+        } else {
+            throw new Error("Listing not found");
+        }
+        } catch (err) {
+        console.error("Failed to load listing:", err);
+        navigate("/marketplace"); // fallback
+        }
+    };
+
+    fetchListing();
+    }, [id]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(getAuth(), (u) => {
@@ -57,11 +78,6 @@ export default function CreateListing() {
       ...p,
       [name]: type === "number" ? Number(value) : value,
     }));
-  };
-
-  // If you later add multi-select fields, keep this helper
-  const handleArrayChange = (name, valueArray) => {
-    setFormData((prev) => ({ ...prev, [name]: valueArray }));
   };
 
   const priceAUD = useMemo(() => {
@@ -100,12 +116,12 @@ export default function CreateListing() {
         quantity: Number(formData.quantity || 1),
       };
 
-      const res = await axios.post("/api/marketplace/create-listing", payload, {
+      const res = await axios.put(`/api/marketplace/${id}`, payload, {
         headers: { authtoken: token },
       });
 
-      if (res.status === 201 && res.data?.success) {
-        alert("Listing created successfully!");
+      if (res.status === 200 && res.data?.success) {
+        alert("Listing updated successfully!");
         navigate("/marketplace");
       } else {
         throw new Error("Unexpected response from server.");
@@ -115,7 +131,7 @@ export default function CreateListing() {
       const status = err?.response?.status;
       const data = err?.response?.data;
       alert(
-        `Failed to create listing. ${status ? `Status: ${status}. ` : ""}${
+        `Failed to update listing. ${status ? `Status: ${status}. ` : ""}${
           data?.error || data?.message || ""
         }`
       );
@@ -136,17 +152,17 @@ export default function CreateListing() {
   if (!user) {
     return (
       <NotLoggedIn
-        title="You’re not logged in"
+        title="You're not logged in"
         message="You must be logged in to create a listing."
       />
     );
   }
 
   return (
-    <div className="create-listing-wrapper">
+    <div className="edit-listing-wrapper">
       <div>
-        <h1 style={{ textAlign: "center", marginBottom: 20 }}>Create New Listing</h1>
-        <form onSubmit={onSubmit} className="create-form">
+        <h1 style={{ textAlign: "center", marginBottom: 20 }}>Edit Listing</h1>
+        <form onSubmit={onSubmit} className="edit-form">
           <input
             name="title"
             placeholder="Title"
@@ -297,7 +313,7 @@ export default function CreateListing() {
           />
 
           <button type="submit" disabled={submitting}>
-            {submitting ? "Creating…" : "Create Listing"}
+            {submitting ? "Updating…" : "Edit Listing"}
           </button>
         </form>
       </div>

@@ -170,7 +170,7 @@ export default function Profile() {
               <p>Loading your listings…</p>
             ) : myListings.length === 0 ? (
               <div className="empty">
-                <p>You haven’t posted anything yet.</p>
+                <p>You haven't posted anything yet.</p>
                 <button className="btn btn-primary" onClick={() => navigate("/create-listing")}>
                   Create your first listing
                 </button>
@@ -202,6 +202,7 @@ export default function Profile() {
                       {l.location && <div className="loc">📍 {l.location}</div>}
                       <div className="actions">
                         <Link className="btn" to={`/marketplace/${l._id}`}>View</Link>
+                        <Link className="btn btn-secondary" to={`/edit-listing/${l._id}`}>Edit</Link>
                         <button
                           className="btn btn-danger"
                           onClick={() => deleteListing(l._id)}

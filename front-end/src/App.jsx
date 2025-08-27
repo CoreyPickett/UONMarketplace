@@ -13,6 +13,7 @@ import MarketPlace from "./pages/MarketPlace";
 import Listing from "./pages/Listing";
 import { loader as listingLoader } from "./listingLoader";
 import CreateListing from "./pages/CreateListing";
+import EditListing from "./pages/EditListing"
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -58,6 +59,10 @@ const routes = [
       {
         path: "create-listing",
         element: <CreateListing />
+      },
+      {
+        path: "edit-listing/:id",
+        element: <EditListing/>
       },
       {
         path: "profile",
