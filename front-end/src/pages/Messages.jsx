@@ -8,26 +8,57 @@ import "./Messages.css";
 const ProfileSearch = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [profiles, setProfiles] = useState([]);
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [starting, setStarting] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const me = getAuth().currentUser;
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
+    setProfiles([]);
     try {
-      const { data } = await api.get("/marketplace/");
-      // Filter results
-      const filtered = (data || []).filter(item =>
-        item.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      if (!searchTerm.trim()) {
+        setError("Please enter an email to search.");
+        setLoading(false);
+        return;
+      }
+      const current = getAuth().currentUser;
+      if (!current) {
+        setError("You must be logged in to search users.");
+        setLoading(false);
+        return;
+      }
+      const token = await current.getIdToken();
+      // Use the same endpoint as Admin.jsx
+      const res = await api.get("/admin/search-user", {
+        params: { email: searchTerm.trim() },
+        headers: { authtoken: token },
+      });
+      const u = res.data;
+      setProfiles(
+        u && (u.uid || u.id || u._id)
+          ? [
+              {
+                uid: u.uid || u.id || u._id,
+                email: u.email,
+                displayName: u.displayName,
+                disabled: u.disabled,
+                isAdmin: u.customClaims?.isAdmin === true,
+              },
+            ]
+          : []
       );
-      setProfiles(filtered);
+      if (!u || !(u.uid || u.id || u._id)) {
+        setError("No user found with that email.");
+      }
     } catch (err) {
-      console.error("Error fetching profiles:", err);
+      console.error("Error fetching user:", err);
       setProfiles([]);
+      setError(
+        err?.response?.data?.error || "Failed to fetch user. Check email and permissions."
+      );
     } finally {
       setLoading(false);
     }
@@ -35,20 +66,30 @@ const ProfileSearch = () => {
 
   return (
     <div>
-        <h2>Search Profiles</h2>
-        <form onSubmit={handleSearch}>
+      <h2>Search Profiles</h2>
+      <form onSubmit={handleSearch}>
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search profiles..."
         />
-        <button className="btn" type="submit">Search</button>
+        <button className="btn" type="submit" disabled={loading}>
+          {loading ? "Searching..." : "Search"}
+        </button>
       </form>
+      {error && <div className="alert error">{error}</div>}
       {profiles.length > 0 && (
         <ul style={{ marginTop: 10 }}>
           {profiles.map((p) => (
-            <li key={p._id || p.id || p.title}>{p.title}</li>
+            <li key={p.uid}>
+              <button className="profile-button" onClick={() => navigate(`/messages/${p.uid}`)}>
+                <strong>{p.displayName || "Unnamed User"}</strong> <br />
+                <span>{p.email}</span> <br />
+                <span>{p.isAdmin ? "Admin" : "User"}</span> <br />
+                <span>{p.disabled ? "Disabled" : "Active"}</span>
+              </button>
+            </li>
           ))}
         </ul>
       )}
