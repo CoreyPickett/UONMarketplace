@@ -248,11 +248,6 @@ export default function CreateListing() {
                 const filename = encodeURIComponent(file.name);
 
                 try {
-                  // If protected, include authtoken:
-                  // const token = await getAuth().currentUser?.getIdToken();
-                  // const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url",
-                  //   { params: { filename, filetype }, headers: { authtoken: token } });
-
                   const { data } = await axios.get(
                     "/api/marketplace/s3-upload-url",
                     { params: { filename, filetype } }

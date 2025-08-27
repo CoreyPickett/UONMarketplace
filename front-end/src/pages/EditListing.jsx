@@ -80,11 +80,6 @@ export default function EditListing () {
     }));
   };
 
-  // If you later add multi-select fields, keep this helper
-  const handleArrayChange = (name, valueArray) => {
-    setFormData((prev) => ({ ...prev, [name]: valueArray }));
-  };
-
   const priceAUD = useMemo(() => {
     const n = Number(formData.price);
     return Number.isFinite(n)
@@ -121,7 +116,7 @@ export default function EditListing () {
         quantity: Number(formData.quantity || 1),
       };
 
-      const res = await axios.put("/api/marketplace/${id}", payload, {
+      const res = await axios.put(`/api/marketplace/${id}`, payload, {
         headers: { authtoken: token },
       });
 
@@ -269,11 +264,6 @@ export default function EditListing () {
                 const filename = encodeURIComponent(file.name);
 
                 try {
-                  // If protected, include authtoken:
-                  // const token = await getAuth().currentUser?.getIdToken();
-                  // const { data } = await axios.get("/api/marketplace/create-listing/s3-upload-url",
-                  //   { params: { filename, filetype }, headers: { authtoken: token } });
-
                   const { data } = await axios.get(
                     "/api/marketplace/s3-upload-url",
                     { params: { filename, filetype } }

@@ -516,7 +516,7 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
       return res.status(403).json({ error: "You are not authorized to edit this listing." });
     }
 
-    // Optional: sanitize updates here
+    // Sanitise updates to only allow certain fields
     const allowedFields = [
       "title", "description", "category", "price", "condition",
       "location", "delivery_options", "image", "quantity", "seller"
@@ -526,10 +526,11 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
       if (key in updates) safeUpdates[key] = updates[key];
     }
 
-    const result = await db.collection('items').updateOne(
+    const result = await db.collection('items').updateOne( //Update DB
       { _id: new ObjectId(id) },
       { $set: safeUpdates }
     );
+
 
     if (result.modifiedCount === 1) {
       res.json({ success: true });
