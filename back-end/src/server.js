@@ -71,27 +71,31 @@ app.get(/^(?!\/api).+/, (req, res) => {
 })
 */
 
-
-
-
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).send('Internal Server Error');
 });
 
-
-
 //GET request for a listing
 app.get('/api/marketplace/:id', async (req, res) => {
   const { id } = req.params;
-  const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
-  res.json(listing);
+  try {
+    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    res.json(listing);
+  } catch (e) {
+    console.error("Fetch listing error:", e);
+    res.status(400).json({ error: "Invalid listing id" });
+  }
 });
 
-//GET request for Whole Marketplace
+// GET request for Whole Marketplace
 app.get('/api/marketplace/', async (req, res) => {
   try {
-    const listings = await db.collection('items').find().toArray(); //Lists all items in 'items' array
+    const listings = await db.collection('items')
+      .find()
+      .sort({ createdAt: -1 })
+      .toArray();
     res.status(200).json(listings);
   } catch (error) {
     console.error("Error fetching listings:", error);
@@ -126,7 +130,7 @@ function checkIfAdmin(req, res, next) {
   next();
 }
 
-//Verification for a logged in user
+// Verification for a logged in user
 const verifyUser = async (req, res, next) => {
   const { authtoken } = req.headers;
   
@@ -146,6 +150,7 @@ const verifyUser = async (req, res, next) => {
   }
 };
 
+// Custom function to check if user is admin verified
 const requireAdmin = (req, res, next) => {
   // If you set a custom claim like { isAdmin: true } on the user,
   // it will appear on the decoded token as req.user.isAdmin
@@ -198,75 +203,6 @@ app.post('/api/admin/enable-user', verifyUser, requireAdmin, async (req, res) =>
   }
 });
 
-
-//GET request for a listing
-app.get('/api/marketplace/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
-    res.json(listing);
-  } catch (e) {
-    console.error("Fetch listing error:", e);
-    res.status(400).json({ error: "Invalid listing id" });
-  }
-});
-
-// GET request for Whole Marketplace (single source of truth)
-app.get('/api/marketplace/', async (req, res) => {
-  try {
-    const listings = await db.collection('items')
-      .find()
-      .sort({ createdAt: -1 })       // <- optional sort by newest
-      .toArray(); //Lists all items in 'items' array
-    res.status(200).json(listings);
-  } catch (error) {
-    console.error("Error fetching listings:", error);
-    res.status(500).json({ error: "Failed to fetch listings" });
-  }
-});
-
-//GET for requested search critera in Marketplace (fixed: uses req.query + Mongo object filter)
-app.get('/api/search', async (req, res) => {
-  //parameter values
-  const { query, category, minPrice, maxPrice } = req.query;
-
-  console.log('Received search:', { query, category, minPrice, maxPrice });
-
-  // build Mongo filter object
-  const filter = {};
-
-  //double checking that title not empty
-  if (query !== "" && query !== undefined && query !== null) {
-    // case-insensitive regex match on title
-    filter.title = { $regex: String(query), $options: 'i' };
-  }
-
-  //double checking that category not empty
-  if (category !== "" && category !== undefined && category !== null) {
-    filter.category = String(category);
-  }
-
-  //double checking that max and min not empty
-  const min = minPrice !== undefined && minPrice !== "" ? Number(minPrice) : undefined;
-  const max = maxPrice !== undefined && maxPrice !== "" ? Number(maxPrice) : undefined;
-
-  if (Number.isFinite(min) || Number.isFinite(max)) {
-    filter.price = {};
-    if (Number.isFinite(min)) filter.price.$gte = min;
-    if (Number.isFinite(max)) filter.price.$lte = max;
-  }
-
-  try {
-    //Lists all items in 'items' array that adhere to the filter requirements 
-    const searchListings = await db.collection('items').find(filter).toArray();  
-    res.status(200).json(searchListings);
-  } catch (error) {
-    console.error("Error fetching searched listings:", error);
-    res.status(500).json({ error: "Failed to fetch searched listings" });
-  }
-});
-
 //POST request for updating upvotes
 app.post('/api/marketplace/:id/upvote', verifyUser, async (req, res) => {
   const { id } = req.params;
@@ -308,7 +244,7 @@ app.post('/api/marketplace/:id/upvote', verifyUser, async (req, res) => {
   }
 });
 
-//POST request for adding comments
+//POST request for adding comments (Not updated)
 app.post('/api/marketplace/:id/comments', verifyUser, async (req, res) => {
   const { id } = req.params;
   const { postedBy, text } = req.body;
@@ -322,8 +258,6 @@ app.post('/api/marketplace/:id/comments', verifyUser, async (req, res) => {
 
   res.json(updatedListing); //Update Listing
 });
-
-
 
 //DELETE request for deleting a listing
 app.delete('/api/marketplace/:id', verifyUser, async (req, res) => {
@@ -344,7 +278,7 @@ app.delete('/api/marketplace/:id', verifyUser, async (req, res) => {
 });
 
 //GET request for uploading images
-app.get('/api/marketplace/create-listing/s3-upload-url', async (req, res) => {
+app.get('/api/marketplace/s3-upload-url', async (req, res) => {
   const { filename, filetype } = req.query;
 
   const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]; //Sanity check for valid image types
@@ -494,21 +428,7 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
   }
 });
 
-// GET request for Whole Marketplace
-app.get('/api/marketplace/', async (req, res) => {
-  try {
-    const listings = await db.collection('items')
-      .find()
-      .sort({ createdAt: -1 })       // <- optional
-      .toArray();
-    res.status(200).json(listings);
-  } catch (error) {
-    console.error("Error fetching listings:", error);
-    res.status(500).json({ error: "Failed to fetch listings" });
-  }
-});
-
-// GET request for Advanced Seacrh Function
+// GET request for Advanced Search Function
 app.get('/api/search', async (req, res) => {
   try {
     const {
@@ -575,6 +495,54 @@ app.get('/api/search', async (req, res) => {
     res.status(500).json({ error: "Failed to perform search" });
   }
 });
+
+//PUT request for Editing Listings
+app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  try {
+    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+
+    // Ownership check
+    const uid = req.user.uid;
+    const email = req.user.email?.toLowerCase();
+    const isOwner =
+      listing.ownerUid === uid ||
+      (email && listing.ownerEmail?.toLowerCase() === email);
+
+    if (!isOwner) {
+      return res.status(403).json({ error: "You are not authorized to edit this listing." });
+    }
+
+    // Optional: sanitize updates here
+    const allowedFields = [
+      "title", "description", "category", "price", "condition",
+      "location", "delivery_options", "image", "quantity", "seller"
+    ];
+    const safeUpdates = {};
+    for (const key of allowedFields) {
+      if (key in updates) safeUpdates[key] = updates[key];
+    }
+
+    const result = await db.collection('items').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: safeUpdates }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ error: "Failed to update listing." });
+    }
+  } catch (e) {
+    console.error("Update listing error:", e);
+    res.status(400).json({ error: "Invalid listing id or update payload." });
+  }
+});
+
+
 
 // \/\/\/\/ Stuff for messages below \/\/\/\/ -------------------------------------------------------------------------
 
