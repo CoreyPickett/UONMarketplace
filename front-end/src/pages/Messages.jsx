@@ -258,3 +258,21 @@ export default function Messages() {
     </main>
   );
 }
+
+// The actual part that allows you to send messages through the server
+export async function sendMessage(conversationId, messageText) {
+  const user = getAuth().currentUser;
+  if (!user) throw new Error("Not logged in");
+  const token = await user.getIdToken(); //authentication
+
+  await api.post(
+    `/messages/${conversationId}/messages`, //send POST to back-end
+    {
+      postedBy: user.displayName || user.email || user.uid,
+      text: messageText,
+    },
+    {
+      headers: { authtoken: token },
+    }
+  );
+}

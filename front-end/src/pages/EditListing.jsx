@@ -161,8 +161,8 @@ export default function EditListing () {
   return (
     <div className="edit-listing-wrapper">
       <div>
-        <h1 style={{ textAlign: "center", marginBottom: 20 }}>Edit Listing</h1>
-        <form onSubmit={onSubmit} className="edit-form">
+  <h1 className="listing-edit-title">Edit Listing</h1>
+  <form onSubmit={onSubmit} className="edit-form">
           <input
             name="title"
             placeholder="Title"
@@ -196,7 +196,7 @@ export default function EditListing () {
             <option value="Other">Other</option>
           </select>
 
-          <div style={{ display: "flex", gap: 15 }}>
+          <div className="edit-form-row">
             <input
               name="price"
               type="text"
@@ -208,12 +208,12 @@ export default function EditListing () {
             />
           </div>
           {priceAUD && (
-            <div style={{ color: "#4b5563", fontSize: 14 }}>
+            <div className="edit-form-price-preview">
               Preview price: {priceAUD}
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 15 }}>
+          <div className="edit-form-row">
             <select
               name="condition"
               value={formData.condition}
@@ -251,7 +251,7 @@ export default function EditListing () {
             <option value="Postal Delivery">Postal Delivery</option>
           </select>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
+          <div className="edit-form-image-row">
             <input
               type="file"
               accept="image/jpeg, image/png, image/webp, image/gif"
@@ -283,23 +283,11 @@ export default function EditListing () {
                 }
               }}
             />
-            <div
-              style={{
-                width: 72,
-                height: 48,
-                borderRadius: 6,
-                overflow: "hidden",
-                background: "#e5e7eb",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1px solid #ddd",
-              }}
-            >
+            <div className="edit-form-thumb-preview">
               <img
                 src={thumbSrc}
                 alt="thumb"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                className="edit-form-thumb-img"
                 onError={() => setThumbFallback(true)}
               />
             </div>
@@ -318,9 +306,9 @@ export default function EditListing () {
         </form>
       </div>
 
-      <div style={{ marginTop: 0 }}>
-        <h3 style={{ margin: "0 0 12px" }}>Preview</h3>
-        <div className="listing-card" style={{ width: 280 }}>
+      <div className="edit-listing-preview">
+        <h3 className="edit-listing-preview-title">Preview</h3>
+        <div className="listing-card">
           <div className="listing-image-wrapper">
             <img
               src={previewSrc}
@@ -328,7 +316,7 @@ export default function EditListing () {
               className="listing-image"
               onError={() => setPreviewFallback(true)}
             />
-            <div style={{ position: "absolute", left: 12, bottom: 12, display: "flex", gap: 8 }}>
+            <div className="listing-badges">
               {formData.condition && <span className="badge">{formData.condition}</span>}
               {formData.price && <span className="badge badge-primary">{priceAUD}</span>}
             </div>

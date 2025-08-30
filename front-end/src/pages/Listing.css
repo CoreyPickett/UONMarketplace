@@ -1,0 +1,33 @@
+.listing-actions-row {
+  display: flex;
+  gap: 14px;
+  margin: 28px 0 0 0;
+  justify-content: flex-start;
+}
+
+.ListingOptions {
+  padding: 12px 22px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  font-size: 1rem;
+  background: #003057;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: background 0.18s, transform 0.12s, box-shadow 0.12s;
+}
+
+.ListingOptions:hover, .ListingOptions:focus {
+  background: #008bee;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.ListingOptions.secondary {
+  background: #e5e7eb;
+  color: #003057;
+}
+
+.ListingOptions.secondary:hover, .ListingOptions.secondary:focus {
+  background: #8a8a8a;
+}

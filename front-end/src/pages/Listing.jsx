@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useParams, useLoaderData } from 'react-router-dom';
 import axios from 'axios';
 import useUser from '../useUser';
+import "./Listing.css"
 
 const formatAUD = (n) =>
   Number.isFinite(Number(n))
@@ -69,7 +70,7 @@ export default function Listing() {
     <div style={{ maxWidth: 980, margin: '16px auto', padding: '0 16px' }}>
       <h1 style={{ margin: '12px 0 16px' }}>{listing.title}</h1>
 
-      {/* Hero image with overlay badges */}
+      {/* Hero image */}
       <div
         style={{
           position: 'relative',
@@ -87,10 +88,11 @@ export default function Listing() {
           onError={(e) => (e.currentTarget.src = '/placeholder-listing.jpg')}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
-        <div style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', gap: 8 }}>
-          {listing.condition ? <span className="badge">{listing.condition}</span> : null}
-          {'price' in listing ? <span className="badge badge-primary">{priceText}</span> : null}
-        </div>
+      </div>
+      {/* Badges below image */}
+      <div style={{ display: 'flex', gap: 8, margin: '8px 0 18px 0' }}>
+        {listing.condition ? <span className="badge">{listing.condition}</span> : null}
+        {'price' in listing ? <span className="badge badge-primary">{priceText}</span> : null}
       </div>
 
       {/* Actions */}
@@ -163,6 +165,11 @@ export default function Listing() {
           </p>
         )}
       </section>
+      <div className="listing-actions-row">
+        <button className="ListingOptions">Buy Now</button>
+        <button className="ListingOptions secondary">Save</button>
+        <button className="ListingOptions secondary">Message seller</button>
+      </div>
     </div>
   );
 }
