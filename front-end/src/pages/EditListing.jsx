@@ -54,6 +54,14 @@ export default function EditListing () {
     }, [id]);
 
   useEffect(() => {
+    if (formData.image) {
+      setThumbFallback(false);
+      setPreviewFallback(false);
+    }
+  }, [formData.image]);
+
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(getAuth(), (u) => {
       setUser(u || null);
       setCheckingUser(false);
@@ -257,11 +265,19 @@ export default function EditListing () {
               accept="image/jpeg, image/png, image/webp, image/gif"
               onChange={async (e) => {
                 const file = e.target.files[0];
+
                 if (!file) return;
 
+                const rawType = file.type?.toLowerCase(); //Extra sanitisation to exclude file type errors
                 const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-                const filetype = validTypes.includes(file.type) ? file.type : "image/jpeg";
-                const filename = encodeURIComponent(file.name);
+                const filetype = validTypes.includes(rawType) ? rawType : "image/jpeg";
+                const filename = encodeURIComponent(file.name?.trim());
+
+                if (!filename || !filetype) {
+                  console.error("Invalid filename or filetype:", { filename, filetype });
+                  alert("Unsupported image type or missing filename.");
+                  return;
+                }
 
                 try {
                   const { data } = await axios.get(

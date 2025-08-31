@@ -71,22 +71,14 @@ app.get(/^(?!\/api).+/, (req, res) => {
 })
 */
 
+// Check for valid MongoDB ID to avoid crashes
+function isValidObjectId(id) {
+    return ObjectId.isValid(id) && String(new ObjectId(id)) === id;
+  }
+
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).send('Internal Server Error');
-});
-
-//GET request for a listing
-app.get('/api/marketplace/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
-    res.json(listing);
-  } catch (e) {
-    console.error("Fetch listing error:", e);
-    res.status(400).json({ error: "Invalid listing id" });
-  }
 });
 
 // GET request for Whole Marketplace
@@ -283,13 +275,14 @@ app.get('/api/marketplace/s3-upload-url', async (req, res) => {
 
   const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]; //Sanity check for valid image types
   if (!validTypes.includes(filetype)) {
+    console.warn("Rejected filetype:", filetype);
     return res.status(400).send("Invalid file type");
   }
 
-  if (!filename || !filetype) { //Sanity check for incomplete query
+  if (!filename || !filetype) {
+    console.warn("Missing filename or filetype:", { filename, filetype });
     return res.status(400).send("Missing filename or filetype");
   }
-
 
   const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, ''); //Remove unwanted characters
   const key = `listings/${Date.now()}_${safeFilename}`;
@@ -505,6 +498,11 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
     const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
     if (!listing) return res.status(404).json({ error: "Listing not found" });
 
+    if (!isValidObjectId(id)) { //Check for valid ObjectID
+    return res.status(400).json({ error: "Invalid listing ID format." });
+  }
+
+
     // Ownership check
     const uid = req.user.uid;
     const email = req.user.email?.toLowerCase();
@@ -540,6 +538,25 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
   } catch (e) {
     console.error("Update listing error:", e);
     res.status(400).json({ error: "Invalid listing id or update payload." });
+  }
+});
+
+//GET request for a listing (Moved to end to resolve routing issues)
+app.get('/api/marketplace/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!isValidObjectId(id)) {
+    console.warn("Invalid ObjectId received:", id);
+    return res.status(400).json({ error: "Invalid listing ID format." });
+  }
+
+  try {
+    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    res.json(listing);
+  } catch (e) {
+    console.error("Fetch listing error:", e);
+    res.status(400).json({ error: "Invalid listing id" });
   }
 });
 
