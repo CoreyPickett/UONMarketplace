@@ -375,7 +375,6 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
       location,
       delivery_options,
       image,
-      seller,
     } = req.body;
 
     const newListing = {
@@ -387,7 +386,6 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
       location,
       delivery_options,
       image,
-      seller,
       //  ownership fields for Profile "My Listings"
       ownerUid: uid || null,
       ownerEmail: email || null,

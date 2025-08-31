@@ -161,7 +161,7 @@ export default function Listing() {
         )}
         {listing.seller && (
           <p>
-            <strong>Seller:</strong> {listing.seller}
+            <strong>Seller:</strong> {listing.ownerEmail.split("@")[0]}
           </p>
         )}
       </section>

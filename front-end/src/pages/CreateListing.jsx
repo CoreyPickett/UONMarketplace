@@ -289,13 +289,6 @@ export default function CreateListing() {
             </div>
           </div>
 
-          <input
-            name="seller"
-            placeholder="Seller Name"
-            value={formData.seller}
-            onChange={handleChange}
-          />
-
           <button type="submit" disabled={submitting}>
             {submitting ? "Creating…" : "Create Listing"}
           </button>
@@ -322,7 +315,7 @@ export default function CreateListing() {
             <h3 className="listing-title">{formData.title || "Listing title"}</h3>
             {formData.category && <p className="listing-category">{formData.category}</p>}
             {formData.location && <p className="listing-location">📍 {formData.location}</p>}
-            {formData.seller && <p className="listing-name">Listed by {formData.seller}</p>}
+            {formData.seller && <p className="listing-name">Listed by {formData.ownerEmail.split("@")[0]}</p>}
           </div>
         </div>
       </div>

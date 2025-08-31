@@ -24,7 +24,7 @@ export default function MarketPlaceList({ listings }) {
                 <p className="listing-category">Condition: {listing.condition}</p>
                 <p className="listing-price">{listing.price}</p>
                 <p className="listing-content">{listing.content?.[0]}</p>
-                <p className="listing-name">Listed by {listing.seller}</p>
+                <p className="listing-name">Listed by {listing.ownerEmail.split("@")[0]}</p>
               </div>
             </Link>
           </div>

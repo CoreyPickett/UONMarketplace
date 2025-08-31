@@ -65,7 +65,7 @@ export default function MarketPlace() {
 
     if (qq) {
       out = out.filter((l) =>
-        [l.title, l.description, l.category, l.location, l.seller]
+        [l.title, l.description, l.category, l.location, l.ownerEmail]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(qq))
       );
