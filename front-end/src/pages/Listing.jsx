@@ -17,6 +17,8 @@ export default function Listing() {
 
   const [upvotes, setUpvotes] = useState(Number(listing?.upvotes || 0));
   const [didUpvote, setDidUpvote] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
 
   // If the loader delivers new data (nav), sync state
   useEffect(() => {
@@ -60,9 +62,10 @@ export default function Listing() {
   const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
   const region = import.meta.env.VITE_AWS_REGION;
 
-  const heroImg = listing.image?.startsWith('http') //Allows hero image with direct url and key
-  ? listing.image
-  : `https://${bucket}.s3.${region}.amazonaws.com/${listing.image}`;
+  const images = Array.isArray(listing.images) && listing.images.length > 0
+  ? listing.images
+  : [listing.image || '/placeholder-listing.jpg'];
+
 
   const priceText = formatAUD(listing.price);
 
@@ -70,7 +73,6 @@ export default function Listing() {
     <div style={{ maxWidth: 980, margin: '16px auto', padding: '0 16px' }}>
       <h1 style={{ margin: '12px 0 16px' }}>{listing.title}</h1>
 
-      {/* Hero image */}
       <div
         style={{
           position: 'relative',
@@ -83,12 +85,62 @@ export default function Listing() {
         }}
       >
         <img
-          src={heroImg}
-          alt={listing.title}
+          src={images[currentImageIndex]}
+          alt={`Image ${currentImageIndex + 1}`}
           onError={(e) => (e.currentTarget.src = '/placeholder-listing.jpg')}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
+
+
+        {/* Navigation buttons */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={() =>
+                setCurrentImageIndex((i) => (i === 0 ? images.length - 1 : i - 1))
+              }
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: 12,
+                transform: 'translateY(-50%)',
+                background: '#fff',
+                border: '1px solid #ccc',
+                borderRadius: '50%',
+                padding: '6px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              ←
+            </button>
+            <button
+              onClick={() =>
+                setCurrentImageIndex((i) => (i === images.length - 1 ? 0 : i + 1))
+              }
+              style={{
+                position: 'absolute',
+                top: '50%',
+                right: 12,
+                transform: 'translateY(-50%)',
+                background: '#fff',
+                border: '1px solid #ccc',
+                borderRadius: '50%',
+                padding: '6px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              →
+            </button>
+          </>
+        )}
       </div>
+
+      {images.length > 1 && (
+          <div style={{ textAlign: 'center', fontSize: 14, color: '#6b7280', marginBottom: 8 }}>
+            Image {currentImageIndex + 1} of {images.length}
+          </div>
+        )}
+
       {/* Badges below image */}
       <div style={{ display: 'flex', gap: 8, margin: '8px 0 18px 0' }}>
         {listing.condition ? <span className="badge">{listing.condition}</span> : null}

@@ -272,40 +272,41 @@ export default function Dashboard() {
             </div>
           ) : (
             <ul className="item-list">
-              {latestMyListings.map((l) => (
-                <li className="item" key={String(l._id)}>
-                  <div className="item__thumb">
-                    <img
-                      src={
-                        l.image?.startsWith("http")
-                          ? l.image
-                          : l.image
-                          ? `/image/${l.image}`
-                          : "/placeholder-listing.jpg"
-                      }
-                      alt={l.title || "Listing"}
-                      onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
-                    />
-                  </div>
-                  <div className="item__meta">
-                    <div className="item__title">{l.title || "Untitled"}</div>
-                    <div className="item__sub">
-                      {l.category || "—"} • {l.location || "Location N/A"}
+              {latestMyListings.map((l) => {
+                const thumbnail =
+                  Array.isArray(l.images) && l.images.length > 0
+                    ? l.images[0]
+                    : l.image || "/placeholder-listing.jpg";
+
+                return (
+                  <li className="item" key={String(l._id)}>
+                    <div className="item__thumb">
+                      <img
+                        src={thumbnail}
+                        alt={l.title || "Listing"}
+                        onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                      />
                     </div>
-                    <div className="item__badges">
-                      {typeof l.price === "number" && (
-                        <span className="badge badge--primary">{formatAUD(l.price)}</span>
-                      )}
-                      {l.condition && <span className="badge">{l.condition}</span>}
-                      <span className="badge">⬆ {l.upvotes ?? 0}</span>
+                    <div className="item__meta">
+                      <div className="item__title">{l.title || "Untitled"}</div>
+                      <div className="item__sub">
+                        {l.category || "—"} • {l.location || "Location N/A"}
+                      </div>
+                      <div className="item__badges">
+                        {typeof l.price === "number" && (
+                          <span className="badge badge--primary">{formatAUD(l.price)}</span>
+                        )}
+                        {l.condition && <span className="badge">{l.condition}</span>}
+                        <span className="badge">⬆ {l.upvotes ?? 0}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="item__tail">
-                    <div className="muted">{timeAgo(l.createdAt)}</div>
-                    <Link to={`/marketplace/${l._id}`} className="btn btn-ghost">View</Link>
-                  </div>
-                </li>
-              ))}
+                    <div className="item__tail">
+                      <div className="muted">{timeAgo(l.createdAt)}</div>
+                      <Link to={`/marketplace/${l._id}`} className="btn btn-ghost">View</Link>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

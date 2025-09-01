@@ -374,7 +374,7 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
       condition,
       location,
       delivery_options,
-      image,
+      images,
     } = req.body;
 
     const newListing = {
@@ -385,7 +385,7 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
       condition,
       location,
       delivery_options,
-      image,
+      images: Array.isArray(images) ? images : [], //Initialise images as an array for multiple images per listing
       //  ownership fields for Profile "My Listings"
       ownerUid: uid || null,
       ownerEmail: email || null,
@@ -397,6 +397,16 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
       createdAt: new Date(),
     };
 
+    //Maximum number of Images
+    if (images.length > 10) { 
+      return res.status(400).json({ error: "Maximum 10 images allowed." });
+    }
+
+    //Ensure valid S3 URL
+    const isValidUrl = (url) => typeof url === "string" && url.startsWith("https://");
+    if (!images.every(isValidUrl)) {
+      return res.status(400).json({ error: "Invalid image URL format." });
+    }
 
     
     const result = await db.collection('items').insertOne(newListing);
@@ -493,12 +503,14 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
   const updates = req.body;
 
   try {
+    //Check for valid ObjectID
+    if (!isValidObjectId(id)) { 
+        return res.status(400).json({ error: "Invalid listing ID format." });
+      }
+
     const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
     if (!listing) return res.status(404).json({ error: "Listing not found" });
 
-    if (!isValidObjectId(id)) { //Check for valid ObjectID
-    return res.status(400).json({ error: "Invalid listing ID format." });
-  }
 
 
     // Ownership check
@@ -515,12 +527,28 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
     // Sanitise updates to only allow certain fields
     const allowedFields = [
       "title", "description", "category", "price", "condition",
-      "location", "delivery_options", "image", "quantity", "seller"
+      "location", "delivery_options", "images", "quantity", "seller"
     ];
     const safeUpdates = {};
     for (const key of allowedFields) {
       if (key in updates) safeUpdates[key] = updates[key];
     }
+
+    //Image safeguard
+    if ("images" in safeUpdates) {
+      const images = safeUpdates.images;
+      if (!Array.isArray(images)) {
+        return res.status(400).json({ error: "Images must be an array." });
+      }
+      if (images.length > 10) {
+        return res.status(400).json({ error: "Maximum 10 images allowed." });
+      }
+      const isValidUrl = (url) => typeof url === "string" && url.startsWith("https://");
+      if (!images.every(isValidUrl)) {
+        return res.status(400).json({ error: "Invalid image URL format." });
+      }
+    }
+
 
     const result = await db.collection('items').updateOne( //Update DB
       { _id: new ObjectId(id) },

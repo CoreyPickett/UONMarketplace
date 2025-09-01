@@ -18,16 +18,11 @@ export default function EditListing () {
         condition: "",
         location: "",
         delivery_options: "",   
-        image: "",
-        seller: "",
+        images: [],
         quantity: 1,            
       });
     
       const [submitting, setSubmitting] = useState(false);
-
-  // preview fallbacks
-  const [thumbFallback, setThumbFallback] = useState(false);
-  const [previewFallback, setPreviewFallback] = useState(false);
 
   // render-level, not inside onSubmit
   const [user, setUser] = useState(null);
@@ -40,7 +35,11 @@ export default function EditListing () {
         try {
         const res = await axios.get(`/api/marketplace/${id}`);
         if (res.status === 200 && res.data) {
-            setFormData(res.data);
+          const safeData = {
+            ...res.data,
+            images: Array.isArray(res.data.images) ? res.data.images : [],
+          };
+          setFormData((prev) => ({ ...prev, ...safeData }));
         } else {
             throw new Error("Listing not found");
         }
@@ -52,13 +51,6 @@ export default function EditListing () {
 
     fetchListing();
     }, [id]);
-
-  useEffect(() => {
-    if (formData.image) {
-      setThumbFallback(false);
-      setPreviewFallback(false);
-    }
-  }, [formData.image]);
 
 
   useEffect(() => {
@@ -85,6 +77,43 @@ export default function EditListing () {
     setFormData((p) => ({
       ...p,
       [name]: type === "number" ? Number(value) : value,
+    }));
+  };
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    const uploadedUrls = [];
+
+    for (const file of files) {
+      const filename = encodeURIComponent(file.name);
+      const filetype = file.type;
+
+      try {
+        //Match backend image limit
+        if (formData.images.length + files.length > 10) {
+          alert("You can upload up to 10 images per listing.");
+          return;
+        }
+
+        const { data } = await axios.get("/api/marketplace/s3-upload-url", {
+          params: { filename, filetype },
+        });
+
+        await axios.put(data.uploadURL, file, {
+          headers: { "Content-Type": filetype },
+        });
+
+        const imageUrl = `https://${import.meta.env.VITE_S3_BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${data.key}`;
+        uploadedUrls.push(imageUrl);
+      } catch (err) {
+        console.error("Image upload failed:", err);
+        alert("Image upload failed. Please try again.");
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...uploadedUrls],
     }));
   };
 
@@ -148,12 +177,17 @@ export default function EditListing () {
     }
   };
 
-  // image preview sources
-  const thumbSrc =
-    thumbFallback || !formData.image ? "/placeholder-listing.jpg" : formData.image;
+  // Remove image before submitting function
+  const removeImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
 
-  const previewSrc =
-    previewFallback || !formData.image ? "/placeholder-listing.jpg" : formData.image;
+
+  // image preview source (updated for multiple images)
+  const previewSrc = formData.images?.[0] || "/placeholder-listing.jpg";
 
   // route to not logged in page if not logged in
   if (checkingUser) return null; 
@@ -259,55 +293,37 @@ export default function EditListing () {
             <option value="Postal Delivery">Postal Delivery</option>
           </select>
 
-          <div className="edit-form-image-row">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 72px", gap: 12 }}>
             <input
               type="file"
+              multiple
               accept="image/jpeg, image/png, image/webp, image/gif"
-              onChange={async (e) => {
-                const file = e.target.files[0];
-
-                if (!file) return;
-
-                const rawType = file.type?.toLowerCase(); //Extra sanitisation to exclude file type errors
-                const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-                const filetype = validTypes.includes(rawType) ? rawType : "image/jpeg";
-                const filename = encodeURIComponent(file.name?.trim());
-
-                if (!filename || !filetype) {
-                  console.error("Invalid filename or filetype:", { filename, filetype });
-                  alert("Unsupported image type or missing filename.");
-                  return;
-                }
-
-                try {
-                  const { data } = await axios.get(
-                    "/api/marketplace/s3-upload-url",
-                    { params: { filename, filetype } }
-                  );
-
-                  await axios.put(data.uploadURL, file, {
-                    headers: { "Content-Type": filetype },
-                  });
-
-                  const imageUrl = `https://${import.meta.env.VITE_S3_BUCKET_NAME}.s3.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${data.key}`;
-                  setFormData((prev) => ({ ...prev, image: imageUrl }));
-                  setThumbFallback(false);
-                  setPreviewFallback(false);
-                } catch (error) {
-                  console.error("Image upload failed:", error);
-                  alert("Image upload failed. Please try again.");
-                }
-              }}
+              onChange={handleImageUpload}
             />
-            <div className="edit-form-thumb-preview">
+            <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+              You can upload up to 10 images. The first image will be used as the listing thumbnail.
+            </p>
+            <div
+              style={{
+                width: 72,
+                height: 48,
+                borderRadius: 6,
+                overflow: "hidden",
+                background: "#e5e7eb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid #ddd",
+              }}
+            >
               <img
-                src={thumbSrc}
-                alt="thumb"
-                className="edit-form-thumb-img"
-                onError={() => setThumbFallback(true)}
+                src={previewSrc}
+                alt="Preview"
+                className="listing-image"
               />
             </div>
           </div>
+
 
           <button type="submit" disabled={submitting}>
             {submitting ? "Updating…" : "Edit Listing"}
@@ -321,21 +337,61 @@ export default function EditListing () {
           <div className="listing-image-wrapper">
             <img
               src={previewSrc}
-              alt={formData.title || "Preview image"}
+              alt="Preview"
               className="listing-image"
-              onError={() => setPreviewFallback(true)}
             />
             <div className="listing-badges">
               {formData.condition && <span className="badge">{formData.condition}</span>}
               {formData.price && <span className="badge badge-primary">{priceAUD}</span>}
             </div>
           </div>
-
+          <div
+          className="image-preview-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(72px, 1fr))",
+            gap: "8px",
+            marginTop: "12px",
+          }}
+        >
+          {formData.images.map((url, i) => (
+            <div key={i} style={{ position: "relative" }}>
+              <img
+                src={url}
+                alt={`Image ${i + 1}`}
+                className="thumbnail"
+                style={{
+                  width: "100%",
+                  height: 48,
+                  objectFit: "cover",
+                  borderRadius: 6,
+                  border: "1px solid #ddd",
+                  background: "#e5e7eb",
+                }}
+                onError={(e) => (e.target.src = "/placeholder-listing.jpg")}
+              />
+              <button
+                type="button"
+                onClick={() => removeImage(i)}
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  right: 2,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "50%",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
           <div className="listing-info">
             <h3 className="listing-title">{formData.title || "Listing title"}</h3>
             {formData.category && <p className="listing-category">{formData.category}</p>}
             {formData.location && <p className="listing-location">📍 {formData.location}</p>}
-            {formData.seller && <p className="listing-name">Listed by {formData.ownerEmail.split("@")[0]}</p>}
           </div>
         </div>
       </div>
