@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Messages from "./pages/Messages";
 import DirectMessage from "./pages/DirectMessage"; 
+import Saved from "./pages/Saved";  
 
 
 // Layout with Header
@@ -39,6 +40,7 @@ const routes = [
         path: "login",
         element: <Login />
       },
+       { path: "saved", element: <Saved /> },  
       {
         path: "registration",
         element: <Registration />

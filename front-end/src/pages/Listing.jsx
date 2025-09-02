@@ -1,26 +1,27 @@
-//Individual Listing 
-import { useMemo, useState, useEffect } from 'react';
-import { useParams, useLoaderData } from 'react-router-dom';
-import axios from 'axios';
-import useUser from '../useUser';
-import "./Listing.css"
+// src/pages/Listing.jsx
+// Individual Listing
+import { useMemo, useState, useEffect } from "react";
+import { useParams, useLoaderData } from "react-router-dom";
+import axios from "axios";
+import useUser from "../useUser";
+import SaveButton from "../SaveButton"; // top-only Save button
+import "./Listing.css";
 import BuyNowModal from "../components/BuyNow.jsx";
 
 const formatAUD = (n) =>
   Number.isFinite(Number(n))
-    ? Number(n).toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })
+    ? Number(n).toLocaleString("en-AU", { style: "currency", currency: "AUD" })
     : n;
 
 export default function Listing() {
   const { id } = useParams();
   const listing = useLoaderData();
-  const { isLoading, user } = useUser();
+  const { user } = useUser();
 
   const [upvotes, setUpvotes] = useState(Number(listing?.upvotes || 0));
   const [didUpvote, setDidUpvote] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showBuyNow, setShowBuyNow] = useState(false);
-
 
   // If the loader delivers new data (nav), sync state
   useEffect(() => {
@@ -42,13 +43,12 @@ export default function Listing() {
       const headers = { authtoken: token };
       const res = await axios.post(`/api/marketplace/${id}/upvote`, null, { headers });
 
-      // Server returns { success, listing, upvotes }
       const next = res.data?.upvotes ?? res.data?.listing?.upvotes;
-      if (typeof next === 'number') setUpvotes(next);
+      if (typeof next === "number") setUpvotes(next);
       setDidUpvote(true);
     } catch (e) {
-      console.error('Upvote failed:', e);
-      alert('Upvote failed. Please try again.');
+      console.error("Upvote failed:", e);
+      alert("Upvote failed. Please try again.");
     }
   }
 
@@ -61,40 +61,45 @@ export default function Listing() {
     );
   }
 
-  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
-  const region = import.meta.env.VITE_AWS_REGION;
-
-  const images = Array.isArray(listing.images) && listing.images.length > 0
-  ? listing.images
-  : [listing.image || '/placeholder-listing.jpg'];
-
+  // Images (array or single), with fallback
+  const images =
+    Array.isArray(listing.images) && listing.images.length > 0
+      ? listing.images
+      : [listing.image || "/placeholder-listing.jpg"];
 
   const priceText = formatAUD(listing.price);
 
   return (
-    <div style={{ maxWidth: 980, margin: '16px auto', padding: '0 16px' }}>
-      <h1 style={{ margin: '12px 0 16px' }}>{listing.title}</h1>
+    <div style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
+      {/* Title + Save (top only) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <h1 style={{ margin: "12px 0 16px" }}>{listing.title}</h1>
+        <SaveButton listingId={listing._id} />
+        {typeof listing.saves === "number" && (
+          <span className="badge">{listing.saves} saved</span>
+        )}
+      </div>
 
+      {/* Hero image */}
       <div
         style={{
-          position: 'relative',
+          position: "relative",
           height: 300,
           borderRadius: 12,
-          overflow: 'hidden',
-          boxShadow: '0 6px 18px rgba(0,0,0,0.10)',
+          overflow: "hidden",
+          boxShadow: "0 6px 18px rgba(0,0,0,0.10)",
           marginBottom: 18,
-          background: '#e5e7eb',
+          background: "#e5e7eb",
         }}
       >
         <img
           src={images[currentImageIndex]}
           alt={`Image ${currentImageIndex + 1}`}
-          onError={(e) => (e.currentTarget.src = '/placeholder-listing.jpg')}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
 
-
-        {/* Navigation buttons */}
+        {/* Image nav */}
         {images.length > 1 && (
           <>
             <button
@@ -102,15 +107,15 @@ export default function Listing() {
                 setCurrentImageIndex((i) => (i === 0 ? images.length - 1 : i - 1))
               }
               style={{
-                position: 'absolute',
-                top: '50%',
+                position: "absolute",
+                top: "50%",
                 left: 12,
-                transform: 'translateY(-50%)',
-                background: '#fff',
-                border: '1px solid #ccc',
-                borderRadius: '50%',
-                padding: '6px 10px',
-                cursor: 'pointer',
+                transform: "translateY(-50%)",
+                background: "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "50%",
+                padding: "6px 10px",
+                cursor: "pointer",
               }}
             >
               ←
@@ -120,15 +125,15 @@ export default function Listing() {
                 setCurrentImageIndex((i) => (i === images.length - 1 ? 0 : i + 1))
               }
               style={{
-                position: 'absolute',
-                top: '50%',
+                position: "absolute",
+                top: "50%",
                 right: 12,
-                transform: 'translateY(-50%)',
-                background: '#fff',
-                border: '1px solid #ccc',
-                borderRadius: '50%',
-                padding: '6px 10px',
-                cursor: 'pointer',
+                transform: "translateY(-50%)",
+                background: "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "50%",
+                padding: "6px 10px",
+                cursor: "pointer",
               }}
             >
               →
@@ -138,49 +143,51 @@ export default function Listing() {
       </div>
 
       {images.length > 1 && (
-          <div style={{ textAlign: 'center', fontSize: 14, color: '#6b7280', marginBottom: 8 }}>
-            Image {currentImageIndex + 1} of {images.length}
-          </div>
-        )}
+        <div style={{ textAlign: "center", fontSize: 14, color: "#6b7280", marginBottom: 8 }}>
+          Image {currentImageIndex + 1} of {images.length}
+        </div>
+      )}
 
       {/* Badges below image */}
-      <div style={{ display: 'flex', gap: 8, margin: '8px 0 18px 0' }}>
+      <div style={{ display: "flex", gap: 8, margin: "8px 0 18px 0" }}>
         {listing.condition ? <span className="badge">{listing.condition}</span> : null}
-        {'price' in listing ? <span className="badge badge-primary">{priceText}</span> : null}
+        {"price" in listing ? (
+          <span className="badge badge-primary">{priceText}</span>
+        ) : null}
       </div>
 
-      {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      {/* Actions (Upvote + count) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         {user ? (
           <button
             onClick={onUpvoteClicked}
             disabled={!canUpvote}
             style={{
-              background: canUpvote ? '#003057' : '#9aa6b2',
-              color: '#fff',
-              border: 'none',
+              background: canUpvote ? "#003057" : "#9aa6b2",
+              color: "#fff",
+              border: "none",
               borderRadius: 10,
-              padding: '10px 14px',
-              cursor: canUpvote ? 'pointer' : 'not-allowed',
+              padding: "10px 14px",
+              cursor: canUpvote ? "pointer" : "not-allowed",
               fontWeight: 800,
             }}
           >
-            {alreadyUpvoted || didUpvote ? 'Upvoted' : 'Upvote'}
+            {alreadyUpvoted || didUpvote ? "Upvoted" : "Upvote"}
           </button>
         ) : (
-          <span style={{ color: '#6b7280' }}>Sign in to upvote</span>
+          <span style={{ color: "#6b7280" }}>Sign in to upvote</span>
         )}
-        <span style={{ color: '#374151' }}>
-          This listing has <strong>{upvotes}</strong> upvote{upvotes === 1 ? '' : 's'}
+        <span style={{ color: "#374151" }}>
+          This listing has <strong>{upvotes}</strong> upvote{upvotes === 1 ? "" : "s"}
         </span>
       </div>
 
       {/* Details */}
       <section
         style={{
-          background: '#fff',
+          background: "#fff",
           borderRadius: 12,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
           padding: 16,
           lineHeight: 1.55,
         }}
@@ -193,7 +200,7 @@ export default function Listing() {
             <strong>Category:</strong> {listing.category}
           </p>
         )}
-        {'price' in listing && (
+        {"price" in listing && (
           <p>
             <strong>Price:</strong> {priceText}
           </p>
@@ -210,25 +217,28 @@ export default function Listing() {
         )}
         {Array.isArray(listing.delivery_options) && listing.delivery_options.length > 0 && (
           <p>
-            <strong>Delivery Options:</strong> {listing.delivery_options.join(', ')}
+            <strong>Delivery Options:</strong> {listing.delivery_options.join(", ")}
           </p>
         )}
         {listing.seller && (
           <p>
-            <strong>Seller:</strong> {listing.ownerEmail.split("@")[0]}
+            <strong>Seller:</strong> {listing.seller}
           </p>
         )}
       </section>
+
+      {/* Bottom actions row (Save removed) */}
       <div className="listing-actions-row">
-        <button className="ListingOptions" onClick={() => setShowBuyNow(true)}>Buy Now</button>
-        <button className="ListingOptions secondary">Save</button>
+        <button className="ListingOptions" onClick={() => setShowBuyNow(true)}>
+          Buy Now
+        </button>
         <button className="ListingOptions secondary">Message seller</button>
       </div>
-       {/* Buy Now Modal */}
-      {showBuyNow && listing && (
-        <BuyNowModal listing={listing} onClose={(success) => setShowBuyNow(false)} />
-      )}
 
+      {/* Buy Now Modal */}
+      {showBuyNow && listing && (
+        <BuyNowModal listing={listing} onClose={() => setShowBuyNow(false)} />
+      )}
     </div>
   );
 }
