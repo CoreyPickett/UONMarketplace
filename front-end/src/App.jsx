@@ -79,6 +79,11 @@ const routes = [
       {
       path: "messages/:id",
         element: <DirectMessage />
+      },
+      {
+        path: "marketplace/:id/buy",
+        element: <Listing />,  // same page
+        loader: listingLoader,
       }
     ]
   }

@@ -4,6 +4,7 @@ import { useParams, useLoaderData } from 'react-router-dom';
 import axios from 'axios';
 import useUser from '../useUser';
 import "./Listing.css"
+import BuyNowModal from "../components/BuyNow.jsx";
 
 const formatAUD = (n) =>
   Number.isFinite(Number(n))
@@ -18,6 +19,7 @@ export default function Listing() {
   const [upvotes, setUpvotes] = useState(Number(listing?.upvotes || 0));
   const [didUpvote, setDidUpvote] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showBuyNow, setShowBuyNow] = useState(false);
 
 
   // If the loader delivers new data (nav), sync state
@@ -218,10 +220,15 @@ export default function Listing() {
         )}
       </section>
       <div className="listing-actions-row">
-        <button className="ListingOptions">Buy Now</button>
+        <button className="ListingOptions" onClick={() => setShowBuyNow(true)}>Buy Now</button>
         <button className="ListingOptions secondary">Save</button>
         <button className="ListingOptions secondary">Message seller</button>
       </div>
+       {/* Buy Now Modal */}
+      {showBuyNow && listing && (
+        <BuyNowModal listing={listing} onClose={(success) => setShowBuyNow(false)} />
+      )}
+
     </div>
   );
 }
