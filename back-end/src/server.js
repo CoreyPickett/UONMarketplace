@@ -673,15 +673,15 @@ app.delete('/api/saves/:id', verifyUser, async (req, res) => {
 
 //GET request for a messages
 app.get('/api/messages/:id', async (req, res) => {
-  
-   const { id } = req.params;
-  
-  if (!ObjectId.isValid(id)) {
-    return res.status(400).json({ error: 'Invalid message ID format.' });
-  }
+  const { id } = req.params;
 
   try {
-    const message = await db.collection('messages').findOne({ _id: new ObjectId(id) });
+    // Try to use ObjectId if valid, else use string as-is
+    const query = ObjectId.isValid(id)
+      ? { _id: new ObjectId(id) }
+      : { _id: id }; // Use string directly
+
+    const message = await db.collection('messages').findOne(query);
 
     if (!message) {
       return res.status(404).json({ error: 'Message not found.' });
