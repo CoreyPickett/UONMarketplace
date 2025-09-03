@@ -777,7 +777,7 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
                                                         // what I need passed through the "body" are the values for 'from' and 'messages text'
 
   const updatedMessages = await db.collection('messages').findOneAndUpdate({ _id: new ObjectId(id) }, { //Get messages based on unique ID
-    $push: { messages: { from: postedBy, body: text, at: new Date().toISOString() }} 
+    $push: { messages: { from: postedBy, body: text, at: new Date().toISOString() }}   // currently having issues with mostlikely the new objectid part
   }, {
     returnDocument: 'after',
   });
