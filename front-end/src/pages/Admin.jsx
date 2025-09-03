@@ -380,58 +380,64 @@ const setUserDisabled = async (uid, disabled) => {
                         </td>
                       </tr>
                     ) : (
-                      filtered.map((l) => (
-                        <tr key={String(l._id)}>
-                          <td>
-                            <div className="item-cell">
-                              <div className="thumb">
-                                <img
-                                  src={
-                                    l.image?.startsWith("http")
-                                      ? l.image
-                                      : l.image
-                                      ? `/image/${l.image}`
-                                      : "/placeholder-listing.jpg"
-                                  }
-                                  alt={l.title || "Listing"}
-                                  onError={(e) =>
-                                    (e.currentTarget.src =
-                                      "/placeholder-listing.jpg")
-                                  }
-                                />
-                              </div>
-                              <div className="meta">
-                                <div className="title">
-                                  {l.title || "Untitled"}
+                      filtered.map((l) => {
+                        const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+                        const region = import.meta.env.VITE_AWS_REGION;
+
+                        const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string"
+                          ? l.images[0]
+                          : null;
+
+                        const thumbnail = imageKey?.startsWith("http")
+                          ? imageKey
+                          : imageKey
+                            ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                            : l.image?.startsWith("http")
+                              ? l.image
+                              : l.image
+                                ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                                : "/placeholder-listing.jpg";
+
+                        return (
+                          <tr key={String(l._id)}>
+                            <td>
+                              <div className="item-cell">
+                                <div className="thumb">
+                                  <img
+                                    src={thumbnail}
+                                    alt={l.title || "Listing"}
+                                    onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                                  />
                                 </div>
-                                <div className="sub muted">
-                                  {l.location || "Location N/A"}
+                                <div className="meta">
+                                  <div className="title">{l.title || "Untitled"}</div>
+                                  <div className="sub muted">{l.location || "Location N/A"}</div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="hide-sm">{l.category || "—"}</td>
-                          <td>
-                            {typeof l.price === "number"
-                              ? l.price.toLocaleString("en-AU", {
-                                  style: "currency",
-                                  currency: "AUD",
-                                })
-                              : "—"}
-                          </td>
-                          <td className="hide-md">{l.seller || "—"}</td>
-                          <td>{l.upvotes ?? 0}</td>
-                          <td>
-                            <button
-                              className="icon-btn danger"
-                              title="Delete listing"
-                              onClick={() => onDeleteListing(l._id)}
-                            >
-                              🗑
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                            </td>
+                            <td className="hide-sm">{l.category || "—"}</td>
+                            <td>
+                              {typeof l.price === "number"
+                                ? l.price.toLocaleString("en-AU", {
+                                    style: "currency",
+                                    currency: "AUD",
+                                  })
+                                : "—"}
+                            </td>
+                            <td className="hide-md">{l.seller || "—"}</td>
+                            <td>{l.upvotes ?? 0}</td>
+                            <td>
+                              <button
+                                className="icon-btn danger"
+                                title="Delete listing"
+                                onClick={() => onDeleteListing(l._id)}
+                              >
+                                🗑
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

@@ -262,35 +262,52 @@ export default function Dashboard() {
             </div>
           ) : (
             <ul className="list">
-              {latestMyListings.map((l) => (
-                <li key={String(l._id)} className="list__row">
-                  <div className="item-cell">
-                    <div className="thumb">
-                      <img
-                        src={l.image || "/placeholder-listing.jpg"}
-                        alt={l.title || "Listing"}
-                        onError={(e) =>
-                          (e.currentTarget.src = "/placeholder-listing.jpg")
-                        }
-                      />
-                    </div>
-                    <div className="meta">
-                      <div className="title">{l.title || "Untitled"}</div>
-                      <div className="sub">
-                        {formatAUD(l.price)} · {timeAgo(l.createdAt)}
+              {latestMyListings.map((l) => {
+                const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+                const region = import.meta.env.VITE_AWS_REGION;
+
+                const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string"
+                  ? l.images[0]
+                  : null;
+
+                const thumbnail = imageKey?.startsWith("http")
+                  ? imageKey
+                  : imageKey
+                    ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                    : l.image?.startsWith("http")
+                      ? l.image
+                      : l.image
+                        ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                        : "/placeholder-listing.jpg";
+
+                return (
+                  <li key={String(l._id)} className="list__row">
+                    <div className="item-cell">
+                      <div className="thumb">
+                        <img
+                          src={thumbnail}
+                          alt={l.title || "Listing"}
+                          onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                        />
+                      </div>
+                      <div className="meta">
+                        <div className="title">{l.title || "Untitled"}</div>
+                        <div className="sub">
+                          {formatAUD(l.price)} · {timeAgo(l.createdAt)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="row-actions">
-                    <Link className="btn btn-ghost" to={`/marketplace/${l._id}`}>
-                      View
-                    </Link>
-                    <Link className="btn btn-ghost" to={`/edit-listing/${l._id}`}>
-                      Edit
-                    </Link>
-                  </div>
-                </li>
-              ))}
+                    <div className="row-actions">
+                      <Link className="btn btn-ghost" to={`/marketplace/${l._id}`}>
+                        View
+                      </Link>
+                      <Link className="btn btn-ghost" to={`/edit-listing/${l._id}`}>
+                        Edit
+                      </Link>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

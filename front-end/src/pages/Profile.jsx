@@ -177,43 +177,62 @@ export default function Profile() {
               </div>
             ) : (
               <div className="cards-grid">
-                {myListings.map((l) => (
-                  <article className="card" key={l._id}>
-                    <div className="card-img">
-                      <img
-                        src={l.image || "/placeholder-listing.jpg"}
-                        alt={l.title}
-                        onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
-                      />
-                      <div className="badges">
-                        {l.condition && <span className="badge">{l.condition}</span>}
-                        {"price" in l && (
-                          <span className="badge badge-primary">
-                            {Number(l.price || 0).toLocaleString("en-AU", {
-                              style: "currency",
-                              currency: "AUD",
-                            })}
-                          </span>
-                        )}
+                {myListings.map((l) => {
+                  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+                  const region = import.meta.env.VITE_AWS_REGION;
+
+                  const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string"
+                    ? l.images[0]
+                    : null;
+
+                  const thumbnail = imageKey?.startsWith("http")
+                    ? imageKey
+                    : imageKey
+                      ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                      : l.image?.startsWith("http")
+                        ? l.image
+                        : l.image
+                          ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                          : "/placeholder-listing.jpg";
+
+                  return (
+                    <article className="card" key={l._id}>
+                      <div className="card-img">
+                        <img
+                          src={thumbnail}
+                          alt={l.title}
+                          onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                        />
+                        <div className="badges">
+                          {l.condition && <span className="badge">{l.condition}</span>}
+                          {"price" in l && (
+                            <span className="badge badge-primary">
+                              {Number(l.price || 0).toLocaleString("en-AU", {
+                                style: "currency",
+                                currency: "AUD",
+                              })}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="card-body">
-                      <h4 title={l.title}>{l.title}</h4>
-                      {l.location && <div className="loc">📍 {l.location}</div>}
-                      <div className="actions">
-                        <Link className="btn" to={`/marketplace/${l._id}`}>View</Link>
-                        <Link className="btn btn-secondary" to={`/edit-listing/${l._id}`}>Edit</Link>
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => deleteListing(l._id)}
-                          disabled={deletingId === String(l._id)}
-                        >
-                          {deletingId === String(l._id) ? "Deleting…" : "Delete"}
-                        </button>
+                      <div className="card-body">
+                        <h4 title={l.title}>{l.title}</h4>
+                        {l.location && <div className="loc">📍 {l.location}</div>}
+                        <div className="actions">
+                          <Link className="btn" to={`/marketplace/${l._id}`}>View</Link>
+                          <Link className="btn btn-secondary" to={`/edit-listing/${l._id}`}>Edit</Link>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => deleteListing(l._id)}
+                            disabled={deletingId === String(l._id)}
+                          >
+                            {deletingId === String(l._id) ? "Deleting…" : "Delete"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>

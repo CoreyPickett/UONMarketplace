@@ -3,13 +3,26 @@ import { Link } from "react-router-dom";
 import './MarketPlaceList.css';
 
 export default function MarketPlaceList({ listings }) {
+  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+  const region = import.meta.env.VITE_AWS_REGION;
+
   return (
     <div className="marketplace-grid">
       {Array.isArray(listings) && listings.length > 0 ? (
         listings.map((listing) => {
-          const thumbnail = Array.isArray(listing.images) && listing.images.length > 0
+          const imageKey = Array.isArray(listing.images) && typeof listing.images[0] === "string"
             ? listing.images[0]
-            : listing.image || "/placeholder-listing.jpg";
+            : null;
+
+          const thumbnail = imageKey?.startsWith("http")
+            ? imageKey
+            : imageKey
+              ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+              : listing.image?.startsWith("http")
+                ? listing.image
+                : listing.image
+                  ? `https://${bucket}.s3.${region}.amazonaws.com/${listing.image}`
+                  : "/placeholder-listing.jpg";
 
           return (
             <div key={listing._id} className="listing-card">
@@ -22,7 +35,6 @@ export default function MarketPlaceList({ listings }) {
                     onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
                   />
                 </div>
-
                 <div className="listing-info">
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-category">Condition: {listing.condition}</p>
