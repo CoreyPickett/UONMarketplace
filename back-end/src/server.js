@@ -773,16 +773,29 @@ app.delete('/api/messages/:id', verifyUser, async (req, res) => {
 //POST request for adding message to messages page
 app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
   const { id } = req.params;
-  const { postedBy, text } = req.body;                  // reciving wrong data 
+  const { user } = useAuth();
+  const me = user.id;
+  const {text } = req.body;                  // reciving wrong data 
                                                         // what I need passed through the "body" are the values for 'from' and 'messages text'
 
+  try {
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ error: "Invalid message ID" });
+  }
+
   const updatedMessages = await db.collection('messages').findOneAndUpdate({ _id: new ObjectId(id) }, { //Get messages based on unique ID
-    $push: { messages: { from: postedBy, body: text, at: new Date().toISOString() }}   // currently having issues with mostlikely the new objectid part
+    $push: { messages: { from: me, body: text, at: new Date().toISOString() }}   // currently having issues with mostlikely the new objectid part
   }, {
     returnDocument: 'after',
   });
 
   res.json(updatedMessages); //Update Messages
+
+  } catch (e) {
+  console.error("Error updating messages:", e);
+  res.status(500).json({ error: "Internal server error" });
+}
+
 });
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000

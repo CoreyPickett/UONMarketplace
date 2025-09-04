@@ -58,12 +58,17 @@ export default function DirectMessage() {
 
   // Send new message
   const handleSend = async (body) => {
+    
+    console.log("🧪 Sending message with:");
+    console.log("ID:", id);             // <- route param
+    console.log("Message body:", body); // <- message text
+    
     // Add message 
     const temp = { _id: `tmp_${Date.now()}`, from: me, body, at: new Date().toISOString() };
     setMessages((prev) => [...prev, temp]);
     try {
       // Try to send to backend
-      const { data } = await api.post(`/messages/${id}/messages`, { postedBy: me, text: body });
+      const { data } = await api.post(`/messages/${id}/messages`, { body });
       const real = data?.messages || temp;
       // Replace temp message with real one from backend
       setMessages((prev) => prev.map((m) => (m._id === temp._id ? real : m)));
