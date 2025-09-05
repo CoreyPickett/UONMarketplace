@@ -17,6 +17,7 @@ export default function BuyNowModal({ listing, onClose }) {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVC, setCardCVC] = useState("");
+  const [showCVC, setShowCVC] = useState(false);
 
   // Close on escape button
   useEffect(() => {
@@ -129,6 +130,11 @@ export default function BuyNowModal({ listing, onClose }) {
               Pay in Cash (in person)
             </label>
           </div>
+        {paymentMethod === "cash" && listing.location && (
+          <div className="modal-row" style={{ marginBottom: 12, color: '#374151', fontSize: 15 }}>
+            <strong>Meet up at:</strong> {listing.location}
+          </div>
+        )}
         </div>
 
         {paymentMethod === "credit" && (
@@ -139,36 +145,69 @@ export default function BuyNowModal({ listing, onClose }) {
                 id="cardNumber"
                 type="text"
                 value={cardNumber}
-                onChange={e => setCardNumber(e.target.value)}
+                required
+                onChange={e => {
+                  const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 16);
+                  const formatted = digitsOnly.replace(/(.{4})/g, '$1-').replace(/-$/, '');
+                  setCardNumber(formatted);
+                }}
                 style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #d1d5db' }}
-                placeholder="1234 5678 9012 3456"
+                placeholder="****-****-****-****"
                 maxLength={19}
               />
             </div>
-            <div className="modal-row" style={{ marginBottom: 12, display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
+            <div className="modal-row" style={{ marginBottom: 12, display: 'flex', gap: 20 }}>
+        <div style={{ flex: '0 0 90px', position: 'relative', maxWidth: 90 }}>
                 <label htmlFor="cardExpiry" style={{ color: '#374151', display: 'block', marginBottom: 2 }}>Expiry</label>
                 <input
                   id="cardExpiry"
                   type="text"
                   value={cardExpiry}
-                  onChange={e => setCardExpiry(e.target.value)}
+                  required
+                  onChange={e => {
+                    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    const formatted = digitsOnly.replace(/(\d{2})(\d{0,2})/, (match, g1, g2) => g2 ? `${g1}/${g2}` : g1);
+                    setCardExpiry(formatted);
+                  }}
                   style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #d1d5db' }}
                   placeholder="MM/YY"
                   maxLength={5}
                 />
               </div>
-              <div style={{ flex: 1 }}>
+        <div style={{ flex: '0 0 90px', position: 'relative', maxWidth: 100 }}>
                 <label htmlFor="cardCVC" style={{ color: '#374151', display: 'block', marginBottom: 2 }}>CVC</label>
                 <input
                   id="cardCVC"
-                  type="text"
+                  type={showCVC ? "text" : "password"}
                   value={cardCVC}
-                  onChange={e => setCardCVC(e.target.value)}
-                  style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #d1d5db' }}
+                  required
+                  onChange={e => {
+                    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 3);
+                    const formatted = digitsOnly;
+                    setCardCVC(formatted);
+                  }}
+          style={{ width: '100%', padding: 6, borderRadius: 6, border: '1px solid #d1d5db', paddingRight: 36, maxWidth: 90 }}
                   placeholder="123"
                   maxLength={4}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowCVC(v => !v)}
+                  style={{
+                    position: 'absolute',
+                    right: -40,
+                    top: 28,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: 16,
+                    color: '#003057',
+                  }}
+                  aria-label={showCVC ? "Hide CVC" : "Show CVC"}
+                >
+                  {showCVC ? 'Hide' : 'Show'}
+                </button>
               </div>
             </div>
           </>
