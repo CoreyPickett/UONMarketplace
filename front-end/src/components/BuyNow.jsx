@@ -193,18 +193,8 @@ export default function BuyNowModal({ listing, onClose }) {
                 <button
                   type="button"
                   onClick={() => setShowCVC(v => !v)}
-                  style={{
-                    position: 'absolute',
-                    right: -40,
-                    top: 28,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    fontSize: 16,
-                    color: '#003057',
-                  }}
                   aria-label={showCVC ? "Hide CVC" : "Show CVC"}
+                  className="modal-cvc-toggle"
                 >
                   {showCVC ? 'Hide' : 'Show'}
                 </button>
@@ -224,35 +214,13 @@ export default function BuyNowModal({ listing, onClose }) {
             onClick={handleConfirm}
             disabled={isSubmitting || !user}
             className="btn-primary"
-            style={{
-              background: '#003057',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 18px',
-              fontWeight: 600,
-              fontSize: 16,
-              cursor: isSubmitting || !user ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting || !user ? 0.7 : 1,
-              transition: 'background 0.2s',
-            }}
+
           >
             {isSubmitting ? "Placing order..." : "Confirm purchase"}
           </button>
           <button
             onClick={() => onClose(false)}
             className="btn-secondary"
-            style={{
-              background: '#e5e7eb',
-              color: '#003057',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 18px',
-              fontWeight: 600,
-              fontSize: 16,
-              cursor: 'pointer',
-              transition: 'background 0.2s',
-            }}
           >
             Cancel
           </button>

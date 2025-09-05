@@ -9,7 +9,7 @@
 /* Sidebar: deep navy with readable controls */
 .sidebar {
   width: 260px;
-  padding: 1.5rem;
+  padding: 3rem;
   background-color: #003865; /* deep UON navy */
   color: #ffffff;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
@@ -27,6 +27,8 @@
   margin-bottom: 1.1rem;
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  margin-bottom: 0px;
 }
 
 .filter-group label {
@@ -38,13 +40,14 @@
 .filter-group input,
 .filter-group select {
   width: 100%;
-  padding: 10px;
+  padding: 12px 18px;
   border: 1px solid #d7dde5;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   background-color: #ffffff;
   color: #1c1c1c;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
 }
 
 /* Note under price fields */
@@ -75,7 +78,7 @@
 .search-btn:hover { filter: brightness(0.98); }
 .search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Reset button: subtle */
+/* Reset button */
 .reset-btn {
   background: #e5e7eb;
   color: #111827;
@@ -84,8 +87,12 @@
   padding: 10px 14px;
   font-weight: 600;
   cursor: pointer;
+  
 }
-.reset-btn:hover { background: #dfe3e7; }
+.reset-btn:hover {
+  background: #cfd4da; /* make slightly darker shade when hovering over button */
+  color: #008cff;      /* optional: change text color to navy */
+}
 
 /* Main listing section */
 .listing-section {
