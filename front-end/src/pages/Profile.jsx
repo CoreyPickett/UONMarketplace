@@ -285,6 +285,7 @@ export default function Profile() {
           </div>
         )}
 
+        {/* Saved */}
         {activeTab === "saved" && (
           <div className="panel">
             <h3>Saved Items</h3>
@@ -350,10 +351,12 @@ export default function Profile() {
           </div>
         )}
 
+        {/* Settings */}
         {activeTab === "settings" && (
           <div className="panel">
             <h3>Settings</h3>
 
+            {/* Update Email */}
             <div className="settings-actions">
               <div className="action-block">
                 <button
@@ -364,6 +367,7 @@ export default function Profile() {
                 </button>
               </div>
 
+              {/* Update Password */}
               <div className="action-block">
                 <button
                   className="btn btn-primary"
@@ -376,6 +380,7 @@ export default function Profile() {
 
             <hr />
 
+            {/* Sign Out */}
             <button
               className="btn"
               onClick={async () => {
