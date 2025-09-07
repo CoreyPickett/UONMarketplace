@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { getAuth } from "firebase/auth";
+import { getAuth, updatePassword, updateEmail} from "firebase/auth";
 import useUser from "../useUser";
 import "./Profile.css";
 
@@ -12,6 +12,12 @@ export default function Profile() {
   const [allListings, setAllListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [changing, setChanging] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [updatingEmail, setUpdatingEmail] = useState(false);
+
+
 
   // NEW: saved IDs (prefer server, fallback to localStorage)
   const [savedIds, setSavedIds] = useState([]);
@@ -347,7 +353,29 @@ export default function Profile() {
         {activeTab === "settings" && (
           <div className="panel">
             <h3>Settings</h3>
-            <p className="muted">More settings coming soon.</p>
+
+            <div className="settings-actions">
+              <div className="action-block">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate("/updateEmail")}
+                >
+                  Change Email
+                </button>
+              </div>
+
+              <div className="action-block">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate("/updatePswd")}
+                >
+                  Change Password
+                </button>
+              </div>
+            </div>
+
+            <hr />
+
             <button
               className="btn"
               onClick={async () => {

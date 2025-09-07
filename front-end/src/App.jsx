@@ -19,7 +19,10 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Messages from "./pages/Messages";
 import DirectMessage from "./pages/DirectMessage"; 
-import Saved from "./pages/Saved";  
+import Saved from "./pages/Saved"; 
+import UpdateEmail from "./pages/UpdateEmail";
+import UpdatePswd from "./pages/UpdatePswd";
+import UpdateSuccess from "./pages/UpdateSuccess"; 
 
 
 // Layout with Header
@@ -73,6 +76,18 @@ const routes = [
       {
         path: "admin",
         element: <Admin />
+      },
+      {
+        path: "updateEmail",
+        element: <UpdateEmail />
+      },
+      {
+        path: "updatePswd",
+        element: <UpdatePswd />
+      },
+      {
+        path: "updateSuccess",
+        element: <UpdateSuccess />
       },
       {
         path: "messages",

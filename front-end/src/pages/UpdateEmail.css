@@ -1,0 +1,56 @@
+/* Centered container for the update email form */
+.update-email-container {
+  width: 320px;
+  margin: 100px auto;
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  font-family: sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Form layout */
+.update-email-container form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Input styling */
+.update-email-container input {
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* Submit button */
+.update-email-container button[type="submit"] {
+  padding: 10px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Back link */
+.update-email-container .back-link {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.update-email-container .back-link a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.update-email-container .back-link a:hover {
+  text-decoration: underline;
+}
+
+/* Optional: page background */
+body {
+  background-color: #f0f2f5;
+  margin: 0;
+  padding: 0;
+}
