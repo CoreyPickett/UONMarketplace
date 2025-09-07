@@ -1,121 +1,132 @@
-/* Layout */
-.marketplace-container {
-  display: flex;
-  background-color: #f5f5f5;
+/* Page shell */
+.mp-wrap {
+  background: #f5f5f5;
   min-height: 100vh;
   color: #1c1c1c;
 }
 
-/* Sidebar: deep navy with readable controls */
-.sidebar {
-  width: 260px;
-  padding: 3rem;
-  background-color: #003865; /* deep UON navy */
-  color: #ffffff;
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+/* Sticky toolbar */
+.mp-toolbar {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 14px 16px;
 }
 
-.sidebar h3 {
-  font-size: 1.25rem;
-  margin-bottom: 1.25rem;
-  color: #ffffff;
-}
-
-/* Filters */
-.filter-group {
-  margin-bottom: 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 0px;
-}
-
-.filter-group label {
-  font-weight: 700;
-  margin-bottom: 0.45rem;
-  color: #ffffff;
-}
-
-.filter-group input,
-.filter-group select {
-  width: 100%;
-  padding: 12px 18px;
+/* Big search bar (icon removed) */
+.mp-search {
+  max-width: 900px;
+  margin: 0 auto 10px;
   border: 1px solid #d7dde5;
-  border-radius: 12px;
-  font-size: 1rem;
-  background-color: #ffffff;
-  color: #1c1c1c;
-  margin-bottom: 14px;
-  box-sizing: border-box;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #f9fafb;
 }
 
-/* Note under price fields */
-.range-note {
-  font-size: 0.85rem;
-  color: #e5e7eb;
-  margin-top: -2px;
-  margin-bottom: 10px;
-}
-
-/* Buttons stack */
-.filter-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Search button: white with navy text for readability */
-.search-btn {
-  background-color: #ffffff;
-  color: #003865;
-  font-weight: 700;
+.mp-input {
+  width: 100%;
   border: none;
-  border-radius: 8px;
-  padding: 10px 14px;
-  cursor: pointer;
-}
-.search-btn:hover { filter: brightness(0.98); }
-.search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-/* Reset button */
-.reset-btn {
-  background: #e5e7eb;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
   color: #111827;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+}
+.mp-input::placeholder { color: #9ca3af; }
+
+/* Filter row */
+.mp-row {
+  display: grid;
+  grid-template-columns: 1fr 260px 200px auto; /* category | price | sort | actions */
+  gap: 10px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (max-width: 1100px) {
+  .mp-row { grid-template-columns: 1fr 1fr 1fr; }
+}
+@media (max-width: 760px) {
+  .mp-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .mp-row { grid-template-columns: 1fr; }
+}
+
+.mp-select {
+  width: 100%;
+  border: 1px solid #d7dde5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+}
+
+/* Min/Max box (fits neatly) */
+.mp-price {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d7dde5;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: #fff;
+}
+.mp-price-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+  color: #111827;
+  min-width: 0;           /* keeps inputs from overflowing */
+}
+.mp-price-input::placeholder { color: #9ca3af; }
+.mp-price-sep { text-align: center; color: #6b7280; }
+
+/* Actions: Search + Reset next to each other */
+.mp-actions {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mp-btn {
+  background: #003057;
+  color: #ffffff;
+  border: 1px solid #003057;
+  border-radius: 10px;
   padding: 10px 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  
+  transition: filter 120ms ease;
 }
-.reset-btn:hover {
-  background: #cfd4da; /* make slightly darker shade when hovering over button */
-  color: #008cff;      /* optional: change text color to navy */
+.mp-btn:hover { filter: brightness(0.95); }
+.mp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.mp-btn-ghost {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+.mp-btn-ghost:hover { background: #f3f4f6; }
+
+/* Note under toolbar */
+.mp-note {
+  max-width: 1100px;
+  margin: 8px auto 0;
+  color: #9ca3af;
+  font-size: 13px;
 }
 
-/* Main listing section */
-.listing-section {
-  flex: 1;
-  padding: 2rem;
-  background-color: #f5f5f5;
+/* Results area */
+.mp-results {
+  max-width: 1200px;
+  margin: 18px auto;
+  padding: 0 16px 24px;
 }
-
-.listing-section h2 {
-  margin-bottom: 1.5rem;
-  font-size: 1.75rem;
-  color: #003057;
-}
-
-/* Card hover (kept if you use MarketPlaceList.css) */
-.listing-card {
-  background-color: white;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  transition: box-shadow 0.2s ease;
-}
-.listing-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+.mp-heading { margin: 8px 0 16px; color: #003057; }

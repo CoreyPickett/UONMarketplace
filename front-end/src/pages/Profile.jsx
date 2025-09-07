@@ -8,9 +8,13 @@ import "./Profile.css";
 export default function Profile() {
   const { user, isLoading } = useUser();
   const [activeTab, setActiveTab] = useState("overview"); // overview | my | saved | settings
+
   const [allListings, setAllListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+
+  // NEW: saved IDs (prefer server, fallback to localStorage)
+  const [savedIds, setSavedIds] = useState([]);
 
   const navigate = useNavigate();
 
@@ -30,19 +34,56 @@ export default function Profile() {
         if (alive) setLoadingListings(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  // Saved IDs from localStorage
-  const savedIds = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("savedItems");
-      const arr = JSON.parse(raw || "[]");
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
+  // Load saved IDs:
+  //  - If signed in: GET /api/saves?idsOnly=1 with authtoken
+  //  - Else fallback to localStorage "savedItems"
+  useEffect(() => {
+    let alive = true;
+
+    async function loadSaved() {
+      // helper: localStorage fallback
+      const getLocalSaved = () => {
+        try {
+          const raw = localStorage.getItem("savedItems");
+          const arr = JSON.parse(raw || "[]");
+          return Array.isArray(arr) ? arr.map(String) : [];
+        } catch {
+          return [];
+        }
+      };
+
+      // signed in? try server
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch("/api/saves?idsOnly=1", {
+            headers: { authtoken: token },
+          });
+          if (!res.ok) throw new Error("Saved API failed");
+          const ids = await res.json();
+          if (alive) setSavedIds(Array.isArray(ids) ? ids.map(String) : []);
+          return;
+        } catch (e) {
+          console.warn("Falling back to local saved items:", e);
+          if (alive) setSavedIds(getLocalSaved());
+          return;
+        }
+      }
+
+      // not signed in -> use local
+      if (alive) setSavedIds(getLocalSaved());
     }
-  }, []);
+
+    loadSaved();
+    return () => {
+      alive = false;
+    };
+  }, [user]);
 
   const myListings = useMemo(() => {
     if (!user) return [];
@@ -50,7 +91,7 @@ export default function Profile() {
     const email = user.email?.toLowerCase();
     return allListings.filter((l) => {
       const owner = (l.ownerUid || "").toString();
-      const sellerEmail = (l.seller || "").toString().toLowerCase();
+      const sellerEmail = (l.ownerEmail || l.seller || "").toString().toLowerCase();
       return (owner && owner === uid) || (email && sellerEmail === email);
     });
   }, [allListings, user]);
@@ -250,35 +291,54 @@ export default function Profile() {
               </div>
             ) : (
               <div className="cards-grid">
-                {savedListings.map((l) => (
-                  <article className="card" key={l._id}>
-                    <div className="card-img">
-                      <img
-                        src={l.image || "/placeholder-listing.jpg"}
-                        alt={l.title}
-                        onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
-                      />
-                      <div className="badges">
-                        {l.condition && <span className="badge">{l.condition}</span>}
-                        {"price" in l && (
-                          <span className="badge badge-primary">
-                            {Number(l.price || 0).toLocaleString("en-AU", {
-                              style: "currency",
-                              currency: "AUD",
-                            })}
-                          </span>
-                        )}
+                {savedListings.map((l) => {
+                  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+                  const region = import.meta.env.VITE_AWS_REGION;
+
+                  const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string"
+                    ? l.images[0]
+                    : null;
+
+                  const thumbnail = imageKey?.startsWith("http")
+                    ? imageKey
+                    : imageKey
+                      ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                      : l.image?.startsWith("http")
+                        ? l.image
+                        : l.image
+                          ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                          : "/placeholder-listing.jpg";
+
+                  return (
+                    <article className="card" key={l._id}>
+                      <div className="card-img">
+                        <img
+                          src={thumbnail}
+                          alt={l.title}
+                          onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                        />
+                        <div className="badges">
+                          {l.condition && <span className="badge">{l.condition}</span>}
+                          {"price" in l && (
+                            <span className="badge badge-primary">
+                              {Number(l.price || 0).toLocaleString("en-AU", {
+                                style: "currency",
+                                currency: "AUD",
+                              })}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="card-body">
-                      <h4 title={l.title}>{l.title}</h4>
-                      {l.location && <div className="loc">📍 {l.location}</div>}
-                      <div className="actions">
-                        <Link className="btn" to={`/marketplace/${l._id}`}>View</Link>
+                      <div className="card-body">
+                        <h4 title={l.title}>{l.title}</h4>
+                        {l.location && <div className="loc">📍 {l.location}</div>}
+                        <div className="actions">
+                          <Link className="btn" to={`/marketplace/${l._id}`}>View</Link>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>

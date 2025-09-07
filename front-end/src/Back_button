@@ -1,0 +1,25 @@
+import { useNavigate } from "react-router-dom";
+
+export default function BackButton({
+  children = "← Back",
+  fallback = "/",
+  className = "btn",
+  ...props
+}) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    // If we have history, go back. Otherwise go to a safe fallback.
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate(fallback, { replace: true });
+    }
+  };
+
+  return (
+    <button type="button" onClick={handleClick} className={className} {...props}>
+      {children}
+    </button>
+  );
+}

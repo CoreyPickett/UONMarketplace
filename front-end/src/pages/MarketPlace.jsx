@@ -2,26 +2,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import MarketPlaceList from "../MarketPlaceList";
 import "./MarketPlace.css";
 
-const toParams = (obj) =>
-  new URLSearchParams(
-    Object.entries(obj).reduce((acc, [k, v]) => {
-      if (v !== "" && v !== undefined && v !== null) acc[k] = v;
-      return acc;
-    }, {})
-  ).toString();
-
 export default function MarketPlace() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // filters
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [rangeNote, setRangeNote] = useState("");
   const [sort, setSort] = useState("recent");
+  const [rangeNote, setRangeNote] = useState("");
 
-  // initial load (all listings)
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -37,11 +29,12 @@ export default function MarketPlace() {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  // validate prices; if max < min, auto-correct and show note
-  const validatePrices = () => {
+  useEffect(() => {
     const min = minPrice === "" ? undefined : Number(minPrice);
     const max = maxPrice === "" ? undefined : Number(maxPrice);
     if (
@@ -51,23 +44,21 @@ export default function MarketPlace() {
       !Number.isNaN(max) &&
       max < min
     ) {
-      setMaxPrice(String(min));
-      setRangeNote("Max price adjusted to match Min price.");
-      return { minPrice: String(min), maxPrice: String(min) };
+      setRangeNote("Max price is below Min price.");
+    } else {
+      setRangeNote("");
     }
-    setRangeNote("");
-    return { minPrice, maxPrice };
-  };
+  }, [minPrice, maxPrice]);
 
   const filteredListings = useMemo(() => {
     let out = [...listings];
-    const qq = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
 
-    if (qq) {
+    if (q) {
       out = out.filter((l) =>
         [l.title, l.description, l.category, l.location, l.ownerEmail]
           .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(qq))
+          .some((v) => String(v).toLowerCase().includes(q))
       );
     }
 
@@ -79,7 +70,6 @@ export default function MarketPlace() {
     if (!Number.isNaN(min) && min !== undefined) {
       out = out.filter((l) => typeof l.price === "number" && l.price >= min);
     }
-
     if (!Number.isNaN(max) && max !== undefined) {
       out = out.filter((l) => typeof l.price === "number" && l.price <= max);
     }
@@ -87,27 +77,24 @@ export default function MarketPlace() {
     out.sort((a, b) => {
       if (sort === "priceAsc") return (a.price ?? Infinity) - (b.price ?? Infinity);
       if (sort === "priceDesc") return (b.price ?? -Infinity) - (a.price ?? -Infinity);
-      if (sort === "titleAsc") return String(a.title || "").localeCompare(String(b.title || ""));
-      return String(b._id || "").localeCompare(String(a._id || "")); // recent fallback
+      if (sort === "titleAsc")
+        return String(a.title || "").localeCompare(String(b.title || ""));
+      return String(b._id || "").localeCompare(String(a._id || "")); // recent
     });
 
     return out;
   }, [listings, search, category, minPrice, maxPrice, sort]);
-
 
   const handleReset = () => {
     setSearch("");
     setCategory("");
     setMinPrice("");
     setMaxPrice("");
+    setSort("recent");
     setRangeNote("");
   };
 
-
-  
-
-  // Disable Search when numbers are invalid
-  const buttonDisabled = useMemo(() => {
+  const searchDisabled = useMemo(() => {
     const min = Number(minPrice);
     const max = Number(maxPrice);
     if (minPrice !== "" && Number.isNaN(min)) return true;
@@ -118,90 +105,110 @@ export default function MarketPlace() {
       !Number.isNaN(min) &&
       !Number.isNaN(max) &&
       max < min
-    ) {
+    )
       return true;
-    }
     return false;
   }, [minPrice, maxPrice]);
 
   return (
-    <div className="marketplace-container">
-      <aside className="sidebar">
-        <h3>Advanced Filters</h3>
-
-        <div className="filter-group">
-          <label>Search</label>
+    <div className="mp-wrap">
+      {/* Sticky toolbar */}
+      <div className="mp-toolbar">
+        {/* Big search bar (icon removed) */}
+        <div className="mp-search">
           <input
+            className="mp-input"
             type="text"
+            placeholder="Search Marketplace…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title..."
+            aria-label="Search listings"
           />
         </div>
 
-        <div className="filter-group">
-          <label>Category</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="">All</option>
+        {/* Filter row */}
+        <div className="mp-row">
+          <select
+            className="mp-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            aria-label="Filter by category"
+          >
+            <option value="">All categories</option>
             <option value="Books">Books</option>
             <option value="Electronics">Electronics</option>
             <option value="Clothing">Clothing</option>
             <option value="Furniture">Furniture</option>
             <option value="Other">Other</option>
           </select>
-        </div>
 
-        <div className="filter-group">
-          <label>Sort By</label>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+          {/* Min/Max kept snug inside one box */}
+          <div className="mp-price">
+            <input
+              className="mp-price-input"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              placeholder="Min"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              aria-label="Minimum price"
+            />
+            <span className="mp-price-sep">–</span>
+            <input
+              className="mp-price-input"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              placeholder="Max"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              aria-label="Maximum price"
+            />
+          </div>
+
+          <select
+            className="mp-select"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            aria-label="Sort results"
+          >
             <option value="recent">Most Recent</option>
             <option value="priceAsc">Price: Low to High</option>
             <option value="priceDesc">Price: High to Low</option>
             <option value="titleAsc">Title A–Z</option>
           </select>
+
+          {/* Actions: Search + Reset side-by-side */}
+          <div className="mp-actions">
+            <button
+              className="mp-btn"
+              disabled={searchDisabled}
+              onClick={() => {}}
+              title={searchDisabled ? "Fix price inputs to apply" : "Apply filters"}
+            >
+              Search
+            </button>
+            <button className="mp-btn mp-btn-ghost" onClick={handleReset}>
+              Reset
+            </button>
+          </div>
         </div>
 
+        {rangeNote && <div className="mp-note">{rangeNote}</div>}
+      </div>
 
-        {/* Min above Max (stacked) */}
-        <div className="filter-group">
-          <label>Min Price</label>
-          <input
-            type="number"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            placeholder="e.g. 10"
-            min="0"
-          />
-
-          <label>Max Price</label>
-          <input
-            type="number"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            placeholder="e.g. 100"
-            min="0"
-          />
-        </div>
-
-        {rangeNote && <div className="range-note">{rangeNote}</div>}
-
-        <div className="filter-buttons">
-          <button className="reset-btn" onClick={handleReset} type="button">
-            Reset
-          </button>
-        </div>
-      </aside>
-
-      <main className="listing-section">
-        <h2>Current Listings</h2>
+      {/* Results */}
+      <div className="mp-results">
+        <h2 className="mp-heading">Current Listings</h2>
         {loading ? (
-          <p>Loading...</p>
-        ) : listings.length === 0 ? (
+          <p>Loading…</p>
+        ) : filteredListings.length === 0 ? (
           <p>No listings found.</p>
         ) : (
           <MarketPlaceList listings={filteredListings} />
         )}
-      </main>
+      </div>
     </div>
   );
 }
