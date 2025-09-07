@@ -1,3 +1,4 @@
+
 //Backend server, currently integrated with MongoDb globally
 import express from 'express';
 import { MongoClient, ServerApiVersion } from 'mongodb';
@@ -141,28 +142,47 @@ const verifyUser = async (req, res, next) => {
     return res.sendStatus(401);
   }
 };
-
-// Custom function to check if user is admin verified
+// POST request to mark a conversation as read
+app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
+  const { id } = req.params;
+  const { uid, email } = req.user || {};
+  const me = uid || email || "unknown";
+  try {
+    // Support both ObjectId and string IDs
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const result = await db.collection('messages').findOneAndUpdate(
+      query,
+      { $set: { ["unread." + me]: 0 } },
+      { returnDocument: 'after' }
+    );
+    if (result.value) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "Conversation not found" });
+    }
+  } catch (e) {
+    console.error("Error marking as read:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+// check if user is admin verified
 const requireAdmin = (req, res, next) => {
-  // If you set a custom claim like { isAdmin: true } on the user,
-  // it will appear on the decoded token as req.user.isAdmin
   if (req.user?.isAdmin === true || req.user?.admin === true) {
     return next();
   }
   return res.status(403).json({ error: "Admin privileges required" });
 };
 
-// --- add this route ---
 app.delete("/api/admin/users/:uid", verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
 
-    // safety: don't let admins delete themselves by accident
+    // so admins dont delete themselves by accident
     if (uid === req.user.uid) {
       return res.status(400).json({ error: "You cannot delete your own account." });
     }
 
-    // OPTIONAL: block deleting another admin unless you want to allow it
+    // block deleting another admin 
     const target = await admin.auth().getUser(uid);
     if (target.customClaims?.isAdmin === true) {
       return res.status(403).json({ error: "Cannot delete another admin user." });
@@ -674,22 +694,17 @@ app.delete('/api/saves/:id', verifyUser, async (req, res) => {
 //GET request for a messages
 app.get('/api/messages/:id', async (req, res) => {
   const { id } = req.params;
-
   try {
-    // Try to use ObjectId if valid, else use string as-is
-    const query = ObjectId.isValid(id)
-      ? { _id: new ObjectId(id) }
-      : { _id: id }; // Use string directly
-
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    console.log("DirectMessage API: Querying with", query);
     const message = await db.collection('messages').findOne(query);
-
     if (!message) {
+      console.log("DirectMessage API: No message found for", query);
       return res.status(404).json({ error: 'Message not found.' });
     }
-
     res.json(message);
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('DirectMessage API: Database error:', error);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });
@@ -773,29 +788,34 @@ app.delete('/api/messages/:id', verifyUser, async (req, res) => {
 //POST request for adding message to messages page
 app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
   const { id } = req.params;
-  const { user } = useAuth();
-  const me = user.id;
-  const {text } = req.body;                  // reciving wrong data 
-                                                        // what I need passed through the "body" are the values for 'from' and 'messages text'
-
+  const { uid, email } = req.user || {};
+  const me = uid || email || "unknown";
+  const { body } = req.body; // frontend sends { body }
   try {
-  if (!ObjectId.isValid(id)) {
-    return res.status(400).json({ error: "Invalid message ID" });
-  }
-
-  const updatedMessages = await db.collection('messages').findOneAndUpdate({ _id: new ObjectId(id) }, { //Get messages based on unique ID
-    $push: { messages: { from: me, body: text, at: new Date().toISOString() }}   // currently having issues with mostlikely the new objectid part
-  }, {
-    returnDocument: 'after',
-  });
-
-  res.json(updatedMessages); //Update Messages
-
+    // Support both ObjectId and string IDs
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const result = await db.collection('messages').findOneAndUpdate(
+      query,
+      {
+        $push: {
+          messages: {
+            from: me,
+            body,
+            at: new Date().toISOString(),
+          },
+        },
+      },
+      { returnDocument: 'after' }
+    );
+    if (result.value && result.value.messages) {
+      res.json({ messages: result.value.messages });
+    } else {
+      res.status(404).json({ error: "Conversation not found" });
+    }
   } catch (e) {
-  console.error("Error updating messages:", e);
-  res.status(500).json({ error: "Internal server error" });
-}
-
+    console.error("Error updating messages:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000

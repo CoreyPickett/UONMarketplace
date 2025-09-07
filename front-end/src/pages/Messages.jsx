@@ -1,10 +1,10 @@
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api";  
+import { api } from "../api";
 import { getAuth } from "firebase/auth";
 import "./Messages.css";
 
-// Lets users search for profiles 
+// Lets users search for profiles
 const ProfileSearch = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [profiles, setProfiles] = useState([]);
@@ -121,11 +121,20 @@ const ConversationList = () => {
   useEffect(() => {
     (async () => {
       try {
-        // fetch all conversations for user
-        const { data } = await api.get("/messages");
-        const list = data?.threads ?? data ?? [];
-        // If no threads demo it
-        setThreads(list.length ? list : DEMO_THREADS);
+        const current = getAuth().currentUser;
+        if (!current) {
+          console.warn("No user logged in; showing demo.");
+          setThreads(DEMO_THREADS);
+        } else {
+          const token = await current.getIdToken();
+          // fetch all conversations for user with auth
+          const { data } = await api.get("/messages", {
+            headers: { authtoken: token },
+          });
+          const list = data?.threads ?? data ?? [];
+          // If no threads demo it
+          setThreads(list.length ? list : DEMO_THREADS);
+        }
       } catch (e) {
         // If API fails demo it and log error
         console.warn("GET /api/messages failed; showing demo:", e);
@@ -136,38 +145,41 @@ const ConversationList = () => {
     })();
   }, []);
 
-  // Mark conversation as read 
+  // Mark conversation as read
   const handleMarkAsRead = async (id) => {
-    // API call is commented out for demo will uncomment when backend is ready
-    try {
-    await api.post(`/messages/${id}/read`);
-    } catch (e) {
-      console.error("Failed to mark as read", e);
-     }
+    // Only call backend if not a demo thread
+    if (!id.startsWith("demo-")) {
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        if (token) {
+          await api.post(`/messages/${id}/read`, null, { headers: { authtoken: token } });
+        }
+      } catch (e) {
+        console.error("Failed to mark as read", e);
+      }
+    }
     // Update local state so UI reflects the change immediately
     setThreads((prev) =>
-      prev.map((t) =>
-        t._id === id ? { ...t, unread: { ...t.unread, me: 0 } } : t
-      )
+      prev.map((t) => (t._id === id ? { ...t, unread: { ...(t.unread || {}), me: 0 } } : t))
     );
     setMenuFor(null);
   };
 
-  // Delete conversation 
+  // Delete conversation
   const handleDelete = async (id) => {
     // API call is commented out for demo will uncomment when backend is ready
-     try {
+    try {
       await api.delete(`/messages/${id}`);
-   } catch (e) {
+    } catch (e) {
       console.error("Failed to delete conversation", e);
-   }
+    }
     // Remove the thread from local state
     setThreads((prev) => prev.filter((t) => t._id !== id));
     setConfirmDeleteId(null);
     setMenuFor(null);
   };
 
-  // loading message 
+  // loading message
   if (loading) return <div>Loading messages…</div>;
   // No convos message
   if (!threads.length) return <div>No conversations yet.</div>;
@@ -192,7 +204,12 @@ const ConversationList = () => {
                 }
                 style={{ cursor: "pointer" }}
               >
-                <img src={t.avatar ?? "/images/default-avatar.png"} alt="" width={40} style={{ borderRadius: "50%" }} />
+                <img
+                  src={t.avatar ?? "/images/default-avatar.png"}
+                  alt=""
+                  width={40}
+                  style={{ borderRadius: "50%" }}
+                />
                 <span className="sender">{t.otherUserName ?? "User"}</span>
               </td>
               <td
@@ -208,12 +225,12 @@ const ConversationList = () => {
                 }
                 style={{ cursor: "pointer" }}
               >
-                <strong>  {(t.unread?.me ?? 0) > 0 ? "Unread" : "Read" }</strong> {t.lastMessage}
+                <strong>{(t.unread?.me ?? 0) > 0 ? "Unread" : "Read"}</strong> {t.lastMessage}
               </td>
               <td>{t.lastMessageAt ? new Date(t.lastMessageAt).toLocaleString() : ""}</td>
               <td style={{ position: "relative" }}>
                 <button
-                  onClick={e => {
+                  onClick={(e) => {
                     e.stopPropagation();
                     setMenuFor(menuFor === t._id ? null : t._id);
                   }}
@@ -239,7 +256,9 @@ const ConversationList = () => {
         <div className="delete-confirm-popup">
           <div>
             <p>Delete this conversation?</p>
-            <button className="btn" onClick={() => handleDelete(confirmDeleteId)} style={{ marginRight: 10 }}>Delete</button>
+            <button className="btn" onClick={() => handleDelete(confirmDeleteId)} style={{ marginRight: 10 }}>
+              Delete
+            </button>
             <button className="btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
           </div>
         </div>
@@ -268,8 +287,7 @@ export async function sendMessage(conversationId, messageText) {
   await api.post(
     `/messages/${conversationId}/messages`, //send POST to back-end
     {
-      postedBy: user.displayName || user.email || user.uid,
-      text: messageText,
+      body: messageText,
     },
     {
       headers: { authtoken: token },
