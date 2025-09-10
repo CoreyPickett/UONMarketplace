@@ -48,9 +48,33 @@
   text-decoration: underline;
 }
 
-/* Optional: page background */
 body {
   background-color: #f0f2f5;
   margin: 0;
   padding: 0;
+}
+
+.password-group {
+  position: relative;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.password-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 60px;
+}
+
+.password-group button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
