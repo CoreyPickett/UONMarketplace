@@ -1,90 +1,85 @@
 // src/pages/Listing.jsx
-// Individual Listing
-import { useMemo, useState, useEffect } from "react";
-import { useParams, useLoaderData } from "react-router-dom";
-import axios from "axios";
-import useUser from "../useUser";
-import SaveButton from "../SaveButton"; // top-only Save button
-import "./Listing.css";
-import BuyNowModal from "../components/BuyNow.jsx";
+// Individual Listing page (shows one item)
+// - Replaces upvotes with "saved by X people"
+// - Uses loader data from listingLoader.js
+// - Uses SaveButton onChange to keep the saves count live
 
-const formatAUD = (n) =>
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useLoaderData, Link } from "react-router-dom";
+import useUser from "../useUser";
+import SaveButton from "../SaveButton";
+import "./Listing.css";
+
+const toAUD = (n) =>
   Number.isFinite(Number(n))
     ? Number(n).toLocaleString("en-AU", { style: "currency", currency: "AUD" })
-    : n;
+    : n ?? "";
+
+// Build a public S3 URL when listing.images contains just a key
+const buildImageUrl = (key) => {
+  if (!key) return null;
+  if (String(key).startsWith("http")) return key;
+  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+  const region = import.meta.env.VITE_AWS_REGION;
+  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+};
 
 export default function Listing() {
   const { id } = useParams();
-  const listing = useLoaderData();
+  const listing = useLoaderData(); // fetched by /api/marketplace/:id in listingLoader.js
   const { user } = useUser();
 
-  const [upvotes, setUpvotes] = useState(Number(listing?.upvotes || 0));
-  const [didUpvote, setDidUpvote] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showBuyNow, setShowBuyNow] = useState(false);
+  // Saved count (replaces upvotes)
+  const [saves, setSaves] = useState(Number(listing?.saves || 0));
 
-  // If the loader delivers new data (nav), sync state
+  // Image carousel state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Sync saves on loader change
   useEffect(() => {
-    setUpvotes(Number(listing?.upvotes || 0));
-    setDidUpvote(false);
+    setSaves(Number(listing?.saves || 0));
   }, [listing?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const alreadyUpvoted = useMemo(() => {
-    if (!listing?.upvoteIds || !user?.uid) return false;
-    return listing.upvoteIds.includes(user.uid);
-  }, [listing?.upvoteIds, user?.uid]);
+  // Normalise images → array of URLs
+  const images = useMemo(() => {
+    const srcs = Array.isArray(listing?.images) && listing.images.length
+      ? listing.images
+      : (listing?.image ? [listing.image] : []);
+    const urls = srcs
+      .map((k) => buildImageUrl(k))
+      .filter(Boolean);
+    return urls.length ? urls : ["/placeholder-listing.jpg"];
+  }, [listing]);
 
-  const canUpvote = !!user && !didUpvote && !alreadyUpvoted;
-
-  async function onUpvoteClicked() {
-    try {
-      if (!user) return;
-      const token = await user.getIdToken();
-      const headers = { authtoken: token };
-      const res = await axios.post(`/api/marketplace/${id}/upvote`, null, { headers });
-
-      const next = res.data?.upvotes ?? res.data?.listing?.upvotes;
-      if (typeof next === "number") setUpvotes(next);
-      setDidUpvote(true);
-    } catch (e) {
-      console.error("Upvote failed:", e);
-      alert("Upvote failed. Please try again.");
-    }
-  }
+  const priceText = toAUD(listing?.price);
 
   if (!listing) {
     return (
-      <>
+      <main style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
         <h1>Listing not found</h1>
         <p>That item may have been removed or never existed.</p>
-      </>
+        <Link to="/marketplace" className="ListingOptions">← Back to Marketplace</Link>
+      </main>
     );
   }
 
-  // Images (array or single), with fallback
-  const images =
-    Array.isArray(listing.images) && listing.images.length > 0
-      ? listing.images
-      : [listing.image || "/placeholder-listing.jpg"];
-
-  const priceText = formatAUD(listing.price);
-
   return (
-    <div style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
-      {/* Title + Save (top only) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <main style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
+      {/* Title + Save + saved count */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <h1 style={{ margin: "12px 0 16px" }}>{listing.title}</h1>
-        <SaveButton listingId={listing._id} />
-        {typeof listing.saves === "number" && (
-          <span className="badge">{listing.saves} saved</span>
-        )}
+        <SaveButton
+          listingId={listing._id}
+          onChange={(_, delta) => setSaves((s) => Math.max(0, (s || 0) + (delta || 0)))}
+        />
+        <span className="badge">{saves} saved</span>
       </div>
 
       {/* Hero image */}
       <div
         style={{
           position: "relative",
-          height: 300,
+          height: 320,
           borderRadius: 12,
           overflow: "hidden",
           boxShadow: "0 6px 18px rgba(0,0,0,0.10)",
@@ -94,51 +89,40 @@ export default function Listing() {
       >
         <img
           src={images[currentImageIndex]}
-          alt={`Image ${currentImageIndex + 1}`}
-          onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+          alt={listing.title}
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
         />
 
-        {/* Image nav */}
         {images.length > 1 && (
-          <>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 10,
+              left: 10,
+              right: 10,
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
             <button
+              className="image-nav-btn"
               onClick={() =>
-                setCurrentImageIndex((i) => (i === 0 ? images.length - 1 : i - 1))
+                setCurrentImageIndex((i) => (i - 1 + images.length) % images.length)
               }
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: 12,
-                transform: "translateY(-50%)",
-                background: "#fff",
-                border: "1px solid #ccc",
-                borderRadius: "50%",
-                padding: "6px 10px",
-                cursor: "pointer",
-              }}
+              aria-label="Previous image"
             >
-              ←
+              ‹
             </button>
             <button
-              onClick={() =>
-                setCurrentImageIndex((i) => (i === images.length - 1 ? 0 : i + 1))
-              }
-              style={{
-                position: "absolute",
-                top: "50%",
-                right: 12,
-                transform: "translateY(-50%)",
-                background: "#fff",
-                border: "1px solid #ccc",
-                borderRadius: "50%",
-                padding: "6px 10px",
-                cursor: "pointer",
-              }}
+              className="image-nav-btn"
+              onClick={() => setCurrentImageIndex((i) => (i + 1) % images.length)}
+              aria-label="Next image"
             >
-              →
+              ›
             </button>
-          </>
+          </div>
         )}
       </div>
 
@@ -149,96 +133,56 @@ export default function Listing() {
       )}
 
       {/* Badges below image */}
-      <div style={{ display: "flex", gap: 8, margin: "8px 0 18px 0" }}>
+      <div style={{ display: "flex", gap: 8, margin: "8px 0 18px 0", flexWrap: "wrap" }}>
         {listing.condition ? <span className="badge">{listing.condition}</span> : null}
-        {"price" in listing ? (
-          <span className="badge badge-primary">{priceText}</span>
-        ) : null}
+        {priceText ? <span className="badge badge-primary">{priceText}</span> : null}
+        {listing.location ? <span className="badge">📍 {listing.location}</span> : null}
+        {listing.category ? <span className="badge">{listing.category}</span> : null}
       </div>
 
-      {/* Actions (Upvote + count) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        {user ? (
-          <button
-            onClick={onUpvoteClicked}
-            disabled={!canUpvote}
-            style={{
-              background: canUpvote ? "#003057" : "#9aa6b2",
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              padding: "10px 14px",
-              cursor: canUpvote ? "pointer" : "not-allowed",
-              fontWeight: 800,
-            }}
-          >
-            {alreadyUpvoted || didUpvote ? "Upvoted" : "Upvote"}
-          </button>
-        ) : (
-          <span style={{ color: "#6b7280" }}>Sign in to upvote</span>
-        )}
-        <span style={{ color: "#374151" }}>
-          This listing has <strong>{upvotes}</strong> upvote{upvotes === 1 ? "" : "s"}
-        </span>
-      </div>
-
-      {/* Details */}
-      <section
-        style={{
-          background: "#fff",
-          borderRadius: 12,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-          padding: 16,
-          lineHeight: 1.55,
-        }}
-      >
-        <p style={{ marginTop: 0 }}>
-          <strong>Description:</strong> {listing.description}
-        </p>
-        {listing.category && (
-          <p>
-            <strong>Category:</strong> {listing.category}
-          </p>
-        )}
-        {"price" in listing && (
-          <p>
-            <strong>Price:</strong> {priceText}
-          </p>
-        )}
-        {listing.condition && (
-          <p>
-            <strong>Condition:</strong> {listing.condition}
-          </p>
-        )}
-        {listing.location && (
-          <p>
-            <strong>Location:</strong> {listing.location}
-          </p>
-        )}
-        {Array.isArray(listing.delivery_options) && listing.delivery_options.length > 0 && (
-          <p>
-            <strong>Delivery Options:</strong> {listing.delivery_options.join(", ")}
-          </p>
-        )}
-        {listing.seller && (
-          <p>
-            <strong>Seller:</strong> {listing.seller}
-          </p>
-        )}
+      {/* Description */}
+      <section className="listing-details" style={{ marginTop: 8 }}>
+        {Array.isArray(listing.content)
+          ? listing.content.map((para, i) => (
+              <p key={i} style={{ lineHeight: 1.6 }}>{para}</p>
+            ))
+          : listing.description
+          ? <p style={{ lineHeight: 1.6 }}>{listing.description}</p>
+          : listing.content
+          ? <p style={{ lineHeight: 1.6 }}>{listing.content}</p>
+          : null}
       </section>
 
-      {/* Bottom actions row (Save removed) */}
-      <div className="listing-actions-row">
-        <button className="ListingOptions" onClick={() => setShowBuyNow(true)}>
-          Buy Now
-        </button>
-        <button className="ListingOptions secondary">Message seller</button>
-      </div>
+      {/* Seller + Actions */}
+      <section style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 10 }}>
+          Listed by{" "}
+          <strong>
+            {listing.ownerEmail ? listing.ownerEmail.split("@")[0] : "Unknown"}
+          </strong>
+        </div>
 
-      {/* Buy Now Modal */}
-      {showBuyNow && listing && (
-        <BuyNowModal listing={listing} onClose={() => setShowBuyNow(false)} />
-      )}
-    </div>
+        <div className="listing-actions-row">
+          {/* If you later add a checkout flow, wire it here */}
+          {/* <button className="ListingOptions">Buy Now</button> */}
+
+          {/* Message seller — for now, simple mailto (avoids missing components/routes) */}
+          {listing.ownerEmail ? (
+            <a
+              className="ListingOptions secondary"
+              href={`mailto:${listing.ownerEmail}?subject=Enquiry about "${encodeURIComponent(
+                listing.title || "your listing"
+              )}"`}
+            >
+              Message seller
+            </a>
+          ) : (
+            <Link className="ListingOptions secondary" to="/messages">
+              Message seller
+            </Link>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }
