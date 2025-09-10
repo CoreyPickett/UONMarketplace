@@ -54,3 +54,25 @@ body {
   margin: 0;
   padding: 0;
 }
+
+.password-group {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.password-group input {
+  width: 100%;
+  padding-right: 60px; /* space for the button */
+}
+
+.password-group button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
