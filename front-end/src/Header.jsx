@@ -66,8 +66,10 @@ export default function NavBar() {
             onClick={() => navigate("/")}
             style={buttonStyle}
             title="Return to Dashboard"
+            className="header-btn-dashboard"
           >
-            Return to Dashboard
+            <span className="header-btn-dashboard-full">Return to Dashboard</span>
+            <span className="header-btn-dashboard-short">Dashboard</span>
           </button>
         </li>
 
@@ -77,7 +79,8 @@ export default function NavBar() {
           <>
             {user && (
               <li style={{ fontWeight: "bold", marginLeft: 6 }}>
-                Logged in as {user.email}
+                <span className="header-loggedin-full">Logged in as {user.email}</span>
+                <span className="header-loggedin-short">Logged in</span>
               </li>
             )}
             <li>
@@ -106,9 +109,10 @@ export default function NavBar() {
       {/* Right: Logo / brand */}
       <Link to="/" style={{ display: "inline-flex", alignItems: "center" }}>
         <img
-          src="/uon-logo.jfif"
-          alt="UoN Logo"
-          style={{ height: "40px", borderRadius: "4px" }}
+            src="/uon-logo.jfif"
+            alt="UoN Logo"
+            className="uni-logo"
+            style={{ height: "40px", borderRadius: "4px" }}
         />
       </Link>
     </nav>

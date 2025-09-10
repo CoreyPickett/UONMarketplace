@@ -23,6 +23,33 @@
   margin-bottom: 18px;
 }
 
+.profile-create-listing {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin: 18px 0 24px 0;
+}
+@media (max-width: 600px) {
+  .profile-create-listing {
+    justify-content: center;
+  }
+  .profile-create-listing .btn {
+    width: 100%;
+    max-width: 340px;
+    font-size: 1.1rem;
+    padding: 16px 0;
+  }
+  .profile-create-listing .btn {
+    font-size: 1.05rem;
+    padding: 12px 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    max-width: 220px;
+    width: auto;
+  }
+  }
+
+
 .profile-header {
   display: grid;
   grid-template-columns: auto 1fr auto;

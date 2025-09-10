@@ -298,3 +298,32 @@ a.chip:hover {
   padding: 18px;
   color: var(--muted);
 }
+
+/*  hide non-essential header elements for mobile */
+@media (max-width: 600px) {
+  .dash {
+    padding: 0 4px 24px;
+    margin: 8px auto;
+  }
+  .dash__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .dash__header-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+ 
+  .uni-logo {
+    display: none !important;
+  }
+}
+
+  @media (max-width: 430px) {
+    .uni-logo {
+      display: none !important;
+    }
+  }
