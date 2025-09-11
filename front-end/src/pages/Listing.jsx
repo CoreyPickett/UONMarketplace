@@ -1,36 +1,156 @@
-// src/pages/Listing.jsx
-// Individual Listing page (shows one item)
-// - Replaces upvotes with "saved by X people"
-// - Uses loader data from listingLoader.js
-// - Uses SaveButton onChange to keep the saves count live
-
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useLoaderData, Link } from "react-router-dom";
+import { getAuth } from "firebase/auth";
+import { api } from "../api";
 import useUser from "../useUser";
 import SaveButton from "../SaveButton";
 import "./Listing.css";
 
+
+function BuyNowModal({ listing, onClose }) {
+  const [qty, setQty] = useState(1);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const price = Number(listing?.price || 0);
+  const total = Number.isFinite(price) ? price * (Number(qty) || 1) : 0;
+
+  const submit = async () => {
+    try {
+      setSubmitting(true);
+
+      // Build initial message body for the seller
+      const lines = [
+        `Hi, I'm interested in buying "${listing?.title}"`,
+        `Quantity: ${qty}`,
+        Number.isFinite(price) ? `Offered total: $${total.toFixed(2)} AUD` : null,
+        note ? `Note: ${note}` : null,
+        "(Sent via Buy Now)"
+      ].filter(Boolean);
+
+      // Prefer ownerEmail if present; otherwise fall back to ownerUid if available
+      const payload = {
+        reciverIds: listing?.ownerUid ? [listing.ownerUid] : undefined,
+        reciverEmails: listing?.ownerEmail ? [listing.ownerEmail] : undefined,
+        messages: [
+          {
+            from: "me", // backend will override with authenticated uid/email
+            body: lines.join("\n"),
+            at: new Date().toISOString(),
+          },
+        ],
+      };
+
+      const res = await api.post("/messages/create-message", payload);
+      if (res?.data?.success) {
+        alert("Buy request sent to the seller. You can continue the conversation in Messages.");
+        onClose?.();
+      } else {
+        throw new Error("Failed to create conversation");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Could not send buy request. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <h3 style={{ marginTop: 0 }}>Buy “{listing?.title || "Item"}”</h3>
+
+        <div className="modal-row">
+          <label htmlFor="qty">Quantity</label>
+          <input
+            id="qty"
+            type="number"
+            min={1}
+            step={1}
+            value={qty}
+            onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+          />
+        </div>
+
+        <div className="modal-row">
+          <label htmlFor="note">Note to seller (optional)</label>
+          <textarea
+            id="note"
+            rows={4}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add pickup times, offer details, or questions…"
+          />
+        </div>
+
+        <div className="modal-summary">
+          {Number.isFinite(price) ? (
+            <div>
+              <div>Price: ${price.toFixed(2)} AUD</div>
+              <div><strong>Total: ${total.toFixed(2)} AUD</strong></div>
+            </div>
+          ) : (
+            <div><strong>Contact the seller for price.</strong></div>
+          )}
+        </div>
+
+        <div className="modal-actions">
+          <button className="ListingOptions" onClick={submit} disabled={submitting}>
+            {submitting ? "Sending…" : "Send Buy Request"}
+          </button>
+          <button className="ListingOptions secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
+        </div>
+      </div>
+      <style>{`
+        .modal-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+          display: flex; align-items: center; justify-content: center; z-index: 1000;
+          padding: 16px;
+        }
+        .modal-card {
+          width: 100%; max-width: 520px; background: #fff; border-radius: 12px;
+          box-shadow: 0 12px 30px rgba(0,0,0,0.25); padding: 18px 18px 14px;
+        }
+        .modal-row { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+        .modal-row input, .modal-row textarea {
+          border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 10px; font-size: 14px;
+        }
+        .modal-summary { margin: 12px 0; color: #374151; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+      `}</style>
+    </div>
+  );
+}
+
+// --- utils ---
 const toAUD = (n) =>
   Number.isFinite(Number(n))
     ? Number(n).toLocaleString("en-AU", { style: "currency", currency: "AUD" })
     : n ?? "";
 
-// Build a public S3 URL when listing.images contains just a key
 const buildImageUrl = (key) => {
   if (!key) return null;
   if (String(key).startsWith("http")) return key;
   const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
   const region = import.meta.env.VITE_AWS_REGION;
-  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+  return bucket && region
+    ? `https://${bucket}.s3.${region}.amazonaws.com/${key}`
+    : key;
 };
 
 export default function Listing() {
   const { id } = useParams();
-  const listing = useLoaderData(); // fetched by /api/marketplace/:id in listingLoader.js
+  const listing = useLoaderData();
   const { user } = useUser();
+  const auth = getAuth();
 
   // Saved count (replaces upvotes)
   const [saves, setSaves] = useState(Number(listing?.saves || 0));
+
+  // Buy Now
+  const [showBuyNow, setShowBuyNow] = useState(false);
 
   // Image carousel state
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -45,9 +165,7 @@ export default function Listing() {
     const srcs = Array.isArray(listing?.images) && listing.images.length
       ? listing.images
       : (listing?.image ? [listing.image] : []);
-    const urls = srcs
-      .map((k) => buildImageUrl(k))
-      .filter(Boolean);
+    const urls = srcs.map((k) => buildImageUrl(k)).filter(Boolean);
     return urls.length ? urls : ["/placeholder-listing.jpg"];
   }, [listing]);
 
@@ -75,7 +193,6 @@ export default function Listing() {
         <span className="badge">{saves} saved</span>
       </div>
 
-      {/* Hero image */}
       <div
         style={{
           position: "relative",
@@ -163,10 +280,24 @@ export default function Listing() {
         </div>
 
         <div className="listing-actions-row">
-          {/* If you later add a checkout flow, wire it here */}
-          {/* <button className="ListingOptions">Buy Now</button> */}
+          <button
+            className="ListingOptions"
+            onClick={() => {
+              if (!auth.currentUser) {
+                alert("Please sign in to use Buy Now.");
+                return;
+              }
+              if (!listing.ownerEmail && !listing.ownerUid) {
+                alert("Seller contact is missing for this listing.");
+                return;
+              }
+              setShowBuyNow(true);
+            }}
+          >
+            Buy Now
+          </button>
 
-          {/* Message seller — for now, simple mailto (avoids missing components/routes) */}
+          {/* “Message seller” — mailto if email exists, otherwise route to messages */}
           {listing.ownerEmail ? (
             <a
               className="ListingOptions secondary"
@@ -183,6 +314,11 @@ export default function Listing() {
           )}
         </div>
       </section>
+
+      {/* Buy Now Modal */}
+      {showBuyNow && listing && (
+        <BuyNowModal listing={listing} onClose={() => setShowBuyNow(false)} />
+      )}
     </main>
   );
 }
