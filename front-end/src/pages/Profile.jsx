@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { getAuth, updatePassword, updateEmail} from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import useUser from "../useUser";
 import "./Profile.css";
 
@@ -12,10 +12,7 @@ export default function Profile() {
   const [allListings, setAllListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [changing, setChanging] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [updatingEmail, setUpdatingEmail] = useState(false);
+  const [profileData, setProfileData] = useState(null);
 
 
 
@@ -91,6 +88,23 @@ export default function Profile() {
     };
   }, [user]);
 
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const res = await fetch(`/api/profile/${user.uid}`);
+        if (!res.ok) throw new Error("Profile fetch failed");
+        const data = await res.json();
+        setProfileData(data);
+      } catch (err) {
+        console.error("Failed to load profile data:", err);
+      }
+    };
+
+    if (user?.uid) {
+      fetchProfileData();
+    }
+  }, [user]);
+
   const myListings = useMemo(() => {
     if (!user) return [];
     const uid = user.uid;
@@ -153,7 +167,21 @@ export default function Profile() {
       {/* Header */}
       <section className="profile-card">
         <div className="profile-header">
-          <div className="avatar">{user.email?.[0]?.toUpperCase() || "U"}</div>
+          <div className="avatar">
+            {profileData?.profilePhotoUrl?.startsWith("https://") ? (
+              <img
+                src={profileData.profilePhotoUrl}
+                alt="Profile"
+                className="avatar-image"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/default-avatar.png"; // fallback image
+                }}
+              />
+            ) : (
+              user.email?.[0]?.toUpperCase() || "U"
+            )}
+          </div>
           <div className="whoami">
             <h2>{user.email}</h2>
             <div className="muted">UID: {user.uid}</div>
@@ -374,6 +402,16 @@ export default function Profile() {
                   onClick={() => navigate("/updatePswd")}
                 >
                   Change Password
+                </button>
+              </div>
+
+              {/* Update Profile Picture */}
+              <div className="action-block">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate("/updatePhoto")}
+                >
+                  Change Profile Picture
                 </button>
               </div>
             </div>

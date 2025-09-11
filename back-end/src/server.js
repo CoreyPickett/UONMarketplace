@@ -142,6 +142,7 @@ const verifyUser = async (req, res, next) => {
     return res.sendStatus(401);
   }
 };
+
 // POST request to mark a conversation as read
 app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
   const { id } = req.params;
@@ -291,9 +292,9 @@ app.delete('/api/marketplace/:id', verifyUser, async (req, res) => {
 
 //GET request for uploading images
 app.get('/api/marketplace/s3-upload-url', async (req, res) => {
-  const { filename, filetype } = req.query;
+  const { filename, filetype, scope = "listing", userId = "anonymous" } = req.query;
 
-  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]; //Sanity check for valid image types
+  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
   if (!validTypes.includes(filetype)) {
     console.warn("Rejected filetype:", filetype);
     return res.status(400).send("Invalid file type");
@@ -304,8 +305,14 @@ app.get('/api/marketplace/s3-upload-url', async (req, res) => {
     return res.status(400).send("Missing filename or filetype");
   }
 
-  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, ''); //Remove unwanted characters
-  const key = `listings/${Date.now()}_${safeFilename}`;
+  const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+
+  let key;
+  if (scope === "profile") {
+    key = `profile/${userId}/profile.jpg`; // Overwrite-safe path
+  } else {
+    key = `listings/${Date.now()}_${safeFilename}`; // Timestamped for uniqueness
+  }
 
   const params = {
     Bucket: process.env.S3_BUCKET_NAME,
@@ -314,7 +321,7 @@ app.get('/api/marketplace/s3-upload-url', async (req, res) => {
     ContentType: filetype,
   };
 
-  try { //Connect to AWS for image upload to bucket
+  try {
     const uploadURL = await s3.getSignedUrlPromise('putObject', params);
     res.json({ uploadURL, key });
   } catch (error) {
@@ -584,6 +591,103 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
   } catch (e) {
     console.error("Update listing error:", e);
     res.status(400).json({ error: "Invalid listing id or update payload." });
+  }
+});
+
+//POST request to update profile photo
+app.post('/api/profile/update-photo', verifyUser, async (req, res) => {
+  try {
+    const { uid } = req.user || {};
+    const { profilePhotoUrl } = req.body;
+
+    if (!uid || !profilePhotoUrl || typeof profilePhotoUrl !== "string") {
+      return res.status(400).json({ error: "Missing or invalid data" });
+    }
+
+    // Validate S3 URL format
+    if (!profilePhotoUrl.startsWith("https://")) {
+      return res.status(400).json({ error: "Invalid image URL format" });
+    }
+
+    const result = await db.collection('profile').updateOne(
+      { uid },
+      { $set: { profilePhotoUrl, updatedAt: new Date() } },
+      { upsert: true } // Creates the document if it doesn't exist
+    );
+
+    if (!result.acknowledged) {
+      return res.status(500).json({ error: "Update failed" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile photo updated successfully",
+    });
+  } catch (err) {
+    console.error("Profile update error:", err);
+    return res.status(500).json({ success: false, message: "Unexpected error" });
+  }
+});
+
+//POST request for updating profile photos
+app.post("/api/profile/updatePhoto", verifyUser, async (req, res) => {
+  const uid = req.user?.uid;
+  const { profilePhotoUrl } = req.body;
+
+  console.log("Verified UID:", uid);
+  console.log("Photo URL:", profilePhotoUrl);
+
+
+  try {
+    if (!uid || !profilePhotoUrl || typeof profilePhotoUrl !== "string") {
+      console.log("UID:", uid);
+      console.log("typeof UID:", typeof uid);
+      console.log("Photo URL:", profilePhotoUrl);
+      console.log("typeof Photo URL:", typeof profilePhotoUrl);
+
+      return res.status(400).json({ error: "Missing or invalid data" });
+    }
+
+    console.log("Attempting DB update with:");
+    console.log("Filter:", { uid });
+    console.log("Payload:", { profilePhotoUrl, updatedAt: new Date() });
+
+    const result = await db.collection("profile").updateOne(
+      { uid: uid },
+      { $set: { profilePhotoUrl, updatedAt: new Date() } },
+      { upsert: true }
+    );
+
+    console.log("MongoDB update result:", result);
+
+    if (!result.acknowledged) {
+      return res.status(500).json({ error: "Update failed" });
+    }
+
+    res.status(200).json({ success: true, message: "Profile photo updated" });
+    console.log("MongoDB update result:", result);
+  } catch (err) {
+    console.error("Profile photo update error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+//GET request for individual user profile pages
+app.get("/api/profile/:uid", async (req, res) => {
+  try {
+    const { uid } = req.params;
+    if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+    const profile = await db.collection("profile").findOne({ uid });
+
+    if (!profile) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    res.json(profile);
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

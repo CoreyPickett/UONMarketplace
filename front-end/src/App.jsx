@@ -23,6 +23,7 @@ import Saved from "./pages/Saved";
 import UpdateEmail from "./pages/UpdateEmail";
 import UpdatePswd from "./pages/UpdatePswd";
 import UpdateSuccess from "./pages/UpdateSuccess"; 
+import UpdatePhoto from "./pages/UpdatePhoto";
 
 
 // Layout with Header
@@ -84,6 +85,10 @@ const routes = [
       {
         path: "updatePswd",
         element: <UpdatePswd />
+      },
+      {
+        path: "updatePhoto",
+        element: <UpdatePhoto />
       },
       {
         path: "updateSuccess",
