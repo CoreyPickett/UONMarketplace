@@ -64,7 +64,7 @@
   font-size: 14px;
 }
 
-/* Min/Max box (fits neatly) */
+/* Min/Max box  */
 .mp-price {
   display: grid;
   grid-template-columns: 1fr 24px 1fr;
@@ -87,7 +87,7 @@
 .mp-price-input::placeholder { color: #9ca3af; }
 .mp-price-sep { text-align: center; color: #6b7280; }
 
-/* Actions: Search + Reset next to each other */
+/* Search + Reset next to each other */
 .mp-actions {
   display: inline-flex;
   gap: 10px;
@@ -130,3 +130,52 @@
   padding: 0 16px 24px;
 }
 .mp-heading { margin: 8px 0 16px; color: #003057; }
+
+/* swapping text for phone */
+.header-btn-dashboard-short,
+.header-loggedin-short {
+  display: none;
+}
+.header-btn-dashboard-full,
+.header-loggedin-full {
+  display: inline;
+}
+
+@media (max-width: 600px) {
+  .header-btn-dashboard-short,
+  .header-loggedin-short {
+    display: inline !important;
+  }
+  .header-btn-dashboard-full,
+  .header-loggedin-full {
+    display: none !important;
+  }
+}
+
+/* phone header fixes */
+@media (max-width: 430px) {
+  .uni-logo {
+    display: none !important;
+  }
+  nav {
+    flex-wrap: wrap;
+    gap: 4px !important;
+  }
+  .mp-toolbar {
+    top: 48px;
+    padding: 10px 4px;
+  }
+  .mp-search {
+    padding: 8px 8px;
+    font-size: 1rem;
+  }
+  .mp-row {
+    gap: 6px;
+  }
+  .mp-btn, .mp-btn-ghost {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 10px 8px;
+  }
+}

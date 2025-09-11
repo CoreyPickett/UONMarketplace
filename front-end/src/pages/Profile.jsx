@@ -187,9 +187,7 @@ export default function Profile() {
             <div className="muted">UID: {user.uid}</div>
           </div>
           <div className="profile-actions">
-            <button className="btn" onClick={() => navigate("/create-listing")}>
-              + Create Listing
-            </button>
+            
           </div>
         </div>
 
@@ -221,6 +219,10 @@ export default function Profile() {
           </button>
         </div>
       </section>
+
+<button className="btn" onClick={() => navigate("/create-listing")}>
+              + Create Listing
+            </button>
 
       {/* Content */}
       <section className="profile-content">

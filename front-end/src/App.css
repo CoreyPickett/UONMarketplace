@@ -36,3 +36,40 @@
     transform: rotate(360deg);
   }
 }
+
+/* Responsive mobile fixes */
+body, html {
+  box-sizing: border-box;
+  overflow-x: hidden;
+  width: 100vw;
+}
+
+.container, .card, .App-header, .header, .sidebar, .main-content {
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 8px;
+    font-size: 1rem;
+  }
+  .header, .sidebar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .container, .card, .App-header, .header, .sidebar, .main-content {
+    width: 100%;
+    max-width: 100vw;
+    margin: 0 auto;
+    font-size: 1rem;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  button, .btn {
+    font-size: 1rem;
+    padding: 8px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

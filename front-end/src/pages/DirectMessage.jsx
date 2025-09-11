@@ -41,7 +41,9 @@ export default function DirectMessage() {
         });
         setMessages(data?.messages || []);
         // Mark as read in backend
-        try { await api.post(`/messages/${id}/read`); } catch {}
+        if (!id.startsWith("demo-")) {
+          try { await api.post(`/messages/${id}/read`); } catch {}
+      }
       } catch (e) {
         // If API fails use demo 
         console.warn(`GET /api/messages/${id} failed; using demo/preview`, e);
