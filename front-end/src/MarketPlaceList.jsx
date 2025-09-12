@@ -1,54 +1,86 @@
-//File for the display of listings on the marketplace
-import { Link } from "react-router-dom";
-import './MarketPlaceList.css';
+import { Link, useSearchParams } from "react-router-dom";
+import useListings from "./useListings";
+import "./MarketPlaceList.css";
 
-export default function MarketPlaceList({ listings }) {
-  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
-  const region = import.meta.env.VITE_AWS_REGION;
+const toAUD = (n) =>
+  Number.isFinite(Number(n))
+    ? Number(n).toLocaleString("en-AU", { style: "currency", currency: "AUD" })
+    : n ?? "";
+
+export default function MarketPlaceList() {
+  const { listings, loading } = useListings();
+  const [params] = useSearchParams();
+  const q = (params.get("query") || "").trim().toLowerCase();
+
+  const filtered = (listings || []).filter((l) => {
+    if (!q) return true;
+    const hay =
+      [
+        l.title,
+        l.description,
+        l.content,
+        l.category,
+        l.location,
+        Array.isArray(l.tagsOrKeywords) ? l.tagsOrKeywords.join(" ") : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+    return hay.includes(q);
+  });
+
+  if (loading) {
+    return (
+      <div className="marketplace-grid" aria-busy="true">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="listing-card" style={{ height: 280, background: "#f1f5f9" }} />
+        ))}
+      </div>
+    );
+  }
+
+  if (!filtered.length) {
+    return (
+      <div className="marketplace-grid">
+        <div className="no-listings-message">
+          No listings found{q ? ` for “${q}”` : ""}. Try different keywords.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="marketplace-grid">
-      {Array.isArray(listings) && listings.length > 0 ? (
-        listings.map((listing) => {
-          const imageKey = Array.isArray(listing.images) && typeof listing.images[0] === "string"
-            ? listing.images[0]
-            : null;
+      {filtered.map((l) => {
+        const thumb =
+          (Array.isArray(l.images) && l.images[0]) || l.image || "/placeholder-listing.jpg";
+        const saves = Number(l.saves || 0);
 
-          const thumbnail = imageKey?.startsWith("http")
-            ? imageKey
-            : imageKey
-              ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
-              : listing.image?.startsWith("http")
-                ? listing.image
-                : listing.image
-                  ? `https://${bucket}.s3.${region}.amazonaws.com/${listing.image}`
-                  : "/placeholder-listing.jpg";
+        return (
+          <article key={l._id} className="listing-card">
+            <Link className="listing-link" to={`/marketplace/${l._id}`}>
+              <div className="listing-image">
+                <img className="listing-thumb" src={thumb} alt={l.title} loading="lazy"
+                     onError={(e)=> (e.currentTarget.src="/placeholder-listing.jpg")} />
+                <div className="saved-pill">{saves} saved</div>
+              </div>
 
-          return (
-            <div key={listing._id} className="listing-card">
-              <Link to={`/marketplace/${listing._id}`} className="listing-link">
-                <div className="listing-image-wrapper">
-                  <img
-                    src={thumbnail}
-                    alt={listing.title}
-                    className="listing-image"
-                    onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
-                  />
+              <div className="listing-info">
+                <h3 className="listing-title">{l.title}</h3>
+                {"price" in l && <div className="listing-price">{toAUD(l.price)}</div>}
+                {l.content && (
+                  <div className="listing-content">
+                    {Array.isArray(l.content) ? l.content[0] : l.content}
+                  </div>
+                )}
+                <div className="listing-name">
+                  {l.ownerEmail ? l.ownerEmail.split("@")[0] : "Unknown seller"}
                 </div>
-                <div className="listing-info">
-                  <h3 className="listing-title">{listing.title}</h3>
-                  <p className="listing-category">Condition: {listing.condition}</p>
-                  <p className="listing-price">{listing.price}</p>
-                  <p className="listing-content">{listing.content?.[0]}</p>
-                  <p className="listing-name">Listed by {listing.ownerEmail.split("@")[0]}</p>
-                </div>
-              </Link>
-            </div>
-          );
-        })
-      ) : (
-        <p className="no-listings-message">No listings available yet.</p>
-      )}
+              </div>
+            </Link>
+          </article>
+        );
+      })}
     </div>
   );
 }
