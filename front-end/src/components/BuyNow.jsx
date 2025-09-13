@@ -199,6 +199,8 @@ export default function BuyNowModal({ listing, onClose }) {
                   {showCVC ? 'Hide' : 'Show'}
                 </button>
               </div>
+
+              
             </div>
           </>
         )}

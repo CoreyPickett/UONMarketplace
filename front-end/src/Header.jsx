@@ -2,8 +2,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { getAuth, signOut } from "firebase/auth";
 import useUser from "./useUser";
+import Layout from "./Layout";
 
-export default function Header() {
+export default function Header({ onOpenMenu }) {
   const { isLoading, user } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
@@ -25,6 +26,18 @@ export default function Header() {
   return (
     <header style={s.wrap}>
       <nav style={s.nav}>
+        <div style={s.left}>
+        {/*Hamburger menu*/}
+        <button
+            type="button"
+            onClick={onOpenMenu ? onOpenMenu : () => {}}
+            aria-label="Open menu"
+            style={{ ...s.iconBtn, marginRight: 4 }}
+          >
+            ☰
+          </button>
+        
+
         {/* Left: Back + Brand */}
         <div style={s.left}>
           <button
@@ -42,7 +55,7 @@ export default function Header() {
             <span style={s.brandText}>Marketplace</span>
           </Link>
         </div>
-
+      </div>
         {/* Middle: primary links */}
         <ul style={s.links}>
           <li><Link to="/marketplace" style={linkStyle(isActive("/marketplace"))}>Marketplace</Link></li>
@@ -73,6 +86,10 @@ export default function Header() {
       </nav>
     </header>
   );
+
+  
+
+
 }
 
 
@@ -215,13 +232,27 @@ function linkStyle(active) {
   return {
     textDecoration: "none",
     color: active ? NAVY : INK,
-    fontWeight: active ? 800 : 600,
+    fontWeight: 900, // Always bold
     padding: "8px 10px",
     borderRadius: 8,
-    border: active ? `1px solid ${NAVY}` : "1px solid transparent",
-    background: active ? "rgba(0,48,87,0.06)" : "transparent",
+    border: active ? `2px solid ${NAVY}` : "1px solid transparent",
+    background: active ? "rgba(0,48,87,0.18)" : "transparent",
     outline: "none",
-    transition: "background .12s ease, color .12s ease, transform .06s ease",
-    boxShadow: active ? "inset 0 0 0 1px rgba(0,48,87,0.06)" : "none",
+    transition: "background .12s ease, color .12s ease, transform .06s ease, border .12s ease",
+    boxShadow: active ? "0 2px 8px rgba(0,48,87,0.10)" : "none",
+    position: "relative",
+    cursor: "pointer",
+   
+    ...(active ? {} : {
+      ':hover': {
+        background: "rgba(0,48,87,0.10)",
+        border: `1px solid ${NAVY}`,
+        color: NAVY,
+      }
+    })
   };
 }
+
+
+
+

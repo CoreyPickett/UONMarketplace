@@ -1,0 +1,24 @@
+.nav-link {
+  text-decoration: none;
+  color: #0f172a;
+  font-weight: 900;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background .12s, color .12s, border .12s;
+  cursor: pointer;
+}
+
+.nav-link--active {
+  color: #003057;
+  border: 2px solid #003057;
+  background: rgba(0,48,87,0.18);
+  box-shadow: 0 2px 8px rgba(0,48,87,0.10);
+}
+
+.nav-link:hover {
+  background: rgba(0,48,87,0.10);
+  border: 1px solid #003057;
+  color: #003057;
+}
