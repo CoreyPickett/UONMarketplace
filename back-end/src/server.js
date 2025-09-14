@@ -679,15 +679,119 @@ app.get("/api/profile/:uid", async (req, res) => {
     if (!uid) return res.status(400).json({ error: "Missing UID" });
 
     const profile = await db.collection("profile").findOne({ uid });
+    const user = await db.collection("users").findOne({ uid });
 
     if (!profile) {
       return res.status(404).json({ error: "Profile not found" });
     }
 
-    res.json(profile);
+    res.json({
+      ...profile,
+      username: user?.username || null
+    });
   } catch (err) {
     console.error("Error fetching profile:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+//POST request to set a username
+app.post('/api/user/setUsername', verifyUser, async (req, res) => {
+  try {
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ error: "Missing request body" });
+    }
+
+    const { uid } = req.user || {};
+    const { username } = req.body;
+
+    if (!username || typeof username !== "string") {
+      return res.status(400).json({ error: "Username is required and must be a string." });
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      return res.status(400).json({ error: "Invalid username format." });
+    }
+
+    // Check if username is already taken
+    const existingUser = await db.collection('users').findOne({ username });
+    if (existingUser) {
+      return res.status(409).json({ error: "Username already taken." });
+    }
+
+    // Update the user's document
+    const result = await db.collection('users').updateOne(
+      { uid },
+      { $set: { username } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(500).json({ error: "Username update failed." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Username set successfully",
+      username
+    });
+  } catch (err) {
+    console.error("Username update error:", err);
+    return res.status(500).json({ success: false, message: "Unexpected error" });
+  }
+});
+
+//POST request to update a username
+app.put('/api/user/updateUsername', verifyUser, async (req, res) => {
+  try {
+    const { uid, email } = req.user || {};
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ error: "Missing username in request body." });
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      return res.status(400).json({ error: "Invalid username format." });
+    }
+
+    // Check if username is already taken
+    const existingUserWithUsername = await db.collection('users').findOne({ username });
+    if (existingUserWithUsername && existingUserWithUsername.uid !== uid) {
+      return res.status(409).json({ error: "Username already taken." });
+    }
+
+    // Ensure user document exists
+    const userDoc = await db.collection('users').findOne({ uid });
+    if (!userDoc) {
+      await db.collection('users').insertOne({
+        uid,
+        email,
+        username: null,
+        createdAt: new Date()
+      });
+    }
+
+    // Update username
+    const result = await db.collection('users').updateOne(
+      { uid },
+      { $set: { username } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(200).json({ success: true, message: "Username already set", username });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Username updated successfully",
+      username
+    });
+
+  } catch (err) {
+    console.error("Username update error:", err);
+    return res.status(500).json({ success: false, message: "Unexpected error" });
   }
 });
 
@@ -921,6 +1025,15 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.url}`);
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
+  next();
+});
+
+
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
 

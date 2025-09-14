@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { getAuth, signOut } from "firebase/auth";
+import { api } from "./api";
 import useUser from "./useUser";
 import Layout from "./Layout";
 
@@ -8,6 +9,26 @@ export default function Header({ onOpenMenu }) {
   const { isLoading, user } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [profileData, setProfileData] = useState(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`/api/profile/${user.uid}`);
+        if (!res.ok) throw new Error("Profile fetch failed");
+        const data = await res.json(); // <-- parse the response body
+        setProfileData(data);
+      } catch (err) {
+        console.error("Failed to fetch profile:", err);
+      }
+    };
+
+    if (user?.uid) {
+      fetchProfile();
+    }
+  }, [user]);
+
 
   // Back button state 
   const canGoBack = useMemo(
@@ -71,7 +92,9 @@ export default function Header({ onOpenMenu }) {
           ) : user ? (
             <>
               <li style={{ ...s.muted, fontWeight: 600 }}>
-                {user.email?.split("@")[0] || "Account"}
+                {profileData?.username
+                  ? `@${profileData.username}`
+                  : user.email?.split("@")[0] || "Account"}
               </li>
               <li><Link to="/profile" style={s.btnSecondary}>Profile</Link></li>
               <li><button type="button" onClick={onSignOut} style={s.btnPrimary}>Sign out</button></li>

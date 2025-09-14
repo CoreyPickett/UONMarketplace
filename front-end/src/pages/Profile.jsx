@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getAuth } from "firebase/auth";
 import useUser from "../useUser";
+import { api } from "../api";
 import "./Profile.css";
 
 export default function Profile() {
@@ -185,6 +186,15 @@ export default function Profile() {
           <div className="whoami">
             <h2>{user.email}</h2>
             <div className="muted">UID: {user.uid}</div>
+
+            {/* Display Username */}
+            {profileData?.username ? (
+              <div className="muted">Username: @{profileData.username}</div>
+            ) : (
+              <div className="muted warning">
+                No username set. <Link to="/updateUsername">Set one now</Link>
+              </div>
+            )}
           </div>
           <div className="profile-actions">
             
@@ -417,6 +427,17 @@ export default function Profile() {
                 </button>
               </div>
             </div>
+
+              {/* Update Username */}
+              <div className="action-block">
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate("/updateUsername")}
+              >
+                Change Username
+              </button>
+            </div>
+
 
             <hr />
 
