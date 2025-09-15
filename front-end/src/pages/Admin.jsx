@@ -41,6 +41,26 @@ export default function Admin() {
     };
   }, []);
 
+  useEffect(() => {
+    if (tab === "users") {
+      fetchAllUsers();
+    }
+  }, [tab]);
+
+  const fetchAllUsers = async () => {
+    try {
+      setULoading(true);
+      const res = await fetch("/api/admin/users"); // Adjust endpoint as needed
+      const data = await res.json();
+      setUsers(data);
+      setUError("");
+    } catch (err) {
+      setUError("Failed to fetch users.");
+    } finally {
+      setULoading(false);
+    }
+  };
+
   const filtered = useMemo(() => {
     let out = [...listings];
     const qq = q.trim().toLowerCase();
@@ -117,59 +137,14 @@ export default function Admin() {
   const [uError, setUError] = useState("");
   const [deleteUid, setDeleteUid] = useState(null); // uid we’re about to delete
   const [deleting, setDeleting] = useState(false);
-const [busyUid, setBusyUid] = useState(null); // uid currently being toggled (disable/enable)
+  const [busyUid, setBusyUid] = useState(null); // uid currently being toggled (disable/enable)
 
 
-  const searchUsersByEmail = async () => {
-    const email = uQuery.trim();
-    if (!email) {
-      setUsers([]);
-      setUError("");
-      return;
-    }
-    try {
-      setULoading(true);
-      setUError("");
-      const auth = getAuth();
-      const current = auth.currentUser;
-      if (!current) {
-        setUError("You must be logged in as admin to search users.");
-        setULoading(false);
-        return;
-      }
-      const token = await current.getIdToken();
-      const res = await axios.get(`/api/admin/search-user`, {
-        params: { email },
-        headers: { authtoken: token },
-      });
-      const u = res.data;
-      // normalize to array for table
-      setUsers(
-        u && (u.uid || u.id || u._id)
-          ? [
-              {
-                uid: u.uid || u.id || u._id,
-                email: u.email,
-                displayName: u.displayName,
-                disabled: u.disabled,
-                isAdmin: u.customClaims?.isAdmin === true,
-              },
-            ]
-          : []
-      );
-      if (!u || !(u.uid || u.id || u._id)) {
-        setUError("No user found with that email.");
-      }
-    } catch (err) {
-      console.error(err);
-      setUsers([]);
-      setUError(
-        err?.response?.data?.error || "Failed to fetch user. Check email and permissions."
-      );
-    } finally {
-      setULoading(false);
-    }
-  };
+  const filteredUsers = users.filter(u =>
+    u.email?.toLowerCase().includes(uQuery.toLowerCase()) ||
+    u.displayName?.toLowerCase().includes(uQuery.toLowerCase()) ||
+    (u.uid || u.id || u._id)?.toLowerCase().includes(uQuery.toLowerCase())
+  );
 
   const requestDeleteUser = (uid) => setDeleteUid(uid);
   const cancelDeleteUser = () => setDeleteUid(null);
@@ -462,26 +437,19 @@ const setUserDisabled = async (uid, disabled) => {
           <input
             value={uQuery}
             onChange={(e) => setUQuery(e.target.value)}
-            placeholder="Search user by email…"
-            aria-label="Search users by email"
+            placeholder="Search user by email, name, or UID…"
+            aria-label="Search users"
           />
           {uQuery && (
             <button
               className="icon-btn"
-              onClick={() => {
-                setUQuery("");
-                setUsers([]);
-                setUError("");
-              }}
+              onClick={() => setUQuery("")}
               title="Clear"
             >
               ✕
             </button>
           )}
         </div>
-        <button className="btn" onClick={searchUsersByEmail} disabled={uLoading}>
-          {uLoading ? "Searching…" : "Search"}
-        </button>
       </div>
     </div>
 
@@ -501,36 +469,24 @@ const setUserDisabled = async (uid, disabled) => {
         </thead>
 
         <tbody>
-          {users.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <tr>
-              {/* 🔧 was 5; header has 6 columns */}
               <td colSpan={6} style={{ textAlign: "center" }}>
-                <div className="empty">No users. Try a different email.</div>
+                <div className="empty">No matching users.</div>
               </td>
             </tr>
           ) : (
-            users.map((u) => {
+            filteredUsers.map((u) => {
               const uid = u.uid || u.id || u._id;
               const isSelf = currentUid && uid === currentUid;
               return (
                 <tr key={uid}>
                   <td>
-                    <div className="item-cell">
-                      <div className="thumb user">
-                        <img
-                          src={"/avatar-placeholder.png"}
-                          alt={u.displayName || "User"}
-                          onError={(e) =>
-                            (e.currentTarget.src = "/avatar-placeholder.png")
-                          }
-                        />
+                    <div className="meta">
+                      <div className="title">
+                        {u.displayName || (u.email ? `(${u.email})` : "Unnamed")}
                       </div>
-                      <div className="meta">
-                        <div className="title">
-                          {u.displayName || "Unnamed User"}
-                        </div>
-                        <div className="sub muted">{uid}</div>
-                      </div>
+                      <div className="sub muted">{uid}</div>
                     </div>
                   </td>
                   <td className="hide-sm">{u.email || "—"}</td>

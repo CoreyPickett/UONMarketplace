@@ -330,6 +330,34 @@ app.get('/api/marketplace/s3-upload-url', async (req, res) => {
   }
 });
 
+//GET request to list all users
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const allUsers = [];
+    let nextPageToken;
+
+    do {
+      const result = await admin.auth().listUsers(1000, nextPageToken); // max 1000 per page
+      result.users.forEach((userRecord) => {
+        allUsers.push({
+          uid: userRecord.uid,
+          email: userRecord.email,
+          displayName: userRecord.displayName,
+          disabled: userRecord.disabled,
+          customClaims: userRecord.customClaims || {},
+        });
+      });
+      nextPageToken = result.pageToken;
+    } while (nextPageToken);
+
+    res.json(allUsers);
+  } catch (error) {
+    console.error("Error listing users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+
 
 //GET request to search user by email
 app.get('/api/admin/search-user', verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
