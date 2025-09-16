@@ -4,6 +4,7 @@ import { getAuth, signOut } from "firebase/auth";
 import { api } from "./api";
 import useUser from "./useUser";
 import Layout from "./Layout";
+import "./Header.css"; 
 
 export default function Header({ onOpenMenu }) {
   const { isLoading, user } = useUser();
@@ -17,20 +18,15 @@ export default function Header({ onOpenMenu }) {
       try {
         const res = await fetch(`/api/profile/${user.uid}`);
         if (!res.ok) throw new Error("Profile fetch failed");
-        const data = await res.json(); // <-- parse the response body
+        const data = await res.json();
         setProfileData(data);
       } catch (err) {
         console.error("Failed to fetch profile:", err);
       }
     };
-
-    if (user?.uid) {
-      fetchProfile();
-    }
+    if (user?.uid) fetchProfile();
   }, [user]);
 
-
-  // Back button state 
   const canGoBack = useMemo(
     () => window.history.length > 1 && location.pathname !== "/",
     [location.pathname]
@@ -48,37 +44,33 @@ export default function Header({ onOpenMenu }) {
     <header style={s.wrap}>
       <nav style={s.nav}>
         <div style={s.left}>
-        {/*Hamburger menu*/}
-        <button
+          {/* Hamburger */}
+          <button
             type="button"
             onClick={onOpenMenu ? onOpenMenu : () => {}}
             aria-label="Open menu"
             style={{ ...s.iconBtn, marginRight: 4 }}
-          >
-            ☰
-          </button>
-        
+          >☰</button>
 
-        {/* Left: Back + Brand */}
-        <div style={s.left}>
-          <button
-            type="button"
-            onClick={goBack}
-            disabled={!canGoBack}
-            aria-label="Go back"
-            style={{ ...s.iconBtn, ...(canGoBack ? {} : s.iconBtnDisabled) }}
-          >
-            ←
-          </button>
+          {/* Back + Brand */}
+          <div style={s.left}>
+            <button
+              type="button"
+              onClick={goBack}
+              disabled={!canGoBack}
+              aria-label="Go back"
+              style={{ ...s.iconBtn, ...(canGoBack ? {} : s.iconBtnDisabled) }}
+            >←</button>
 
-          <Link to="/" aria-label="UoN Marketplace Home" style={s.brandLink}>
-            <span style={s.brandMark}>UoN</span>
-            <span style={s.brandText}>Marketplace</span>
-          </Link>
+            <Link to="/" aria-label="UoN Marketplace Home" style={s.brandLink}>
+              <span style={s.brandMark}>UoN</span>
+              <span style={s.brandText}>Marketplace</span>
+            </Link>
+          </div>
         </div>
-      </div>
-        {/* Middle: primary links */}
-        <ul style={s.links}>
+
+        {/* primary links */}
+        <ul className="header-links">
           <li><Link to="/marketplace" style={linkStyle(isActive("/marketplace"))}>Marketplace</Link></li>
           <li><Link to="/saved" style={linkStyle(isActive("/saved"))}>Saved</Link></li>
           <li><Link to="/create-listing" style={linkStyle(isActive("/create-listing"))}>Create Listing</Link></li>
@@ -96,8 +88,17 @@ export default function Header({ onOpenMenu }) {
                   ? `@${profileData.username}`
                   : user.email?.split("@")[0] || "Account"}
               </li>
-              <li><Link to="/profile" style={s.btnSecondary}>Profile</Link></li>
-              <li><button type="button" onClick={onSignOut} style={s.btnPrimary}>Sign out</button></li>
+
+              {/* Hide this Profile on mobile; it will appear in the mobile bar below */}
+              <li className="hide-on-mobile">
+                <Link to="/profile" style={s.btnSecondary}>Profile</Link>
+              </li>
+
+              <li>
+                <button type="button" onClick={onSignOut} style={s.btnPrimary}>
+                  Sign out
+                </button>
+              </li>
             </>
           ) : (
             <>
@@ -107,12 +108,17 @@ export default function Header({ onOpenMenu }) {
           )}
         </ul>
       </nav>
+
+      {/* ===== Mobile-only second row ===== */}
+      <div className="mobile-bar-wrapper">
+        <div className="mobile-bar">
+          <Link to="/marketplace" className="mobile-bar-link">Marketplace</Link>
+          <Link to="/profile" className="mobile-bar-link">Profile</Link>
+        </div>
+      </div>
+      {/* ===== end mobile row ===== */}
     </header>
   );
-
-  
-
-
 }
 
 

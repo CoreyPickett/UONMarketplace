@@ -1,3 +1,11 @@
+@media (max-width: 600px) {
+  .mp-toolbar {
+    position: static !important;
+    top: auto !important;
+    box-shadow: none !important;
+    border-bottom: none !important;
+  }
+}
 /* Page shell */
 .mp-wrap {
   background: #f5f5f5;
