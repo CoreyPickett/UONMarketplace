@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import NotLoggedIn from "./NotLoggedIn";
 import useUser from "../useUser";
 import "./Dashboard.css";
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const [allListings, setAllListings] = useState([]);
   const [allThreads, setAllThreads] = useState([]);
   const [savedCount, setSavedCount] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Initial load (no manual refresh button anymore)
   useEffect(() => {
@@ -272,6 +274,13 @@ export default function Dashboard() {
                       <Link className="btn btn-ghost" to={`/edit-listing/${l._id}`}>
                         Edit
                       </Link>
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => deleteListing(l._id)}
+                        disabled={deletingId === String(l._id)}
+                      >
+                        {deletingId === String(l._id) ? "Deleting…" : "Delete"}
+                      </button>
                     </div>
                   </li>
                 );
@@ -345,4 +354,24 @@ export default function Dashboard() {
       </section>
     </main>
   );
+
+  async function deleteListing(id) {
+    if (!user) return;
+    const ok = window.confirm("Delete this listing permanently?");
+    if (!ok) return;
+    try {
+      setDeletingId(id);
+      const token = await user.getIdToken(true);
+      await axios.delete(`/api/marketplace/${id}`, {
+        headers: { authtoken: token },
+      });
+      // Remove from UI
+      setAllListings((prev) => prev.filter((l) => String(l._id) !== String(id)));
+    } catch (e) {
+      console.error("Delete failed:", e);
+      alert("Failed to delete listing.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 }
