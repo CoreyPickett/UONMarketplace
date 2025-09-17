@@ -36,13 +36,11 @@ export default function Dashboard() {
   const { user, isLoading } = useUser();
 
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
   const [allListings, setAllListings] = useState([]);
   const [allThreads, setAllThreads] = useState([]);
   const [savedCount, setSavedCount] = useState(null);
 
-  // Initial load
+  // Initial load (no manual refresh button anymore)
   useEffect(() => {
     let alive = true;
 
@@ -50,17 +48,17 @@ export default function Dashboard() {
       try {
         setLoading(true);
 
-        // Listings (public)
+        // Public listings
         const lres = await fetch("/api/marketplace/");
         const listings = await lres.json();
         if (alive) setAllListings(Array.isArray(listings) ? listings : []);
 
-        // Messages (public in your server)
+        // Threads (as used previously)
         const mres = await fetch("/api/messages/");
         const threads = await mres.json();
         if (alive) setAllThreads(Array.isArray(threads) ? threads : []);
 
-        // Saved count (only if signed in)
+        // Saved count if logged in
         if (user) {
           try {
             const token = await user.getIdToken();
@@ -93,7 +91,7 @@ export default function Dashboard() {
     };
   }, [user]);
 
-  // “Mine”
+  // Mine
   const my = useMemo(() => {
     if (!user) return { listings: [], threads: [] };
     const uid = user.uid;
@@ -123,50 +121,30 @@ export default function Dashboard() {
     return { totalListings, totalUpvotes, totalThreads };
   }, [my]);
 
-  const latestMyListings = useMemo(() => {
-    return [...my.listings]
-      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-      .slice(0, 4);
-  }, [my.listings]);
+  const latestMyListings = useMemo(
+    () =>
+      [...my.listings]
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 4),
+    [my.listings]
+  );
 
-  const latestThreads = useMemo(() => {
-    return [...my.threads]
-      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-      .slice(0, 4);
-  }, [my.threads]);
+  const latestThreads = useMemo(
+    () =>
+      [...my.threads]
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 4),
+    [my.threads]
+  );
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const [lres, mres] = await Promise.all([
-        fetch("/api/marketplace/"),
-        fetch("/api/messages/"),
-      ]);
-      const [listings, threads] = await Promise.all([lres.json(), mres.json()]);
-      setAllListings(Array.isArray(listings) ? listings : []);
-      setAllThreads(Array.isArray(threads) ? threads : []);
-
-      if (user) {
-        try {
-          const token = await user.getIdToken();
-          const sres = await fetch("/api/saves?idsOnly=1", {
-            headers: { authtoken: token },
-          });
-          const ids = await sres.json();
-          setSavedCount(Array.isArray(ids) ? ids.length : 0);
-        } catch {
-          setSavedCount(0);
-        }
-      } else {
-        setSavedCount(null);
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Refresh failed. Please try again.");
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  // Latest public marketplace listings shown on dashboard
+  const latestPublicListings = useMemo(
+    () =>
+      [...(allListings || [])]
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 6),
+    [allListings]
+  );
 
   if (isLoading) return <div className="loading">Loading…</div>;
 
@@ -196,18 +174,18 @@ export default function Dashboard() {
         </div>
 
         <div className="dash__header-actions">
-          <button className="btn" onClick={onRefresh} disabled={refreshing}>
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </button>
-          {/* Saved moved to Quick Links */}
+          {/* Refresh removed */}
           <Link className="btn btn-primary" to="/create-listing">
             + Create Listing
           </Link>
         </div>
       </header>
 
-      {/* Stats */}
-      <section className="dash__grid">
+      {/* Stats — Quick Links removed */}
+      <section
+        className="dash__grid"
+        style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
+      >
         <div className="stat-card">
           <div className="stat-card__label">My Listings</div>
           <div className="stat-card__value">{stats.totalListings}</div>
@@ -226,19 +204,6 @@ export default function Dashboard() {
           <div className="stat-card__label">Threads</div>
           <div className="stat-card__value">{stats.totalThreads}</div>
           <div className="stat-card__hint">Messages you’re part of</div>
-        </div>
-
-        <div className="stat-card stat-card--accent">
-          <div className="stat-card__label">Quick Links</div>
-          <div className="stat-card__actions">
-            <Link to="/marketplace" className="chip">Browse</Link>
-            <Link to="/messages" className="chip">Messages</Link>
-            <Link to="/profile" className="chip">Profile</Link>
-            <Link to="/saved" className="chip">
-              Saved{savedCount !== null ? ` (${savedCount ?? 0})` : ""}
-            </Link>
-            <Link to="/admin" className="chip">Admin</Link>
-          </div>
         </div>
       </section>
 
@@ -266,19 +231,20 @@ export default function Dashboard() {
                 const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
                 const region = import.meta.env.VITE_AWS_REGION;
 
-                const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string"
-                  ? l.images[0]
-                  : null;
+                const imageKey =
+                  Array.isArray(l.images) && typeof l.images[0] === "string"
+                    ? l.images[0]
+                    : null;
 
                 const thumbnail = imageKey?.startsWith("http")
                   ? imageKey
                   : imageKey
-                    ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
-                    : l.image?.startsWith("http")
-                      ? l.image
-                      : l.image
-                        ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
-                        : "/placeholder-listing.jpg";
+                  ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                  : l.image?.startsWith("http")
+                  ? l.image
+                  : l.image
+                  ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                  : "/placeholder-listing.jpg";
 
                 return (
                   <li key={String(l._id)} className="list__row">
@@ -287,7 +253,9 @@ export default function Dashboard() {
                         <img
                           src={thumbnail}
                           alt={l.title || "Listing"}
-                          onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                          onError={(e) =>
+                            (e.currentTarget.src = "/placeholder-listing.jpg")
+                          }
                         />
                       </div>
                       <div className="meta">
@@ -312,52 +280,60 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Inbox Preview */}
+        {/* Latest on Marketplace (public) */}
         <div className="panel">
           <div className="panel__head">
-            <h2 className="panel__title">Inbox Preview</h2>
-            <Link to="/messages" className="btn btn-ghost">
-              Open Inbox
-            </Link>
+            <h2 className="panel__title">Latest on Marketplace</h2>
+            <Link to="/marketplace" className="btn btn-ghost">Browse</Link>
           </div>
 
           {loading ? (
             <div className="empty">Loading…</div>
-          ) : latestThreads.length === 0 ? (
-            <div className="empty">
-              No threads yet. Start a conversation from a listing.
-            </div>
+          ) : latestPublicListings.length === 0 ? (
+            <div className="empty">No listings yet. Be the first to post!</div>
           ) : (
             <ul className="list">
-              {latestThreads.map((t) => {
-                const messages = Array.isArray(t.messages) ? t.messages : [];
-                const last = messages[messages.length - 1];
-                const preview =
-                  typeof last?.text === "string" && last.text
-                    ? last.text
-                    : "No messages yet";
+              {latestPublicListings.map((l) => {
+                const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+                const region = import.meta.env.VITE_AWS_REGION;
+
+                const imageKey =
+                  Array.isArray(l.images) && typeof l.images[0] === "string"
+                    ? l.images[0]
+                    : null;
+
+                const thumbnail = imageKey?.startsWith("http")
+                  ? imageKey
+                  : imageKey
+                  ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                  : l.image?.startsWith("http")
+                  ? l.image
+                  : l.image
+                  ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                  : "/placeholder-listing.jpg";
+
                 return (
-                  <li key={String(t._id)} className="list__row">
+                  <li key={String(l._id)} className="list__row">
                     <div className="item-cell">
-                      <div className="thumb user">
+                      <div className="thumb">
                         <img
-                          src={"/avatar-placeholder.png"}
-                          alt="Thread"
+                          src={thumbnail}
+                          alt={l.title || "Listing"}
                           onError={(e) =>
-                            (e.currentTarget.src = "/avatar-placeholder.png")
+                            (e.currentTarget.src = "/placeholder-listing.jpg")
                           }
                         />
                       </div>
                       <div className="meta">
-                        <div className="title">
-                          Thread {String(t._id).slice(-6).toUpperCase()}
+                        <div className="title">{l.title || "Untitled"}</div>
+                        <div className="sub">
+                          {formatAUD(l.price)} · {timeAgo(l.createdAt)}
                         </div>
-                        <div className="sub">{preview}</div>
                       </div>
                     </div>
                     <div className="row-actions">
-                      <Link className="btn btn-ghost" to={`/messages/${t._id}`}>
-                        Open
+                      <Link className="btn btn-ghost" to={`/marketplace/${l._id}`}>
+                        View
                       </Link>
                     </div>
                   </li>
