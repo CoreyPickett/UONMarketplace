@@ -13,6 +13,8 @@
   max-width: 1240px;
   margin: 24px auto;
   padding: 0 24px 40px;
+  width : 100%;
+  box-sizing: border-box;
 }
 
 /* header: bigger gaps */
@@ -299,11 +301,11 @@ a.chip:hover {
   color: var(--muted);
 }
 
-/*  hide non-essential header elements for mobile */
+/*  hide header elements for mobile */
 @media (max-width: 600px) {
   .dash {
-    padding: 0 4px 24px;
-    margin: 8px auto;
+    padding: 80px 4px 24px; 
+    margin: 100px auto 0 auto; 
   }
   .dash__header {
     flex-direction: column;
@@ -327,3 +329,20 @@ a.chip:hover {
       display: none !important;
     }
   }
+
+ @media (max-width: 600px) {
+  /* Put actions on a new line so nothing overflows to the right */
+  .list__row {
+    grid-template-columns: 1fr;  /* was 1fr auto */
+    align-items: start;
+  } 
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;     /* allow buttons to wrap */
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .item-cell { min-width: 0; }   /* allows text to wrap instead of growing the row */
+  .meta .title { word-break: break-word; }
+}
