@@ -55,6 +55,8 @@
 
 @media (max-width: 768px) {
   .mobile-bar-wrapper { display: none !important; }
+   .header-links { display: none !important; }
+  .hide-on-mobile { display: none !important; }
 }
 
 .mobile-bar {

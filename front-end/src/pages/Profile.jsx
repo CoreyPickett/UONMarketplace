@@ -185,7 +185,18 @@ export default function Profile() {
           </div>
           <div className="whoami">
             <h2>{user.email}</h2>
-            <div className="muted">UID: {user.uid}</div>
+            <div className="uid-row">
+  <span className="uid-label">UID:</span>
+  <span className="uid-value" title={user.uid}>{user.uid}</span>
+  <button
+  type="button"
+  className="btn-copy btn-xs"
+  onClick={() => navigator.clipboard.writeText(user.uid)}
+  aria-label="Copy UID"
+>
+  Copy
+</button>
+</div>
 
             {/* Display Username */}
             {profileData?.username ? (

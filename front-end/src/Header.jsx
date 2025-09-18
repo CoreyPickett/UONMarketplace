@@ -94,11 +94,12 @@ export default function Header({ onOpenMenu }) {
                 <Link to="/profile" style={s.btnSecondary}>Profile</Link>
               </li>
 
-              <li>
+              <li className= "hide-on-mobile">
                 <button type="button" onClick={onSignOut} style={s.btnPrimary}>
                   Sign out
                 </button>
               </li>
+              
             </>
           ) : (
             <>
