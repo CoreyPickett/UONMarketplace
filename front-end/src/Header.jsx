@@ -10,8 +10,24 @@ export default function Header({ onOpenMenu }) {
   const { isLoading, user } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(false);
 
   const [profileData, setProfileData] = useState(null);
+
+ useEffect(() => {
+  const mql = window.matchMedia("(max-width: 900px)");
+  const onChange = () => setIsMobile(mql.matches);
+  onChange();
+  mql.addEventListener("change", onChange);
+  return () => mql.removeEventListener("change", onChange);
+}, []);
+useEffect(() => {
+  const handler = () => setIsMobile(window.innerWidth <= 900); // or 768
+  handler(); // set initial
+  console.log("viewport width:", window.innerWidth); // temp debug
+  window.addEventListener("resize", handler);
+  return () => window.removeEventListener("resize", handler);
+}, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -45,12 +61,17 @@ export default function Header({ onOpenMenu }) {
       <nav style={s.nav}>
         <div style={s.left}>
           {/* Hamburger */}
-          <button
-            type="button"
-            onClick={onOpenMenu ? onOpenMenu : () => {}}
-            aria-label="Open menu"
-            style={{ ...s.iconBtn, marginRight: 4 }}
-          >☰</button>
+          {isMobile && (
+  <button
+    type="button"
+    onClick={onOpenMenu ? onOpenMenu : () => {}}
+    aria-label="Open menu"
+    className="burger"
+    style={{ ...s.iconBtn, marginRight: 4 }}
+  >
+    ☰
+  </button>
+)}
 
           {/* Back + Brand */}
           <div style={s.left}>

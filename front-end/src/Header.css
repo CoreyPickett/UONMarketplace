@@ -86,3 +86,10 @@
   background: #e5e7eb;
   color: #0f172a;
 }
+
+.burger { display: none; }
+
+/* Show burger on tablets/phones */
+@media (max-width: 1024px) {
+  .burger { display: inline-flex !important}
+}
