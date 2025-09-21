@@ -13,6 +13,7 @@ import MarketPlace from "./pages/MarketPlace";
 import Listing from "./pages/Listing";
 import { loader as listingLoader } from "./listingLoader";
 import CreateListing from "./pages/CreateListing";
+import CreateMessage from "./pages/CreateMessage";
 import EditListing from "./pages/EditListing"
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
@@ -66,6 +67,10 @@ const routes = [
       {
         path: "create-listing",
         element: <CreateListing />
+      },
+      {
+        path: "create-message",
+        element: <CreateMessage />
       },
       {
         path: "edit-listing/:id",

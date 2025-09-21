@@ -6,14 +6,13 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "./CreateListing.css";
 import NotLoggedIn from "./NotLoggedIn";
 
-export default function CreateListing() {
+export default function CreateMessage() {
   const [formData, setFormData] = useState({
     otherUserName: "",
     lastMessage: "",
     lastMessageAt: "",
     unread: [],   
-    avatar: "",
-    messages: [],            
+    message: "",            
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -110,9 +109,9 @@ export default function CreateListing() {
             />
 
             <textarea
-                name=""
-                placeholder="Description"
-                value={formData.description}
+                name="messages"
+                placeholder="message"
+                value={formData.message}
                 onChange={handleChange}
                 rows={4}
                 required

@@ -966,15 +966,15 @@ app.post('/api/messages/create-message', verifyUser, async (req, res) => {
     const { uid, email } = req.user || {};
 
     const {
-      reciverIds,
-      reciverEmails,
-      messages,
+      otherUserName,
+      message,
     } = req.body;
 
     const newMessages = {
-      reciverIds,
-      reciverEmails,
-      messages,
+      otherUserName,
+      lastMessage: message,
+      unread,   // removed avatar as that is now stored elsewere 
+      messages: { from: uid, body: message, at: new Date().toISOString() },
       //  ownership fields for Profile "messages"
       ownerUid: uid || null,
       ownerEmail: email || null,
