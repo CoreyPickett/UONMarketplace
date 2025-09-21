@@ -31,6 +31,7 @@ export default function CreateMessage() {
     return () => unsub();
     }, []);
 
+    
 
     const onSubmit = async (e) => {
     e.preventDefault();
@@ -84,6 +85,14 @@ export default function CreateMessage() {
     }
   };
 
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+
+    setFormData((p) => ({
+      ...p,
+      [name]: type === "number" ? Number(value) : value,
+    }));
+  };
 
 // route to not logged in page if not logged in
   if (checkingUser) return null; 
