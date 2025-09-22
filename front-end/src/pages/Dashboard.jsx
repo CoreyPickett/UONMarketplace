@@ -1,6 +1,6 @@
+// src/Dashboard.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import NotLoggedIn from "./NotLoggedIn";
 import useUser from "../useUser";
 import "./Dashboard.css";
@@ -40,9 +40,8 @@ export default function Dashboard() {
   const [allListings, setAllListings] = useState([]);
   const [allThreads, setAllThreads] = useState([]);
   const [savedCount, setSavedCount] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
 
-  // Initial load (no manual refresh button anymore)
+  // Initial load
   useEffect(() => {
     let alive = true;
 
@@ -55,7 +54,7 @@ export default function Dashboard() {
         const listings = await lres.json();
         if (alive) setAllListings(Array.isArray(listings) ? listings : []);
 
-        // Threads (as used previously)
+        // Threads
         const mres = await fetch("/api/messages/");
         const threads = await mres.json();
         if (alive) setAllThreads(Array.isArray(threads) ? threads : []);
@@ -139,7 +138,7 @@ export default function Dashboard() {
     [my.threads]
   );
 
-  // Latest public marketplace listings shown on dashboard
+  // Latest public listings for dashboard
   const latestPublicListings = useMemo(
     () =>
       [...(allListings || [])]
@@ -175,15 +174,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="dash__header-actions">
-          {/* Refresh removed */}
-          <Link className="btn btn-primary" to="/create-listing">
-            + Create Listing
-          </Link>
-        </div>
+        {/* Top-right actions: Create Listing button REMOVED */}
+        <div className="dash__header-actions" />
       </header>
 
-      {/* Stats — Quick Links removed */}
+      {/* Stats row (Quick Links removed) */}
       <section
         className="dash__grid"
         style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
@@ -211,7 +206,7 @@ export default function Dashboard() {
 
       {/* Panels */}
       <section className="dash__columns">
-        {/* My Latest Listings */}
+        {/* My Latest Listings (keeps + New in header & empty-state link) */}
         <div className="panel">
           <div className="panel__head">
             <h2 className="panel__title">My Latest Listings</h2>
@@ -274,13 +269,6 @@ export default function Dashboard() {
                       <Link className="btn btn-ghost" to={`/edit-listing/${l._id}`}>
                         Edit
                       </Link>
-                      <button
-                        className="btn btn-ghost"
-                        onClick={() => deleteListing(l._id)}
-                        disabled={deletingId === String(l._id)}
-                      >
-                        {deletingId === String(l._id) ? "Deleting…" : "Delete"}
-                      </button>
                     </div>
                   </li>
                 );
@@ -354,24 +342,4 @@ export default function Dashboard() {
       </section>
     </main>
   );
-
-  async function deleteListing(id) {
-    if (!user) return;
-    const ok = window.confirm("Delete this listing permanently?");
-    if (!ok) return;
-    try {
-      setDeletingId(id);
-      const token = await user.getIdToken(true);
-      await axios.delete(`/api/marketplace/${id}`, {
-        headers: { authtoken: token },
-      });
-      // Remove from UI
-      setAllListings((prev) => prev.filter((l) => String(l._id) !== String(id)));
-    } catch (e) {
-      console.error("Delete failed:", e);
-      alert("Failed to delete listing.");
-    } finally {
-      setDeletingId(null);
-    }
-  }
 }
