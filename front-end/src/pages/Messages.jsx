@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "./Messages.css";
 
 // Lets users search for profiles
@@ -97,6 +97,10 @@ const ProfileSearch = () => {
   );
 };
 
+
+
+
+
 // just as a demo
 const DEMO_THREADS = [
   {
@@ -118,32 +122,41 @@ const ConversationList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null); // Which thread is being deleted
 
   // fetch all message threads for the user
-  useEffect(() => {
-    (async () => {
-      try {
-        const current = getAuth().currentUser;
-        if (!current) {
-          console.warn("No user logged in; showing demo.");
-          setThreads(DEMO_THREADS);
-        } else {
-          const token = await current.getIdToken();
-          // fetch all conversations for user with auth
-          const { data } = await api.get("/messages", {
-            headers: { authtoken: token },
-          });
-          const list = data?.threads ?? data ?? [];
-          // If no threads demo it
-          setThreads(list.length ? list : DEMO_THREADS);
-        }
-      } catch (e) {
-        // If API fails demo it and log error
-        console.warn("GET /api/messages failed; showing demo:", e);
+  
+useEffect(() => {
+  const auth = getAuth();
+  setLoading(true);
+
+  const unsub = onAuthStateChanged(auth, async (user) => {
+    try {
+      if (!user) {
+        console.warn("No user logged in; showing demo.");
         setThreads(DEMO_THREADS);
-      } finally {
         setLoading(false);
+        return;
       }
-    })();
-  }, []);
+      const token = await user.getIdToken();
+      const { data } = await api.get("/messages", {
+        headers: { authtoken: token },
+      });
+
+      const list = Array.isArray(data?.threads)
+        ? data.threads
+        : Array.isArray(data)
+        ? data
+        : [];
+
+      setThreads(list.length ? list : DEMO_THREADS);
+    } catch (e) {
+      console.warn("GET /api/messages failed; showing demo:", e);
+      setThreads(DEMO_THREADS);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  return () => unsub();
+}, []);
 
   // Mark conversation as read
   const handleMarkAsRead = async (id) => {
