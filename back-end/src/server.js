@@ -961,7 +961,7 @@ app.get('/api/messages', verifyUser, async (req, res) => {
 });
 
 // POST request for creating a new messages
-app.post('/api/messages/create-message', verifyUser, async (req, res) => {
+app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
   const { uid, email } = req.user || {};
   const { otherUserName, otherUid, message } = req.body;
 
@@ -977,20 +977,74 @@ app.post('/api/messages/create-message', verifyUser, async (req, res) => {
     createdAt: new Date(),
   };
 
+
+    // checks for values
+    if (!otherUserName || !message) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (!req.user || !req.user.uid) {
+      return res.status(400).json({ error: "User information is missing" });
+    }
+
+    // posting to database
   const result = await db.collection('messages').insertOne(newThread);
 
   if (!result.acknowledged) {
     return res.status(500).json({ error: "Insert failed" });
   }
 
-  res.status(201).json({
-    success: true,
-    message: "Message thread created successfully",
-    insertedId: result.insertedId,
-  });
+    return res.status(201).json({
+      success: true,
+      message: 'Messages created successfully',
+      insertedId: result.insertedId
+    });
+  } catch (err) {
+    console.error('Insert error:', err);
+    return res.status(500).json({ success: false, message: 'Unexpected error', error: err.message });
+  }
 });
+
+// For searching for user exists in database
+app.get('/api/create-message/user-search', verifyUser, async () => {
+  const {uid} = req.body
   
-//DELETE request for deleting a listing
+  try{
+  const user = await db.collection('users').findOne( { uid : uid}).toArray();
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+
+});
+
+app.get('/api/message/mutual-check', verifyUser, async (req, res) => {
+  const { uid, otherUid } = req.query;  // Use query for GET
+
+  try {
+    const messagesCollection = db.collection('messages');
+
+    const chat = await messagesCollection.findOne({
+      $or: [
+        { ownerUid: uid, otherUserName: otherUid },
+        { ownerUid: otherUid, otherUserName: uid }
+      ]
+    });
+
+    if (chat) {
+      res.status(200).json(chat);
+    } else {
+      res.status(404).json({ message: 'No matching messages found' });
+    }
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
+
+
+//DELETE request for deleting a message
 app.delete('/api/messages/:id', verifyUser, async (req, res) => {
   const { id } = req.params;
 

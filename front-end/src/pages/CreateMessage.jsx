@@ -45,7 +45,7 @@ export default function CreateMessage() {
 
       // return JSX here—just redirect 
       if (!current) {
-        navigate("/login", { replace: true, state: { from: "/create-messages" } });
+        navigate("/login", { replace: true, state: { from: "/create-message" } });
         return;
       }
 
@@ -61,7 +61,7 @@ export default function CreateMessage() {
         
       };
 
-      const res = await axios.post("/api/marketplace/create-messages", payload, {
+      const res = await axios.post("/api/marketplace/create-message", payload, {
         headers: { authtoken: token },
       });
 
