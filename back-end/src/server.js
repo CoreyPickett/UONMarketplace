@@ -148,6 +148,7 @@ app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
   const { id } = req.params;
   const { uid, email } = req.user || {};
   const me = uid || email || "unknown";
+ 
   try {
     // Support both ObjectId and string IDs
     const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
@@ -928,81 +929,67 @@ app.delete('/api/saves/:id', verifyUser, async (req, res) => {
 // \/\/\/\/ Stuff for messages below \/\/\/\/ -------------------------------------------------------------------------
 
 //GET request for a messages
-app.get('/api/messages/:id', async (req, res) => {
+app.get('/api/messages/:id', verifyUser, async (req, res) => {
   const { id } = req.params;
   try {
+    const me = req.user?.uid || req.user?.email;
     const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
-    console.log("DirectMessage API: Querying with", query);
-    const message = await db.collection('messages').findOne(query);
-    if (!message) {
-      console.log("DirectMessage API: No message found for", query);
-      return res.status(404).json({ error: 'Message not found.' });
-    }
-    res.json(message);
-  } catch (error) {
-    console.error('DirectMessage API: Database error:', error);
-    res.status(500).json({ error: 'Internal server error.' });
+    const t = await db.collection('messages').findOne(query);
+    if (!t) return res.status(404).json({ error: 'Not found' });
+
+    const isParticipant = t.ownerUid === me || t.otherUid === me;
+    if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+
+    res.json(t);
+  } catch {
+    res.status(500).json({ error: 'Internal error' });
   }
 });
 
 //GET request for all messages
-app.get('/api/messages/', async (req, res) => {
+app.get('/api/messages', verifyUser, async (req, res) => {
   try {
-    const messages = await db.collection('messages').find().toArray(); //Lists all messages in 'messages' array
-    res.status(200).json(messages);
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-    res.status(500).json({ error: "Failed to fetch messages" });
+    const me = req.user?.uid || req.user?.email;        // your auth user id
+    const threads = await db.collection('messages')
+      .find({ $or: [{ ownerUid: me }, { otherUid: me }] })  // OR condition
+      .sort({ lastMessageAt: -1, createdAt: -1 })
+      .toArray();
+    res.status(200).json(threads);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch messages' });
   }
 });
 
 // POST request for creating a new messages
 app.post('/api/messages/create-message', verifyUser, async (req, res) => {
-  try {
-    if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({ error: "Missing request body" });
-    }
+  const { uid, email } = req.user || {};
+  const { otherUserName, otherUid, message } = req.body;
 
-    const { uid, email } = req.user || {};
+  const newThread = {
+    ownerUid: uid || null,
+    ownerEmail: email || null,
+    otherUid: otherUid || null,
+    otherUserName,
+    lastMessage: message,
+    lastMessageAt: new Date(),
+    unread: { [uid]: 0, [otherUid]: 1 },
+    messages: [{ from: uid, body: message, at: new Date().toISOString() }],
+    createdAt: new Date(),
+  };
 
-    const {
-      otherUserName,
-      message,
-    } = req.body;
+  const result = await db.collection('messages').insertOne(newThread);
 
-    const newMessages = {
-      otherUserName,
-      lastMessage: message,
-      unread,   // removed avatar as that is now stored elsewere 
-      messages: { from: uid, body: message, at: new Date().toISOString() },
-      //  ownership fields for Profile "messages"
-      ownerUid: uid || null,
-      ownerEmail: email || null,
-
-      //  createdAt to help sort later
-      createdAt: new Date(),
-    };
-
-    const result = await db.collection('messages').insertOne(newMessages);
-
-    if (!result.acknowledged) {
-      if (!res.headersSent) {
-        return res.status(500).json({ error: "Insert failed" });
-      }
-      return;
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: 'Messages created successfully',
-      insertedId: result.insertedId
-    });
-  } catch (err) {
-    console.error('Insert error:', err);
-    return res.status(500).json({ success: false, message: 'Unexpected error' });
+  if (!result.acknowledged) {
+    return res.status(500).json({ error: "Insert failed" });
   }
-});
 
+  res.status(201).json({
+    success: true,
+    message: "Message thread created successfully",
+    insertedId: result.insertedId,
+  });
+});
+  
 //DELETE request for deleting a listing
 app.delete('/api/messages/:id', verifyUser, async (req, res) => {
   const { id } = req.params;
@@ -1030,6 +1017,14 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
   try {
     // Support both ObjectId and string IDs
     const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const thread = await db.collection('messages').findOne(query);
+    if (!thread) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    if (thread.ownerUid !== me && thread.otherUid !== me) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    const other = thread.ownerUid === me ? thread.otherUid : thread.ownerUid;
     const result = await db.collection('messages').findOneAndUpdate(
       query,
       {
@@ -1038,6 +1033,10 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
             from: me,
             body,
             at: new Date().toISOString(),
+          },
+          $set: {
+            lastMessage: body,
+            ["unread." + other]: 1,
           },
         },
       },
