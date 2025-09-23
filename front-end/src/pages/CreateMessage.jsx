@@ -127,7 +127,7 @@ export default function CreateMessage() {
             />
 
             <button type="submit" disabled={submitting}>
-                {submitting ? "Creating…" : "Create Listing"}
+                {submitting ? "Creating…" : "Create Direct Message"}
             </button>
             </form>
         </div>
