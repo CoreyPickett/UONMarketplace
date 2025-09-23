@@ -949,9 +949,9 @@ app.get('/api/messages/:id', verifyUser, async (req, res) => {
 //GET request for all messages
 app.get('/api/messages', verifyUser, async (req, res) => {
   try {
-    const me = req.user?.uid || req.user?.email;        // your auth user id
+    const me = req.user?.uid || req.user?.email;
     const threads = await db.collection('messages')
-      .find({ $or: [{ ownerUid: me }, { otherUid: me }] })  // OR condition
+      .find({ $or: [{ ownerUid: me }, { otherUid: me }] })
       .sort({ lastMessageAt: -1, createdAt: -1 })
       .toArray();
     res.status(200).json(threads);
@@ -961,43 +961,32 @@ app.get('/api/messages', verifyUser, async (req, res) => {
 });
 
 // POST request for creating a new messages
-app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
-  const { uid, email } = req.user || {};
-  const { otherUserName, otherUid, message } = req.body;
+app.post('/api/messages/create-message', verifyUser, async (req, res) => {
+  try {
+    const { uid, email } = req.user || {};
+    const { otherUserName, otherUid, message } = req.body;
 
-  const newThread = {
-    ownerUid: uid || null,
-    ownerEmail: email || null,
-    otherUid: otherUid || null,
-    otherUserName,
-    lastMessage: message,
-    lastMessageAt: new Date(),
-    unread: { [uid]: 0, [otherUid]: 1 },
-    messages: [{ from: uid, body: message, at: new Date().toISOString() }],
-    createdAt: new Date(),
-  };
-
-
-    // checks for values
     if (!otherUserName || !message) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    if (!req.user || !req.user.uid) {
-      return res.status(400).json({ error: "User information is missing" });
-    }
+    if (!uid) return res.status(400).json({ error: "User information is missing" });
 
-    // posting to database
-  const result = await db.collection('messages').insertOne(newThread);
+    const newThread = {
+      ownerUid: uid,
+      ownerEmail: email || null,
+      otherUid: otherUid || null,
+      otherUserName,
+      lastMessage: message,
+      lastMessageAt: new Date(),
+      unread: { [uid]: 0, [otherUid]: 1 },
+      messages: [{ from: uid, body: message, at: new Date().toISOString() }],
+      createdAt: new Date(),
+    };
 
-  if (!result.acknowledged) {
-    return res.status(500).json({ error: "Insert failed" });
-  }
+    const result = await db.collection('messages').insertOne(newThread);
+    if (!result.acknowledged) return res.status(500).json({ error: "Insert failed" });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Messages created successfully',
-      insertedId: result.insertedId
-    });
+    return res.status(201).json({ success: true, insertedId: result.insertedId });
   } catch (err) {
     console.error('Insert error:', err);
     return res.status(500).json({ success: false, message: 'Unexpected error', error: err.message });
@@ -1005,37 +994,31 @@ app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
 });
 
 // For searching for user exists in database
-app.get('/api/create-message/user-search', verifyUser, async () => {
-  const {uid} = req.body
-  
-  try{
-  const user = await db.collection('users').findOne( { uid : uid}).toArray();
-    res.status(200).json(user);
+app.get('/api/create-message/user-search', verifyUser, async (req, res) => {
+  try {
+    const { uid } = req.query; // GET -> use querystring, not body
+    if (!uid) return res.status(400).json({ error: "uid is required" });
+    const user = await db.collection('users').findOne({ uid });
+    return res.status(200).json(user || null);
   } catch (error) {
     console.error("Error fetching user:", error);
     res.status(500).json({ error: "Failed to fetch user" });
   }
-
 });
 
 app.get('/api/message/mutual-check', verifyUser, async (req, res) => {
-  const { uid, otherUid } = req.query;  // Use query for GET
-
   try {
-    const messagesCollection = db.collection('messages');
+    const { uid, otherUid } = req.query;
+    if (!uid || !otherUid) return res.status(400).json({ error: "uid and otherUid are required" });
 
-    const chat = await messagesCollection.findOne({
+    const chat = await db.collection('messages').findOne({
       $or: [
-        { ownerUid: uid, otherUserName: otherUid },
-        { ownerUid: otherUid, otherUserName: uid }
+        { ownerUid: uid,  otherUid },
+        { ownerUid: otherUid, otherUid: uid }
       ]
     });
-
-    if (chat) {
-      res.status(200).json(chat);
-    } else {
-      res.status(404).json({ message: 'No matching messages found' });
-    }
+    return chat ? res.status(200).json(chat)
+                : res.status(404).json({ message: 'No matching messages found' });
   } catch (error) {
     console.error("Error fetching user:", error);
     res.status(500).json({ error: "Failed to fetch user" });
@@ -1067,40 +1050,28 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
   const { id } = req.params;
   const { uid, email } = req.user || {};
   const me = uid || email || "unknown";
-  const { body } = req.body; // frontend sends { body }
+  const { body } = req.body;
+
   try {
-    // Support both ObjectId and string IDs
     const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
     const thread = await db.collection('messages').findOne(query);
-    if (!thread) {
-      return res.status(404).json({ error: "Conversation not found" });
-    }
+    if (!thread) return res.status(404).json({ error: "Conversation not found" });
     if (thread.ownerUid !== me && thread.otherUid !== me) {
       return res.status(403).json({ error: "Access denied" });
     }
     const other = thread.ownerUid === me ? thread.otherUid : thread.ownerUid;
+
     const result = await db.collection('messages').findOneAndUpdate(
       query,
       {
-        $push: {
-          messages: {
-            from: me,
-            body,
-            at: new Date().toISOString(),
-          },
-          $set: {
-            lastMessage: body,
-            ["unread." + other]: 1,
-          },
-        },
+        $push: { messages: { from: me, body, at: new Date().toISOString() } },
+        $set:  { lastMessage: body, lastMessageAt: new Date(), ["unread." + other]: 1 }
       },
       { returnDocument: 'after' }
     );
-    if (result.value && result.value.messages) {
-      res.json({ messages: result.value.messages });
-    } else {
-      res.status(404).json({ error: "Conversation not found" });
-    }
+
+    if (result.value?.messages) return res.json({ messages: result.value.messages });
+    return res.status(404).json({ error: "Conversation not found" });
   } catch (e) {
     console.error("Error updating messages:", e);
     res.status(500).json({ error: "Internal server error" });
