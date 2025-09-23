@@ -1012,7 +1012,47 @@ app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
   }
 });
 
-//DELETE request for deleting a listing
+// For searching for user exists in database
+app.get('/api/create-message/user-search', verifyUser, async () => {
+  const {uid} = req.body
+  
+  try{
+  const user = await db.collection('users').findOne( { uid : uid}).toArray();
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+
+});
+
+app.get('/api/message/mutual-check', verifyUser, async (req, res) => {
+  const { uid, otherUid } = req.query;  // Use query for GET
+
+  try {
+    const messagesCollection = db.collection('messages');
+
+    const chat = await messagesCollection.findOne({
+      $or: [
+        { ownerUid: uid, otherUserName: otherUid },
+        { ownerUid: otherUid, otherUserName: uid }
+      ]
+    });
+
+    if (chat) {
+      res.status(200).json(chat);
+    } else {
+      res.status(404).json({ message: 'No matching messages found' });
+    }
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
+
+
+//DELETE request for deleting a message
 app.delete('/api/messages/:id', verifyUser, async (req, res) => {
   const { id } = req.params;
 
