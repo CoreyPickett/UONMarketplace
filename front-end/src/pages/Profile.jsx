@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getAuth } from "firebase/auth";
 import useUser from "../useUser";
-import { api } from "../api";
+import Avatar from "../components/Avatar";
 import "./Profile.css";
 
 export default function Profile() {
@@ -168,21 +168,11 @@ export default function Profile() {
       {/* Header */}
       <section className="profile-card">
         <div className="profile-header">
-          <div className="avatar">
-            {profileData?.profilePhotoUrl?.startsWith("https://") ? (
-              <img
-                src={profileData.profilePhotoUrl}
-                alt="Profile"
-                className="avatar-image"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "/default-avatar.png"; // fallback image
-                }}
-              />
-            ) : (
-              user.email?.[0]?.toUpperCase() || "U"
-            )}
-          </div>
+          <Avatar
+            src={profileData?.profilePhotoUrl}
+            fallbackText={user.email?.[0]?.toUpperCase() || "U"}
+            size="md"
+          />
           <div className="whoami">
             <h2>{user.email}</h2>
             <div className="uid-row">

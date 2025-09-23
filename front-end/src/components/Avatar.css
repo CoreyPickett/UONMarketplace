@@ -1,0 +1,17 @@
+.avatar-image.avatar-sm { width: 32px; height: 32px; border-radius: 50%; }
+.avatar-image.avatar-md { width: 64px; height: 64px; border-radius: 50%; }
+.avatar-image.avatar-lg { width: 128px; height: 128px; border-radius: 50%; }
+
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ccc;
+  color: #fff;
+  font-weight: bold;
+  border-radius: 50%;
+}
+
+.avatar-fallback.avatar-sm { width: 32px; height: 32px; font-size: 14px; }
+.avatar-fallback.avatar-md { width: 64px; height: 64px; font-size: 24px; }
+.avatar-fallback.avatar-lg { width: 128px; height: 128px; font-size: 36px; }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import NotLoggedIn from "./NotLoggedIn";
 import useUser from "../useUser";
+import Avatar from "../components/Avatar";
 import "./Dashboard.css";
 
 function formatAUD(n) {
@@ -40,6 +41,7 @@ export default function Dashboard() {
   const [allListings, setAllListings] = useState([]);
   const [allThreads, setAllThreads] = useState([]);
   const [savedCount, setSavedCount] = useState(null);
+  const [profileData, setProfileData] = useState(null);
 
   // Initial load
   useEffect(() => {
@@ -102,6 +104,21 @@ export default function Dashboard() {
     return () => {
       alive = false;
     };
+  }, [user]);
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const res = await fetch(`/api/profile/${user.uid}`);
+        if (!res.ok) throw new Error("Profile fetch failed");
+        const data = await res.json();
+        setProfileData(data);
+      } catch (err) {
+        console.error("Failed to load profile data:", err);
+      }
+    };
+
+    if (user?.uid) fetchProfileData();
   }, [user]);
 
   // Mine
@@ -176,7 +193,12 @@ export default function Dashboard() {
       <header className="dash__header">
         <div className="dash__id">
           <div className="dash__avatar" aria-hidden="true">
-            {(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}
+            <Avatar
+              src={profileData?.profilePhotoUrl}
+              fallbackText={(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}
+              size="sm"
+              alt="Dashboard avatar"
+            />
           </div>
           <div>
             <h1 className="dash__title">
@@ -186,7 +208,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top-right actions: Create Listing button REMOVED */}
         <div className="dash__header-actions" />
       </header>
 

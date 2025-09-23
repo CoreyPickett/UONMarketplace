@@ -6,6 +6,7 @@ import { useParams, useLoaderData, Link } from "react-router-dom";
 import useUser from "../useUser";
 import SaveButton from "../SaveButton";
 import BuyNowModal from "../components/BuyNow"; // <-- ensure filename matches
+import Avatar from "../components/Avatar";
 import "./Listing.css";
 
 // Currency helper
@@ -24,6 +25,8 @@ const buildImageUrl = (key) => {
 };
 
 export default function Listing() {
+  const [sellerProfile, setSellerProfile] = useState(null);
+
   const { id } = useParams(); // not strictly needed, but harmless
   const listing = useLoaderData();
   const { user } = useUser();
@@ -40,6 +43,22 @@ export default function Listing() {
     setSaves(Number(listing?.saves || 0));
     setCurrentImageIndex(0);
   }, [listing?._id]);
+
+  useEffect(() => {
+    const fetchSellerProfile = async () => {
+      try {
+        if (!listing?.ownerUid) return; // assuming you store UID on listing
+        const res = await fetch(`/api/profile/${listing.ownerUid}`);
+        if (!res.ok) throw new Error("Seller profile fetch failed");
+        const data = await res.json();
+        setSellerProfile(data);
+      } catch (err) {
+        console.error("Failed to load seller profile:", err);
+      }
+    };
+
+    fetchSellerProfile();
+  }, [listing?.ownerUid]);
 
   if (!listing) {
     return (
@@ -150,11 +169,16 @@ export default function Listing() {
 
       {/* Seller + Actions */}
       <section style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 10 }}>
-          Listed by{" "}
-          <strong>
-            {listing.ownerEmail ? listing.ownerEmail.split("@")[0] : "Unknown"}
-          </strong>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <Avatar
+            src={sellerProfile?.profilePhotoUrl}
+            fallbackText={listing.ownerEmail?.[0]?.toUpperCase() || "U"}
+            size="sm"
+            alt="Seller avatar"
+          />
+          <div style={{ fontSize: 14, color: "#6b7280" }}>
+            Listed by <strong>{listing.ownerEmail?.split("@")[0] || "Unknown"}</strong>
+          </div>
         </div>
 
         <div className="listing-actions-row">
