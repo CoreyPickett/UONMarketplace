@@ -957,7 +957,7 @@ app.get('/api/messages/', async (req, res) => {
 });
 
 // POST request for creating a new messages
-app.post('/api/messages/create-message', verifyUser, async (req, res) => {
+app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
   try {
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({ error: "Missing request body" });
@@ -973,16 +973,25 @@ app.post('/api/messages/create-message', verifyUser, async (req, res) => {
     const newMessages = {
       otherUserName,
       lastMessage: message,
-      unread,   // removed avatar as that is now stored elsewere 
-      messages: { from: uid, body: message, at: new Date().toISOString() },
+      unread: [otherUserName],   // removed avatar as that is now stored elsewere 
+      messages: [{ from: uid, body: message, at: new Date().toISOString() }],
       //  ownership fields for Profile "messages"
       ownerUid: uid || null,
-      ownerEmail: email || null,
-
+      
       //  createdAt to help sort later
       createdAt: new Date(),
     };
 
+
+    // checks for values
+    if (!otherUserName || !message) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (!req.user || !req.user.uid) {
+      return res.status(400).json({ error: "User information is missing" });
+    }
+
+    // posting to database
     const result = await db.collection('messages').insertOne(newMessages);
 
     if (!result.acknowledged) {
@@ -999,7 +1008,7 @@ app.post('/api/messages/create-message', verifyUser, async (req, res) => {
     });
   } catch (err) {
     console.error('Insert error:', err);
-    return res.status(500).json({ success: false, message: 'Unexpected error' });
+    return res.status(500).json({ success: false, message: 'Unexpected error', error: err.message });
   }
 });
 
