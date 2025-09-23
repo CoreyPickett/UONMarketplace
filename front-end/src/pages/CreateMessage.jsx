@@ -118,12 +118,12 @@ export default function CreateMessage() {
             />
 
             <textarea
-                name="messages"
-                placeholder="message"
+                name="message"
+                placeholder="Message"
                 value={formData.message}
                 onChange={handleChange}
                 rows={4}
-                required
+                //required
             />
 
             <button type="submit" disabled={submitting}>
