@@ -51,13 +51,25 @@ export default function Dashboard() {
 
         // Public listings
         const lres = await fetch("/api/marketplace/");
-        const listings = await lres.json();
+        const listings = lres.ok ? await lres.json() : [];
         if (alive) setAllListings(Array.isArray(listings) ? listings : []);
 
         // Threads
-        const mres = await fetch("/api/messages/");
-        const threads = await mres.json();
-        if (alive) setAllThreads(Array.isArray(threads) ? threads : []);
+        if (user) {
+          try{
+            const token = await user.getIdToken();
+            const tres = await fetch("/api/messages/", {
+              headers: { authtoken: token },
+            });
+            const threads = tres.ok ?  await tres.json() : [];
+            if (alive) setAllThreads(Array.isArray(threads) ? threads : []);
+          } catch {
+            if (alive) setAllThreads([]);
+          }
+        } else{
+          if (alive) setAllThreads([]);
+        }
+        
 
         // Saved count if logged in
         if (user) {

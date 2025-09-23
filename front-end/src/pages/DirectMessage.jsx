@@ -25,38 +25,50 @@ export default function DirectMessage() {
   const [messages, setMessages] = useState([]);
 
   // Load messages 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        // Try to get message from the backend
-        const { data } = await api.get(`/messages/${id}`);
-        if (cancelled) return;
+ useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    setLoading(true);
+    try {
 
-        const t = data?.thread || {};
-        setThread({
-          sender: t.otherUserName || t.name || preview?.sender || "User",
-          avatar: t.avatar || preview?.avatar || "/images/default-avatar.png",
+      const { data } = await api.get(`/messages/${id}`);
+      if (cancelled) return;
+
+      const t = data?.thread || {};
+      setThread({
+        sender: t.otherUserName || t.name || preview?.sender || "User",
+        avatar: t.avatar || preview?.avatar || "/images/default-avatar.png",
+      });
+      setMessages(data?.messages || []);
+
+
+      if (id.startsWith("demo-")) {
+        setThread(preview || { sender: "User", avatar: "/images/default-avatar.png" });
+        setMessages(DEMO_MESSAGES[id] || []);
+        setLoading(false);
+        return;
+      }
+
+      const token = await getAuth().currentUser?.getIdToken();
+      if (token) {
+        await api.post(`/messages/${id}/read`, null, {
+          headers: { authtoken: token },
         });
-        setMessages(data?.messages || []);
-        // Mark as read in backend
-        if (!id.startsWith("demo-")) {
-          try { await api.post(`/messages/${id}/read`); } catch {}
       }
-      } catch (e) {
-        // If API fails use demo 
-        console.warn(`GET /api/messages/${id} failed; using demo/preview`, e);
-        if (!cancelled) {
-          setThread(preview || { sender: "User", avatar: "/images/default-avatar.png" });
-          setMessages(DEMO_MESSAGES[id] || []);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+
+    } catch (e) {
+      // fallback to demo
+      console.warn(`GET /api/messages/${id} failed; using demo/preview`, e);
+      if (!cancelled) {
+        setThread(preview || { sender: "User", avatar: "/images/default-avatar.png" });
+        setMessages(DEMO_MESSAGES[id] || []);
       }
-    })();
-    return () => { cancelled = true; };
-  }, [id, preview]);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  })();
+  return () => { cancelled = true; };
+}, [id, preview]);
 
   // Send new message
   const handleSend = async (body) => {

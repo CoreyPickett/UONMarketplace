@@ -22,9 +22,9 @@ export default function Header({ onOpenMenu }) {
   return () => mql.removeEventListener("change", onChange);
 }, []);
 useEffect(() => {
-  const handler = () => setIsMobile(window.innerWidth <= 900); // or 768
-  handler(); // set initial
-  console.log("viewport width:", window.innerWidth); // temp debug
+  const handler = () => setIsMobile(window.innerWidth <= 900); 
+  handler(); 
+  console.log("viewport width:", window.innerWidth); 
   window.addEventListener("resize", handler);
   return () => window.removeEventListener("resize", handler);
 }, []);
