@@ -49,7 +49,7 @@ export default function CreateMessage() {
         return;
       }
 
-      if (!formData.otherUserName || !formData.lastMessage) {
+      if (!formData.otherUserName || !formData.message ) {
         alert("Please fill in OtherUserName and LastMessage.");
         setSubmitting(false);
         return;
