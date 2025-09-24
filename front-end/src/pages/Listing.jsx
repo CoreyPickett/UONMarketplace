@@ -7,6 +7,7 @@ import useUser from "../useUser";
 import SaveButton from "../SaveButton";
 import BuyNowModal from "../components/BuyNow"; // <-- ensure filename matches
 import Avatar from "../components/Avatar";
+import UsernameDisplay from "../components/UsernameDisplay";
 import "./Listing.css";
 
 // Currency helper
@@ -177,7 +178,10 @@ export default function Listing() {
             alt="Seller avatar"
           />
           <div style={{ fontSize: 14, color: "#6b7280" }}>
-            Listed by <strong>{listing.ownerEmail?.split("@")[0] || "Unknown"}</strong>
+            Listed by <UsernameDisplay
+                        username={sellerProfile?.username}
+                        fallback={listing.ownerEmail?.split("@")[0]}
+                      />
           </div>
         </div>
 

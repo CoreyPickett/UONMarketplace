@@ -4,6 +4,7 @@ import axios from "axios";
 import { getAuth } from "firebase/auth";
 import useUser from "../useUser";
 import Avatar from "../components/Avatar";
+import UsernameDisplay from "../components/UsernameDisplay";
 import "./Profile.css";
 
 export default function Profile() {
@@ -176,31 +177,27 @@ export default function Profile() {
           <div className="whoami">
             <h2>{user.email}</h2>
             <div className="uid-row">
-  <span className="uid-label">UID:</span>
-  <span className="uid-value" title={user.uid}>{user.uid}</span>
-  <button
-  type="button"
-  className="btn-copy btn-xs"
-  onClick={() => navigator.clipboard.writeText(user.uid)}
-  aria-label="Copy UID"
->
-  Copy
-</button>
-</div>
+              <span className="uid-label">UID:</span>
+              <span className="uid-value" title={user.uid}>
+                {user.uid}
+              </span>
+              <button
+                type="button"
+                className="btn-copy btn-xs"
+                onClick={() => navigator.clipboard.writeText(user.uid)}
+                aria-label="Copy UID"
+              >
+                Copy
+              </button>
+            </div>
 
-            {/* Display Username */}
-            {profileData?.username ? (
-              <div className="muted">Username: @{profileData.username}</div>
-            ) : (
-              <div className="muted warning">
-                No username set. <Link to="/updateUsername">Set one now</Link>
-              </div>
-            )}
+              {/* Display Username */}
+              <UsernameDisplay username={profileData?.username} />
+            </div>
+            <div className="profile-actions">
+              
+            </div>
           </div>
-          <div className="profile-actions">
-            
-          </div>
-        </div>
 
         {/* Tabs */}
         <div className="tabs">

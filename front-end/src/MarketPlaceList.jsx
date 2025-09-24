@@ -1,5 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import useListings from "./useListings";
+import UsernameDisplay from "./components/UsernameDisplay";
 import "./MarketPlaceList.css";
 
 const toAUD = (n) =>
@@ -8,6 +10,7 @@ const toAUD = (n) =>
     : n ?? "";
 
 export default function MarketPlaceList() {
+  const [sellerProfiles, setSellerProfiles] = useState({});
   const { listings, loading } = useListings();
   const [params] = useSearchParams();
   const q = (params.get("query") || "").trim().toLowerCase();
@@ -28,6 +31,31 @@ export default function MarketPlaceList() {
         .toLowerCase();
     return hay.includes(q);
   });
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      const uids = filtered.map((l) => l.ownerUid).filter(Boolean);
+      const uniqueUids = [...new Set(uids)];
+
+      const profileMap = {};
+      await Promise.all(
+        uniqueUids.map(async (uid) => {
+          try {
+            const res = await fetch(`/api/profile/${uid}`);
+            if (!res.ok) throw new Error("Profile fetch failed");
+            const data = await res.json();
+            profileMap[uid] = data;
+          } catch (err) {
+            console.error(`Failed to fetch profile for UID ${uid}`, err);
+          }
+        })
+      );
+
+      setSellerProfiles(profileMap);
+    };
+
+    fetchProfiles();
+  }, [filtered]);
 
   if (loading) {
     return (
@@ -74,7 +102,10 @@ export default function MarketPlaceList() {
                   </div>
                 )}
                 <div className="listing-name">
-                  {l.ownerEmail ? l.ownerEmail.split("@")[0] : "Unknown seller"}
+                  <UsernameDisplay
+                    username={sellerProfiles[l.ownerUid]?.username}
+                    fallback={l.ownerEmail?.split("@")[0]}
+                  />
                 </div>
               </div>
             </Link>
