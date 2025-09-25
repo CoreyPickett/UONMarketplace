@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import NotLoggedIn from "./NotLoggedIn";
 import useUser from "../useUser";
+import Avatar from "../components/Avatar";
 import "./Dashboard.css";
 
 function formatAUD(n) {
@@ -39,7 +40,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [allListings, setAllListings] = useState([]);
   const [allThreads, setAllThreads] = useState([]);
-  const [savedCount, setSavedCount] = useState(null); // kept for future use if needed
+  const [savedCount, setSavedCount] = useState(null);
+  const [profileData, setProfileData] = useState(null);
 
   // Initial load
   useEffect(() => {
@@ -51,15 +53,27 @@ export default function Dashboard() {
 
         // Public listings
         const lres = await fetch("/api/marketplace/");
-        const listings = await lres.json();
+        const listings = lres.ok ? await lres.json() : [];
         if (alive) setAllListings(Array.isArray(listings) ? listings : []);
 
         // Threads
-        const mres = await fetch("/api/messages/");
-        const threads = await mres.json();
-        if (alive) setAllThreads(Array.isArray(threads) ? threads : []);
+        if (user) {
+          try{
+            const token = await user.getIdToken();
+            const tres = await fetch("/api/messages/", {
+              headers: { authtoken: token },
+            });
+            const threads = tres.ok ?  await tres.json() : [];
+            if (alive) setAllThreads(Array.isArray(threads) ? threads : []);
+          } catch {
+            if (alive) setAllThreads([]);
+          }
+        } else{
+          if (alive) setAllThreads([]);
+        }
+        
 
-        // Saved IDs count for current user (optional)
+        // Saved count if logged in
         if (user) {
           try {
             const token = await user.getIdToken();
@@ -92,6 +106,21 @@ export default function Dashboard() {
     };
   }, [user]);
 
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const res = await fetch(`/api/profile/${user.uid}`);
+        if (!res.ok) throw new Error("Profile fetch failed");
+        const data = await res.json();
+        setProfileData(data);
+      } catch (err) {
+        console.error("Failed to load profile data:", err);
+      }
+    };
+
+    if (user?.uid) fetchProfileData();
+  }, [user]);
+
   // Mine
   const my = useMemo(() => {
     if (!user) return { listings: [], threads: [] };
@@ -112,19 +141,14 @@ export default function Dashboard() {
     return { listings: myListings, threads: myThreads };
   }, [user, allListings, allThreads]);
 
-  // --- UPDATED: use Total Saved instead of Total Upvotes
   const stats = useMemo(() => {
     const totalListings = my.listings.length;
-
-    // Sum saves from either `saves` (number) or `saveIds` (array)
-    const totalSaved = my.listings.reduce((sum, l) => {
-      if (Number.isFinite(Number(l?.saves))) return sum + Number(l.saves);
-      if (Array.isArray(l?.saveIds)) return sum + l.saveIds.length;
-      return sum;
-    }, 0);
-
+    const totalUpvotes = my.listings.reduce(
+      (sum, l) => sum + (Number(l.upvotes) || 0),
+      0
+    );
     const totalThreads = my.threads.length;
-    return { totalListings, totalSaved, totalThreads };
+    return { totalListings, totalUpvotes, totalThreads };
   }, [my]);
 
   const latestMyListings = useMemo(
@@ -169,7 +193,12 @@ export default function Dashboard() {
       <header className="dash__header">
         <div className="dash__id">
           <div className="dash__avatar" aria-hidden="true">
-            {(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}
+            <Avatar
+              src={profileData?.profilePhotoUrl}
+              fallbackText={(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}
+              size="sm"
+              alt="Dashboard avatar"
+            />
           </div>
           <div>
             <h1 className="dash__title">
@@ -179,11 +208,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top-right actions: Create Listing button REMOVED */}
         <div className="dash__header-actions" />
       </header>
 
-      {/* Stats row */}
+      {/* Stats row (Quick Links removed) */}
       <section
         className="dash__grid"
         style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
@@ -196,11 +224,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* UPDATED CARD: Total Saved */}
         <div className="stat-card">
-          <div className="stat-card__label">Total Saved</div>
-          <div className="stat-card__value">{stats.totalSaved}</div>
-          <div className="stat-card__hint">Combined saves across your items</div>
+          <div className="stat-card__label">Total Upvotes</div>
+          <div className="stat-card__value">{stats.totalUpvotes}</div>
+          <div className="stat-card__hint">Combined upvotes across your items</div>
         </div>
 
         <div className="stat-card">
@@ -212,7 +239,7 @@ export default function Dashboard() {
 
       {/* Panels */}
       <section className="dash__columns">
-        {/* My Latest Listings */}
+        {/* My Latest Listings (keeps + New in header & empty-state link) */}
         <div className="panel">
           <div className="panel__head">
             <h2 className="panel__title">My Latest Listings</h2>
@@ -287,7 +314,7 @@ export default function Dashboard() {
         <div className="panel">
           <div className="panel__head">
             <h2 className="panel__title">Latest on Marketplace</h2>
-          <Link to="/marketplace" className="btn btn-ghost">Browse</Link>
+            <Link to="/marketplace" className="btn btn-ghost">Browse</Link>
           </div>
 
           {loading ? (
