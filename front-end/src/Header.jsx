@@ -56,6 +56,15 @@ useEffect(() => {
 
   const isActive = (to) => location.pathname.startsWith(to);
 
+  const adminEmails = [
+    "admin@uon.edu",
+    "tester@uon.edu",
+    "demo2@uon.edu",
+    "tester100@uon.edu.au",
+  ];
+
+  const isAdmin = adminEmails.includes(user?.email);
+
   return (
     <header style={s.wrap}>
       <nav style={s.nav}>
@@ -96,7 +105,9 @@ useEffect(() => {
           <li><Link to="/saved" style={linkStyle(isActive("/saved"))}>Saved</Link></li>
           <li><Link to="/create-listing" style={linkStyle(isActive("/create-listing"))}>Create Listing</Link></li>
           <li><Link to="/messages" style={linkStyle(isActive("/messages"))}>Messages</Link></li>
-          <li><Link to="/admin" style={linkStyle(isActive("/admin"))}>Admin</Link></li>
+          {isAdmin && (
+            <li><Link to="/admin" style={linkStyle(isActive("/admin"))}>Admin</Link></li>
+          )}
         </ul>
 
         {/* Right: auth controls */}
