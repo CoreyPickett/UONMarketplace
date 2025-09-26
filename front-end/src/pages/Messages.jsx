@@ -140,12 +140,10 @@ useEffect(() => {
         setLoading(false);
         return;
       }
-      
-      const token = await getAuth().currentUser?.getIdToken();
+      const token = await user.getIdToken();
       const { data } = await api.get("/messages", {
-        headers: token ? { authtoken: token } : {},
+        headers: { authtoken: token },
       });
-      setThreads(Array.isArray(data) && data.length ? data : DEMO_THREADS);
 
       const list = Array.isArray(data?.threads)
         ? data.threads

@@ -22,9 +22,9 @@ export default function Header({ onOpenMenu }) {
   return () => mql.removeEventListener("change", onChange);
 }, []);
 useEffect(() => {
-  const handler = () => setIsMobile(window.innerWidth <= 900); 
-  handler(); 
-  console.log("viewport width:", window.innerWidth); 
+  const handler = () => setIsMobile(window.innerWidth <= 900); // or 768
+  handler(); // set initial
+  console.log("viewport width:", window.innerWidth); // temp debug
   window.addEventListener("resize", handler);
   return () => window.removeEventListener("resize", handler);
 }, []);
@@ -55,15 +55,6 @@ useEffect(() => {
   };
 
   const isActive = (to) => location.pathname.startsWith(to);
-
-  const adminEmails = [
-    "admin@uon.edu",
-    "tester@uon.edu",
-    "demo2@uon.edu",
-    "tester100@uon.edu.au",
-  ];
-
-  const isAdmin = adminEmails.includes(user?.email);
 
   return (
     <header style={s.wrap}>
@@ -105,9 +96,7 @@ useEffect(() => {
           <li><Link to="/saved" style={linkStyle(isActive("/saved"))}>Saved</Link></li>
           <li><Link to="/create-listing" style={linkStyle(isActive("/create-listing"))}>Create Listing</Link></li>
           <li><Link to="/messages" style={linkStyle(isActive("/messages"))}>Messages</Link></li>
-          {isAdmin && (
-            <li><Link to="/admin" style={linkStyle(isActive("/admin"))}>Admin</Link></li>
-          )}
+          <li><Link to="/admin" style={linkStyle(isActive("/admin"))}>Admin</Link></li>
         </ul>
 
         {/* Right: auth controls */}
