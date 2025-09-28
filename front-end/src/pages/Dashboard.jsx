@@ -58,20 +58,19 @@ export default function Dashboard() {
 
         // Threads
         if (user) {
-          try{
+          try {
             const token = await user.getIdToken();
             const tres = await fetch("/api/messages/", {
               headers: { authtoken: token },
             });
-            const threads = tres.ok ?  await tres.json() : [];
+            const threads = tres.ok ? await tres.json() : [];
             if (alive) setAllThreads(Array.isArray(threads) ? threads : []);
           } catch {
             if (alive) setAllThreads([]);
           }
-        } else{
+        } else {
           if (alive) setAllThreads([]);
         }
-        
 
         // Saved count if logged in
         if (user) {
@@ -141,14 +140,19 @@ export default function Dashboard() {
     return { listings: myListings, threads: myThreads };
   }, [user, allListings, allThreads]);
 
+  // UPDATED: use Total Saved instead of Total Upvotes
   const stats = useMemo(() => {
     const totalListings = my.listings.length;
-    const totalUpvotes = my.listings.reduce(
-      (sum, l) => sum + (Number(l.upvotes) || 0),
-      0
-    );
+
+    // Sum saves from either `saves` (number) or `saveIds` (array)
+    const totalSaved = my.listings.reduce((sum, l) => {
+      if (Number.isFinite(Number(l?.saves))) return sum + Number(l.saves);
+      if (Array.isArray(l?.saveIds)) return sum + l.saveIds.length;
+      return sum;
+    }, 0);
+
     const totalThreads = my.threads.length;
-    return { totalListings, totalUpvotes, totalThreads };
+    return { totalListings, totalSaved, totalThreads };
   }, [my]);
 
   const latestMyListings = useMemo(
@@ -195,7 +199,9 @@ export default function Dashboard() {
           <div className="dash__avatar" aria-hidden="true">
             <Avatar
               src={profileData?.profilePhotoUrl}
-              fallbackText={(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}
+              fallbackText={(user?.displayName || user?.email || "U")
+                .charAt(0)
+                .toUpperCase()}
               size="sm"
               alt="Dashboard avatar"
             />
@@ -224,10 +230,11 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* UPDATED CARD: Total Saved */}
         <div className="stat-card">
-          <div className="stat-card__label">Total Upvotes</div>
-          <div className="stat-card__value">{stats.totalUpvotes}</div>
-          <div className="stat-card__hint">Combined upvotes across your items</div>
+          <div className="stat-card__label">Total Saved</div>
+          <div className="stat-card__value">{stats.totalSaved}</div>
+          <div className="stat-card__hint">Combined saves across your items</div>
         </div>
 
         <div className="stat-card">
