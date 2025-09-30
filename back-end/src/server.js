@@ -1110,7 +1110,33 @@ app.use((req, res, next) => {
   next();
 });
 
+app.post('/api/messages/start', verifyUser, async (req, res) => {
+  const me = req.user.uid; // current user (buyer)
+  const { listingId, sellerUid } = req.body;
 
+  if (!listingId || !sellerUid) {
+    return res.status(400).json({ error: "Need listingId and sellerUid" });
+  }
+
+  const participants = [me, sellerUid].sort();
+  const now = new Date().toISOString();
+
+  // just barebones doc for demo
+  const baseDoc = {
+    listingId,
+    participants,
+    messages: [],
+    createdAt: now
+  };
+
+  const result = await db.collection('messages').findOneAndUpdate(
+    { listingId, participants },
+    { $setOnInsert: baseDoc },
+    { upsert: true, returnDocument: 'after' }
+  );
+
+  res.json(result.value);
+});
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
 

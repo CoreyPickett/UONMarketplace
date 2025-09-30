@@ -2,7 +2,9 @@
 // Individual Listing (new layout) + Buy Now modal integration
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useLoaderData, Link } from "react-router-dom";
+import { useParams, useLoaderData, Link, useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth";
+import { api } from "../api";
 import useUser from "../useUser";
 import SaveButton from "../SaveButton";
 import BuyNowModal from "../components/BuyNow"; // <-- ensure filename matches
@@ -27,7 +29,7 @@ const buildImageUrl = (key) => {
 
 export default function Listing() {
   const [sellerProfile, setSellerProfile] = useState(null);
-
+  const navigate = useNavigate();
   const { id } = useParams(); // not strictly needed, but harmless
   const listing = useLoaderData();
   const { user } = useUser();
@@ -194,15 +196,30 @@ export default function Listing() {
             Buy Now
           </button>
 
-          {listing.ownerEmail ? (
-            <a
-              className="ListingOptions secondary"
-              href={`mailto:${listing.ownerEmail}?subject=Enquiry about "${encodeURIComponent(
-                listing.title || "your listing"
-              )}"`}
-            >
-              Message seller
-            </a>
+          {(listing.ownerUid || listing.ownerEmail) ? (
+            <button
+  className="ListingOptions secondary"
+  onClick={async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) { 
+      navigate("/login"); 
+      return; 
+    }
+
+    const token = await user.getIdToken();
+    const res = await api.post(
+      "/messages/start",
+      { listingId: listing._id, sellerUid: listing.ownerUid },
+      { headers: { authtoken: token } }
+    );
+
+    const thread = res.data;
+    navigate(`/messages/${thread._id}`);
+  }}
+>
+  Message seller
+</button>
           ) : (
             <Link className="ListingOptions secondary" to="/messages">
               Message seller
