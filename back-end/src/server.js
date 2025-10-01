@@ -923,11 +923,9 @@ app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
   const me = uid || email || "unknown";
   try {
     // Support both ObjectId and string IDs
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid thread ID" });
-    }
-
-    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const query = ObjectId.isValid(id)
+      ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
+      : { _id: id };
     console.log("Marking thread as read:", query);
 
     const result = await db.collection('messages').findOneAndUpdate(
@@ -935,6 +933,13 @@ app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
       { $set: { ["unread." + me]: 0 } },
       { returnDocument: 'after' }
     );
+
+    if (!result.value) {
+      console.warn("Thread not found for read:", id);
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    res.json({ success: true });
     if (result.value) {
       res.json({ success: true });
     } else {
@@ -950,7 +955,9 @@ app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
 app.get('/api/messages/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const query = ObjectId.isValid(id)
+      ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
+      : { _id: id };
     console.log("DirectMessage API: Querying with", query);
     const message = await db.collection('messages').findOne(query);
     if (!message) {
@@ -1094,23 +1101,31 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
   const { id } = req.params;
   const { uid, email } = req.user || {};
   const me = uid || email || "unknown";
-  const { body } = req.body; // frontend sends { body }
+  const { body } = req.body;
+
+  if (!body || typeof body !== "string" || body.trim() === "") {
+    return res.status(400).json({ error: "Invalid message body" });
+  }
+
   try {
-    // Support both ObjectId and string IDs
-    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const query = ObjectId.isValid(id)
+      ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
+      : { _id: id };
+    const now = new Date().toISOString();
+    const message = { from: me, body, at: now };
+
     const result = await db.collection('messages').findOneAndUpdate(
       query,
       {
-        $push: {
-          messages: {
-            from: me,
-            body,
-            at: new Date().toISOString(),
-          },
+        $push: { messages: message },
+        $set: {
+          lastMessage: body,
+          lastMessageAt: now,
         },
       },
       { returnDocument: 'after' }
     );
+
     if (result.value && result.value.messages) {
       res.json({ messages: result.value.messages });
     } else {
@@ -1183,7 +1198,7 @@ app.post('/api/messages/start', verifyUser, async (req, res) => {
   console.log("Thread created or found:", thread._id);
   res.json({
     ...thread,
-    _id: thread._id.toString() // ← Convert ObjectId to string
+    _id: thread._id.toString() // ← Convert existing ObjectId to string
   });
 });
 
@@ -1214,7 +1229,9 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
 
   if (!body?.trim()) return res.status(400).json({ error: "Empty message" });
 
-  const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+  const query = ObjectId.isValid(id)
+    ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
+    : { _id: id };
   const thread = await db.collection('messages').findOne(query);
   if (!thread) return res.status(404).json({ error: "Conversation not found" });
 

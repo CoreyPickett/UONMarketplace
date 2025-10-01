@@ -69,7 +69,7 @@ const ProfileSearch = () => {
 
       <div>
       <h2>Search Profiles</h2>
-      <a class="btn btn-ghost" href="/create-message" data-discover="true">+ New Message</a>
+      <a className="btn btn-ghost" href="/create-message" data-discover="true">+ New Message</a>
       </div>
       
       <form onSubmit={handleSearch}>

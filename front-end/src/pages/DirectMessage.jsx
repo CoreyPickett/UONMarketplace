@@ -26,6 +26,9 @@ export default function DirectMessage() {
   const [messages, setMessages] = useState([]);
   const [sending, setSending] = useState(false);
 
+  const isValidObjectId = (id) =>
+  typeof id === "string" && /^[a-f\d]{24}$/i.test(id);
+
   // Keep Bubbles on correct side
   useEffect(() => {
     const unsub = onAuthStateChanged(getAuth(), (user) => {
@@ -43,6 +46,10 @@ export default function DirectMessage() {
       try {
         // Try to get message from the backend
         const { data } = await api.get(`/messages/${id}`);
+        console.log("Thread data received:", data);
+        if (!data) {
+          console.warn(`Thread ${id} not found in backend`);
+        }
         if (cancelled) return;
 
         const t = data || {};
@@ -56,12 +63,12 @@ export default function DirectMessage() {
           });
         setMessages(t.messages || []);
         // Mark as read in backend
-        if (!id.startsWith("demo-") && id.length === 24) {
-          try {
-            await api.post(`/messages/${id}/read`);
-          } catch (e) {
-            console.warn(`POST /messages/${id}/read failed`, e);
-          }
+        if (!id.startsWith("demo-") && isValidObjectId(id)) {
+          setTimeout(() => {
+            api.post(`/messages/${id}/read`).catch((e) =>
+              console.warn(`POST /messages/${id}/read failed`, e)
+            );
+          }, 300); // Optional delay to avoid race conditions
         }
       } catch (e) {
         // If API fails use demo 
@@ -80,9 +87,20 @@ export default function DirectMessage() {
   // Send new message
   const handleSend = async (body) => {
     if (!me || sending) return;
+
+    if (!body || typeof body !== "string" || body.trim() === "") {
+      console.warn("Invalid message body:", body);
+      return;
+    }
+
     setSending(true);
 
-    const temp = { _id: `tmp_${Date.now()}`, from: me, body, at: new Date().toISOString() };
+    const temp = {
+      _id: `tmp_${Date.now()}`,
+      from: me,
+      body,
+      at: new Date().toISOString(),
+    };
     setMessages((prev) => [...prev, temp]);
 
     try {
