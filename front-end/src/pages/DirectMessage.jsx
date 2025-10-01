@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import MessageMaker from "../components/MessageMaker";
 import MessageList from "../components/MessageList";
 import { api } from "../api";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "./DirectMessage.css";
 
 // Demo if API fails
@@ -18,11 +19,21 @@ export default function DirectMessage() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const preview = state?.preview; // Info from previous page
-  const me = "me"; // Replace with real user ID later on i guess
+  const [me, setMe] = useState(null); // Replaced hardcoed me with Firebase user UID
 
   const [loading, setLoading] = useState(true);
   const [thread, setThread] = useState(preview || null);
   const [messages, setMessages] = useState([]);
+  const [sending, setSending] = useState(false);
+
+  // Keep Bubbles on correct side
+  useEffect(() => {
+    const unsub = onAuthStateChanged(getAuth(), (user) => {
+      setMe(user?.uid || null);
+    });
+    return () => unsub();
+  }, []);
+
 
   // Load messages 
   useEffect(() => {
@@ -34,7 +45,7 @@ export default function DirectMessage() {
         const { data } = await api.get(`/messages/${id}`);
         if (cancelled) return;
 
-        const t = data?.thread || {};
+        const t = data || {};
         const sellerName = t.otherUserName || t.name || "User";
         const composed = t.listingTitle
           ? `${sellerName} – ${t.listingTitle}`
@@ -43,11 +54,15 @@ export default function DirectMessage() {
             sender: composed,
             avatar: t.avatar || preview?.avatar || "/images/default-avatar.png",
           });
-        setMessages(data?.messages || []);
+        setMessages(t.messages || []);
         // Mark as read in backend
-        if (!id.startsWith("demo-")) {
-          try { await api.post(`/messages/${id}/read`); } catch {}
-      }
+        if (!id.startsWith("demo-") && id.length === 24) {
+          try {
+            await api.post(`/messages/${id}/read`);
+          } catch (e) {
+            console.warn(`POST /messages/${id}/read failed`, e);
+          }
+        }
       } catch (e) {
         // If API fails use demo 
         console.warn(`GET /api/messages/${id} failed; using demo/preview`, e);
@@ -64,26 +79,27 @@ export default function DirectMessage() {
 
   // Send new message
   const handleSend = async (body) => {
-    
-    console.log("🧪 Sending message with:");
-    console.log("ID:", id);             // <- route param
-    console.log("Message body:", body); // <- message text
-    
-    // Add message 
+    if (!me || sending) return;
+    setSending(true);
+
     const temp = { _id: `tmp_${Date.now()}`, from: me, body, at: new Date().toISOString() };
     setMessages((prev) => [...prev, temp]);
+
     try {
-      // Try to send to backend
       const { data } = await api.post(`/messages/${id}/messages`, { body });
-      const real = data?.messages || temp;
-      // Replace temp message with real one from backend
-      setMessages((prev) => prev.map((m) => (m._id === temp._id ? real : m)));
+      setMessages(data?.messages || []);
     } catch (e) {
-      // If send fails, keep the temp message
       console.warn("Send failed; keeping optimistic message", e);
-      // (optionally rollback instead)
+    } finally {
+      setSending(false);
     }
   };
+
+  // Scroll to bottom of messages
+  useEffect(() => {
+    const el = document.querySelector(".message-list");
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   if (loading) return <main style={{ padding: 20 }}>Loading…</main>;
   if (!thread)  return <main style={{ padding: 20 }}>Conversation not found</main>;
@@ -98,7 +114,7 @@ export default function DirectMessage() {
       </div>
 
       <MessageList messages={messages} me={me} />
-      <MessageMaker onSend={handleSend} />
+      <MessageMaker onSend={handleSend} sending={sending || !me} />
     </main>
   );
 }

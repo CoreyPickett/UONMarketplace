@@ -208,13 +208,23 @@ export default function Listing() {
     }
 
     const token = await user.getIdToken();
-    const res = await api.post(
-      "/messages/start",
-      { listingId: listing._id, sellerUid: listing.ownerUid, listingTitle: listing.title },
-      { headers: { authtoken: token } }
-    );
+    const res = await api.post("/messages/start", {
+      listingId: listing._id,
+      sellerUid: listing.ownerUid,
+      listingTitle: listing.title
+    }, {
+      headers: { authtoken: token }
+    });
 
     const thread = res.data;
+    console.log("Thread received:", thread);
+
+    if (!thread?._id) {
+      console.error("Thread creation failed or missing _id:", thread);
+      alert("Failed to start conversation. Please try again.");
+      return;
+    }
+
     navigate(`/messages/${thread._id}`, {
       state: {
         preview: {

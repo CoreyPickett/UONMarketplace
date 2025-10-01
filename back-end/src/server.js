@@ -923,7 +923,13 @@ app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
   const me = uid || email || "unknown";
   try {
     // Support both ObjectId and string IDs
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid thread ID" });
+    }
+
     const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    console.log("Marking thread as read:", query);
+
     const result = await db.collection('messages').findOneAndUpdate(
       query,
       { $set: { ["unread." + me]: 0 } },
@@ -1158,16 +1164,27 @@ app.post('/api/messages/start', verifyUser, async (req, res) => {
     createdAt: now,
     lastMessage: "",
     lastMessageAt: null,
-    unread: { [me]: 0, [sellerUid]: 0 },
+    unread: { [me]: 0, [sellerUid]: 1 }, //Set seller to unread of 1 instead of 0
   };
 
-  const result = await db.collection('messages').findOneAndUpdate(
+  const result = await db.collection('messages').updateOne(
     { listingId, participants },
     { $setOnInsert: baseDoc },
-    { upsert: true, returnDocument: 'after' }
+    { upsert: true }
   );
 
-  res.json(result.value);
+  const thread = await db.collection('messages').findOne({ listingId, participants });
+
+  if (!thread || !thread._id) {
+    console.error("Thread creation failed or missing _id:", thread);
+    return res.status(500).json({ error: "Thread creation failed" });
+  }
+
+  console.log("Thread created or found:", thread._id);
+  res.json({
+    ...thread,
+    _id: thread._id.toString() // ← Convert ObjectId to string
+  });
 });
 
 app.get('/api/messages', verifyUser, async (req, res) => {
