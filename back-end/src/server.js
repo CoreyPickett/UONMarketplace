@@ -55,6 +55,7 @@ async function connectToDB() { //Connect to global DB with username and password
 
   db = client.db('uon-marketplace-db');
 
+  //DB Error Message
   if (!db) {
     console.error('Database not connected');
     return res.status(500).send('DB not initialized');
@@ -72,28 +73,17 @@ app.get(/^(?!\/api).+/, (req, res) => {
 })
 */
 
+// \/\/\/\/ Dev Functions \/\/\/\/ -------------------------------------------------------------------------
+
 // Check for valid MongoDB ID to avoid crashes
 function isValidObjectId(id) {
-    return ObjectId.isValid(id) && String(new ObjectId(id)) === id;
-  }
+  return ObjectId.isValid(id) && String(new ObjectId(id)) === id;
+}
 
+//Server Error Message
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).send('Internal Server Error');
-});
-
-// GET request for Whole Marketplace
-app.get('/api/marketplace/', async (req, res) => {
-  try {
-    const listings = await db.collection('items')
-      .find()
-      .sort({ createdAt: -1 })
-      .toArray();
-    res.status(200).json(listings);
-  } catch (error) {
-    console.error("Error fetching listings:", error);
-    res.status(500).json({ error: "Failed to fetch listings" });
-  }
 });
 
 // List of current admin emails
@@ -143,29 +133,6 @@ const verifyUser = async (req, res, next) => {
   }
 };
 
-// POST request to mark a conversation as read
-app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
-  const { id } = req.params;
-  const { uid, email } = req.user || {};
-  const me = uid || email || "unknown";
-  try {
-    // Support both ObjectId and string IDs
-    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
-    const result = await db.collection('messages').findOneAndUpdate(
-      query,
-      { $set: { ["unread." + me]: 0 } },
-      { returnDocument: 'after' }
-    );
-    if (result.value) {
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ error: "Conversation not found" });
-    }
-  } catch (e) {
-    console.error("Error marking as read:", e);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 // check if user is admin verified
 const requireAdmin = (req, res, next) => {
   if (req.user?.isAdmin === true || req.user?.admin === true) {
@@ -174,47 +141,91 @@ const requireAdmin = (req, res, next) => {
   return res.status(403).json({ error: "Admin privileges required" });
 };
 
-app.delete("/api/admin/users/:uid", verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
+// \/\/\/\/ Marketplace \/\/\/\/ -------------------------------------------------------------------------
+
+// GET request for Whole Marketplace
+app.get('/api/marketplace/', async (req, res) => {
   try {
-    const { uid } = req.params;
-
-    // so admins dont delete themselves by accident
-    if (uid === req.user.uid) {
-      return res.status(400).json({ error: "You cannot delete your own account." });
-    }
-
-    // block deleting another admin 
-    const target = await admin.auth().getUser(uid);
-    if (target.customClaims?.isAdmin === true) {
-      return res.status(403).json({ error: "Cannot delete another admin user." });
-    }
-
-    //  Delete auth account
-    await admin.auth().deleteUser(uid);
-
-    //  Clean up marketplace data owned by that user
-    //    Examples (adjust to your schema/fields):
-
-    return res.status(204).send(); // No Content
-  } catch (err) {
-    console.error("Admin delete user error:", err);
-    return res.status(500).json({ error: "Failed to delete user" });
-  }
-});
-
-// Enable user (admin only)
-app.post('/api/admin/enable-user', verifyUser, requireAdmin, async (req, res) => {
-  const { uid } = req.body;
-  if (!uid) return res.status(400).json({ error: "Missing UID" });
-
-  try {
-    await admin.auth().updateUser(uid, { disabled: false });
-    res.json({ success: true, message: "User enabled" });
+    const listings = await db.collection('items')
+      .find()
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.status(200).json(listings);
   } catch (error) {
-    console.error("Enable error:", error);
-    res.status(500).json({ error: "Failed to enable user" });
+    console.error("Error fetching listings:", error);
+    res.status(500).json({ error: "Failed to fetch listings" });
   }
 });
+
+// GET request for Advanced Search Function
+app.get('/api/search', async (req, res) => {
+  try {
+    const {
+      query: rawQuery,
+      category,
+      minPrice,
+      maxPrice,
+      sort = "recent",
+    } = req.query;
+
+    console.log("Received search:", { rawQuery, category, minPrice, maxPrice, sort });
+
+    const query = rawQuery?.trim() || "";
+
+    console.log("Full request URL:", req.originalUrl);
+
+
+    const filters = {};
+
+    // Text search across multiple fields
+    if (query.trim()) {
+      const regex = new RegExp(query.trim(), "i");
+      filters.$or = [
+        { title: regex },
+        { description: regex },
+        { category: regex },
+        { location: regex },
+        { seller: regex },
+      ];
+    }
+
+    // Category filter
+    if (category) {
+      filters.category = category;
+    }
+
+    // Price range filter
+    const min = Number(minPrice);
+    const max = Number(maxPrice);
+    if (!Number.isNaN(min)) {
+      filters.price = { ...filters.price, $gte: min };
+    }
+    if (!Number.isNaN(max)) {
+      filters.price = { ...filters.price, $lte: max };
+    }
+
+    // Sorting logic
+    let sortOption = { createdAt: -1 }; // default: recent
+    if (sort === "priceAsc") sortOption = { price: 1 };
+    if (sort === "priceDesc") sortOption = { price: -1 };
+    if (sort === "titleAsc") sortOption = { title: 1 };
+
+    console.log("Applied sort option:", sortOption);
+
+
+    const listings = await db.collection("items")
+      .find(filters)
+      .sort(sortOption)
+      .toArray();
+
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ error: "Failed to perform search" });
+  }
+});
+
+// \/\/\/\/ Listings \/\/\/\/ -------------------------------------------------------------------------
 
 //POST request for updating upvotes
 app.post('/api/marketplace/:id/upvote', verifyUser, async (req, res) => {
@@ -330,87 +341,6 @@ app.get('/api/marketplace/s3-upload-url', async (req, res) => {
   }
 });
 
-//GET request to list all users
-app.get('/api/admin/users', async (req, res) => {
-  try {
-    const allUsers = [];
-    let nextPageToken;
-
-    do {
-      const result = await admin.auth().listUsers(1000, nextPageToken); // max 1000 per page
-      result.users.forEach((userRecord) => {
-        allUsers.push({
-          uid: userRecord.uid,
-          email: userRecord.email,
-          displayName: userRecord.displayName,
-          disabled: userRecord.disabled,
-          customClaims: userRecord.customClaims || {},
-        });
-      });
-      nextPageToken = result.pageToken;
-    } while (nextPageToken);
-
-    res.json(allUsers);
-  } catch (error) {
-    console.error("Error listing users:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
-  }
-});
-
-
-
-//GET request to search user by email
-app.get('/api/admin/search-user', verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
-  const { email } = req.query;
-
-  if (!email) return res.status(400).json({ error: "Email is required" });
-
-  try {
-    const userRecord = await admin.auth().getUserByEmail(email);
-    res.json({
-      uid: userRecord.uid,
-      email: userRecord.email,
-      displayName: userRecord.displayName,
-      disabled: userRecord.disabled,
-      metadata: userRecord.metadata,
-      customClaims: userRecord.customClaims || {},
-    });
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(404).json({ error: "User not found" });
-  }
-});
-
-//POST request to disable user by IUD
-app.post('/api/admin/disable-user', async (req, res) => {
-  const { uid } = req.body;
-
-  if (!uid) return res.status(400).json({ error: "Missing UID" });
-
-  try {
-    await admin.auth().updateUser(uid, { disabled: true });
-    res.json({ success: true, message: "User disabled" });
-  } catch (error) {
-    console.error("Disable error:", error);
-    res.status(500).json({ error: "Failed to disable user" });
-  }
-});
-
-//POST request to delete user by IUD
-app.post('/api/admin/delete-user', async (req, res) => {
-  const { uid } = req.body;
-
-  if (!uid) return res.status(400).json({ error: "Missing UID" });
-
-  try {
-    await admin.auth().deleteUser(uid);
-    res.json({ success: true, message: "User deleted successfully" });
-  } catch (error) {
-    console.error("Delete error:", error);
-    res.status(500).json({ error: "Failed to delete user" });
-  }
-});
-
 // POST request for creating a new listing
 app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
   try {
@@ -484,73 +414,26 @@ app.post('/api/marketplace/create-listing', verifyUser, async (req, res) => {
   }
 });
 
-// GET request for Advanced Search Function
-app.get('/api/search', async (req, res) => {
+//GET request for a listing (Moved to end to resolve routing issues)
+app.get('/api/marketplace/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!isValidObjectId(id)) {
+    console.warn("Invalid ObjectId received:", id);
+    return res.status(400).json({ error: "Invalid listing ID format." });
+  }
+
   try {
-    const {
-      query: rawQuery,
-      category,
-      minPrice,
-      maxPrice,
-      sort = "recent",
-    } = req.query;
-
-    console.log("Received search:", { rawQuery, category, minPrice, maxPrice, sort });
-
-    const query = rawQuery?.trim() || "";
-
-    console.log("Full request URL:", req.originalUrl);
-
-
-    const filters = {};
-
-    // Text search across multiple fields
-    if (query.trim()) {
-      const regex = new RegExp(query.trim(), "i");
-      filters.$or = [
-        { title: regex },
-        { description: regex },
-        { category: regex },
-        { location: regex },
-        { seller: regex },
-      ];
-    }
-
-    // Category filter
-    if (category) {
-      filters.category = category;
-    }
-
-    // Price range filter
-    const min = Number(minPrice);
-    const max = Number(maxPrice);
-    if (!Number.isNaN(min)) {
-      filters.price = { ...filters.price, $gte: min };
-    }
-    if (!Number.isNaN(max)) {
-      filters.price = { ...filters.price, $lte: max };
-    }
-
-    // Sorting logic
-    let sortOption = { createdAt: -1 }; // default: recent
-    if (sort === "priceAsc") sortOption = { price: 1 };
-    if (sort === "priceDesc") sortOption = { price: -1 };
-    if (sort === "titleAsc") sortOption = { title: 1 };
-
-    console.log("Applied sort option:", sortOption);
-
-
-    const listings = await db.collection("items")
-      .find(filters)
-      .sort(sortOption)
-      .toArray();
-
-    res.status(200).json(listings);
-  } catch (error) {
-    console.error("Search error:", error);
-    res.status(500).json({ error: "Failed to perform search" });
+    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    res.json(listing);
+  } catch (e) {
+    console.error("Fetch listing error:", e);
+    res.status(400).json({ error: "Invalid listing id" });
   }
 });
+
+// \/\/\/\/ Edit Listing \/\/\/\/ -------------------------------------------------------------------------
 
 //PUT request for Editing Listings
 app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
@@ -621,6 +504,132 @@ app.put('/api/marketplace/:id', verifyUser, async (req, res) => {
     res.status(400).json({ error: "Invalid listing id or update payload." });
   }
 });
+
+// \/\/\/\/ Admin \/\/\/\/ -------------------------------------------------------------------------
+
+// DELETE request to delete users through Admin page
+app.delete("/api/admin/users/:uid", verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    // so admins dont delete themselves by accident
+    if (uid === req.user.uid) {
+      return res.status(400).json({ error: "You cannot delete your own account." });
+    }
+
+    // block deleting another admin 
+    const target = await admin.auth().getUser(uid);
+    if (target.customClaims?.isAdmin === true) {
+      return res.status(403).json({ error: "Cannot delete another admin user." });
+    }
+
+    //  Delete auth account
+    await admin.auth().deleteUser(uid);
+
+    //  Clean up marketplace data owned by that user
+    //    Examples (adjust to your schema/fields):
+
+    return res.status(204).send(); // No Content
+  } catch (err) {
+    console.error("Admin delete user error:", err);
+    return res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+// Enable user in Admin page
+app.post('/api/admin/enable-user', verifyUser, requireAdmin, async (req, res) => {
+  const { uid } = req.body;
+  if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+  try {
+    await admin.auth().updateUser(uid, { disabled: false });
+    res.json({ success: true, message: "User enabled" });
+  } catch (error) {
+    console.error("Enable error:", error);
+    res.status(500).json({ error: "Failed to enable user" });
+  }
+});
+
+//GET request to list all users
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const allUsers = [];
+    let nextPageToken;
+
+    do {
+      const result = await admin.auth().listUsers(1000, nextPageToken); // max 1000 per page
+      result.users.forEach((userRecord) => {
+        allUsers.push({
+          uid: userRecord.uid,
+          email: userRecord.email,
+          displayName: userRecord.displayName,
+          disabled: userRecord.disabled,
+          customClaims: userRecord.customClaims || {},
+        });
+      });
+      nextPageToken = result.pageToken;
+    } while (nextPageToken);
+
+    res.json(allUsers);
+  } catch (error) {
+    console.error("Error listing users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+//GET request to search user by email
+app.get('/api/admin/search-user', verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
+  const { email } = req.query;
+
+  if (!email) return res.status(400).json({ error: "Email is required" });
+
+  try {
+    const userRecord = await admin.auth().getUserByEmail(email);
+    res.json({
+      uid: userRecord.uid,
+      email: userRecord.email,
+      displayName: userRecord.displayName,
+      disabled: userRecord.disabled,
+      metadata: userRecord.metadata,
+      customClaims: userRecord.customClaims || {},
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(404).json({ error: "User not found" });
+  }
+});
+
+//POST request to disable user by IUD
+app.post('/api/admin/disable-user', async (req, res) => {
+  const { uid } = req.body;
+
+  if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+  try {
+    await admin.auth().updateUser(uid, { disabled: true });
+    res.json({ success: true, message: "User disabled" });
+  } catch (error) {
+    console.error("Disable error:", error);
+    res.status(500).json({ error: "Failed to disable user" });
+  }
+});
+
+//POST request to delete user by IUD
+app.post('/api/admin/delete-user', async (req, res) => {
+  const { uid } = req.body;
+
+  if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+  try {
+    await admin.auth().deleteUser(uid);
+    res.json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Delete error:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+// \/\/\/\/ Profile \/\/\/\/ -------------------------------------------------------------------------
 
 //POST request to update profile photo
 app.post('/api/profile/update-photo', verifyUser, async (req, res) => {
@@ -823,25 +832,6 @@ app.put('/api/user/updateUsername', verifyUser, async (req, res) => {
   }
 });
 
-//GET request for a listing (Moved to end to resolve routing issues)
-app.get('/api/marketplace/:id', async (req, res) => {
-  const { id } = req.params;
-
-  if (!isValidObjectId(id)) {
-    console.warn("Invalid ObjectId received:", id);
-    return res.status(400).json({ error: "Invalid listing ID format." });
-  }
-
-  try {
-    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) }); //Gets idividual item based on unique ID
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
-    res.json(listing);
-  } catch (e) {
-    console.error("Fetch listing error:", e);
-    res.status(400).json({ error: "Invalid listing id" });
-  }
-});
-
 // --- SAVES / FAVORITES -----------------------------------------------
 
 // List my saved items (full item docs). Add ?idsOnly=1 to return only IDs.
@@ -924,8 +914,31 @@ app.delete('/api/saves/:id', verifyUser, async (req, res) => {
   }
 });
 
+// \/\/\/\/ Messages \/\/\/\/ -------------------------------------------------------------------------
 
-// \/\/\/\/ Stuff for messages below \/\/\/\/ -------------------------------------------------------------------------
+// POST request to mark a conversation as read
+app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
+  const { id } = req.params;
+  const { uid, email } = req.user || {};
+  const me = uid || email || "unknown";
+  try {
+    // Support both ObjectId and string IDs
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const result = await db.collection('messages').findOneAndUpdate(
+      query,
+      { $set: { ["unread." + me]: 0 } },
+      { returnDocument: 'after' }
+    );
+    if (result.value) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "Conversation not found" });
+    }
+  } catch (e) {
+    console.error("Error marking as read:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 //GET request for a messages
 app.get('/api/messages/:id', async (req, res) => {
