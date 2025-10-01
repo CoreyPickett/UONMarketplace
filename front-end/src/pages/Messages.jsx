@@ -202,50 +202,46 @@ useEffect(() => {
   // No convos message
   if (!threads.length) return <div>No conversations yet.</div>;
 
-  return (
-    <div>
-      <h2>Conversations:</h2>
-      <table className="messages-table">
-        <tbody>
-          {threads.map((t) => (
+return (
+  <div>
+    <h2>Conversations:</h2>
+    <table className="messages-table">
+      <tbody>
+        {threads.map((t) => {
+          // Build "Seller – Listing" once per row
+          const title = `${t.otherUserName ?? "User"}${
+            t.listingTitle ? " – " + t.listingTitle : ""
+          }`;
+
+          const goToThread = () =>
+            navigate(`/messages/${t._id}`, {
+              state: {
+                preview: {
+                  sender: title, // <-- use composed title here
+                  avatar: t.avatar ?? "/images/default-avatar.png",
+                },
+              },
+            });
+
+          return (
             <tr key={t._id}>
-              <td
-                onClick={() =>
-                  navigate(`/messages/${t._id}`, {
-                    state: {
-                      preview: {
-                        sender: t.otherUserName ?? "User",
-                        avatar: t.avatar ?? "/images/default-avatar.png",
-                      },
-                    },
-                  })
-                }
-                style={{ cursor: "pointer" }}
-              >
+              <td onClick={goToThread} style={{ cursor: "pointer" }}>
                 <img
                   src={t.avatar ?? "/images/default-avatar.png"}
                   alt=""
                   width={40}
                   style={{ borderRadius: "50%" }}
                 />
-                <span className="sender">{t.otherUserName ?? "User"}</span>
+                <span className="sender">{title}</span>
               </td>
-              <td
-                onClick={() =>
-                  navigate(`/messages/${t._id}`, {
-                    state: {
-                      preview: {
-                        sender: t.otherUserName ?? "User",
-                        avatar: t.avatar ?? "/images/default-avatar.png",
-                      },
-                    },
-                  })
-                }
-                style={{ cursor: "pointer" }}
-              >
-                <strong>{(t.unread?.me ?? 0) > 0 ? "Unread" : "Read"}</strong> {t.lastMessage}
+
+              <td onClick={goToThread} style={{ cursor: "pointer" }}>
+                <strong>{(t.unread?.me ?? 0) > 0 ? "Unread" : "Read"}</strong>{" "}
+                {t.lastMessage}
               </td>
+
               <td>{t.lastMessageAt ? new Date(t.lastMessageAt).toLocaleString() : ""}</td>
+
               <td style={{ position: "relative" }}>
                 <button
                   onClick={(e) => {
@@ -257,6 +253,7 @@ useEffect(() => {
                 >
                   ⋮
                 </button>
+
                 {menuFor === t._id && (
                   <div className="dropdown">
                     <button onClick={() => handleMarkAsRead(t._id)}>Mark as read</button>
@@ -267,24 +264,26 @@ useEffect(() => {
                 )}
               </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {confirmDeleteId && (
-        <div className="delete-confirm-popup">
-          <div>
-            <p>Delete this conversation?</p>
-            <button className="btn" onClick={() => handleDelete(confirmDeleteId)} style={{ marginRight: 10 }}>
-              Delete
-            </button>
-            <button className="btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+          );
+        })}
+      </tbody>
+    </table>
 
+    {confirmDeleteId && (
+      <div className="delete-confirm-popup">
+        <div>
+          <p>Delete this conversation?</p>
+          <button className="btn" onClick={() => handleDelete(confirmDeleteId)} style={{ marginRight: 10 }}>
+            Delete
+          </button>
+          <button className="btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+        </div>
+      </div>
+    )}
+  </div>
+);
+}
+  
 //  convo list
 export default function Messages() {
   return (

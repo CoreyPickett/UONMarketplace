@@ -35,10 +35,14 @@ export default function DirectMessage() {
         if (cancelled) return;
 
         const t = data?.thread || {};
-        setThread({
-          sender: t.otherUserName || t.name || preview?.sender || "User",
-          avatar: t.avatar || preview?.avatar || "/images/default-avatar.png",
-        });
+        const sellerName = t.otherUserName || t.name || "User";
+        const composed = t.listingTitle
+          ? `${sellerName} – ${t.listingTitle}`
+          : (preview?.sender || sellerName);
+          setThread({
+            sender: composed,
+            avatar: t.avatar || preview?.avatar || "/images/default-avatar.png",
+          });
         setMessages(data?.messages || []);
         // Mark as read in backend
         if (!id.startsWith("demo-")) {

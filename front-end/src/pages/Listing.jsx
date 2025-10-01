@@ -210,12 +210,19 @@ export default function Listing() {
     const token = await user.getIdToken();
     const res = await api.post(
       "/messages/start",
-      { listingId: listing._id, sellerUid: listing.ownerUid },
+      { listingId: listing._id, sellerUid: listing.ownerUid, listingTitle: listing.title },
       { headers: { authtoken: token } }
     );
 
     const thread = res.data;
-    navigate(`/messages/${thread._id}`);
+    navigate(`/messages/${thread._id}`, {
+      state: {
+        preview: {
+          sender: `${sellerProfile?.username || listing.ownerEmail?.split("@")[0] || "User"} – ${listing.title}`,
+          avatar: sellerProfile?.profilePhotoUrl || "/images/default-avatar.png",
+        },
+      },
+    });
   }}
 >
   Message seller

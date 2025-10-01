@@ -1125,7 +1125,7 @@ app.use((req, res, next) => {
 
 app.post('/api/messages/start', verifyUser, async (req, res) => {
   const me = req.user.uid; // current user (buyer)
-  const { listingId, sellerUid } = req.body;
+  const { listingId, sellerUid, listingTitle } = req.body;
 
   if (!listingId || !sellerUid) {
     return res.status(400).json({ error: "Need listingId and sellerUid" });
@@ -1134,12 +1134,31 @@ app.post('/api/messages/start', verifyUser, async (req, res) => {
   const participants = [me, sellerUid].sort();
   const now = new Date().toISOString();
 
-  // just barebones doc for demo
+  // look up seller display info (optional but nice)
+  let sellerName = "User";
+  let sellerAvatar = "/images/default-avatar.png";
+
+  try {
+    const u = await db.collection('users').findOne({ uid: sellerUid });
+    if (u?.username) sellerName = u.username;
+
+    const p = await db.collection('profile').findOne({ uid: sellerUid });
+    if (p?.profilePhotoUrl) sellerAvatar = p.profilePhotoUrl;
+  } catch (_) {
+    // soft-fail; keep defaults
+  }
+
   const baseDoc = {
     listingId,
+    listingTitle: listingTitle || "",
+    otherUserName: sellerName,           // <-- persist seller name
+    avatar: sellerAvatar,                // <-- persist avatar
     participants,
     messages: [],
-    createdAt: now
+    createdAt: now,
+    lastMessage: "",
+    lastMessageAt: null,
+    unread: { [me]: 0, [sellerUid]: 0 },
   };
 
   const result = await db.collection('messages').findOneAndUpdate(
@@ -1149,6 +1168,52 @@ app.post('/api/messages/start', verifyUser, async (req, res) => {
   );
 
   res.json(result.value);
+});
+
+app.get('/api/messages', verifyUser, async (req, res) => {
+  const me = req.user.uid;
+
+  const threads = await db.collection('messages')
+    .find({ participants: me })
+    .sort({ lastMessageAt: -1, createdAt: -1 })
+    .project({
+      listingId: 1,
+      listingTitle: 1,         
+      otherUserName: 1,        
+      avatar: 1,               
+      unread: 1,
+      lastMessage: 1,
+      lastMessageAt: 1,
+    })
+    .toArray();
+
+  res.json(threads);
+});
+
+app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
+  const { id } = req.params;
+  const me = req.user.uid;
+  const { body } = req.body;
+
+  if (!body?.trim()) return res.status(400).json({ error: "Empty message" });
+
+  const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+  const thread = await db.collection('messages').findOne(query);
+  if (!thread) return res.status(404).json({ error: "Conversation not found" });
+
+  const other = thread.participants.find(u => u !== me) || me;
+  const now = new Date().toISOString();
+
+  const result = await db.collection('messages').findOneAndUpdate(
+    query,
+    {
+      $push: { messages: { from: me, body, at: now } },
+      $set: { lastMessage: body, lastMessageAt: now, [`unread.${other}`]: (thread.unread?.[other] || 0) + 1 }
+    },
+    { returnDocument: 'after' }
+  );
+
+  res.json({ messages: result.value.messages });
 });
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
