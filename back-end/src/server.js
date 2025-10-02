@@ -32,6 +32,31 @@ const s3 = new AWS.S3({
 });
 
 
+
+
+
+// Extract token from either 'authtoken' or 'Authorization: Bearer ...'
+function extractToken(req) {
+  if (req.headers.authtoken) return req.headers.authtoken;
+  const authz = req.headers.authorization || '';
+  const m = authz.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1] : null;
+}
+
+async function verifyUser(req, res, next) {
+  try {
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: 'Missing auth token' });
+
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.user = { uid: decoded.uid, email: decoded.email || null };
+    return next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+
 const app = express();
 
 app.use(express.json()); //Initialise express
@@ -113,25 +138,6 @@ function checkIfAdmin(req, res, next) {
   next();
 }
 
-// Verification for a logged in user
-const verifyUser = async (req, res, next) => {
-  const { authtoken } = req.headers;
-  
-
-
-  if (!authtoken) {
-    return res.sendStatus(400);
-  }
-
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(authtoken);
-    req.user = decodedToken;
-    next();
-  } catch (err) {
-    console.error("Auth error:", err);
-    return res.sendStatus(401);
-  }
-};
 
 // check if user is admin verified
 const requireAdmin = (req, res, next) => {
@@ -551,7 +557,7 @@ app.post('/api/admin/enable-user', verifyUser, requireAdmin, async (req, res) =>
 });
 
 //GET request to list all users
-app.get('/api/admin/users', async (req, res) => {
+app.get('/api/admin/users', verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
   try {
     const allUsers = [];
     let nextPageToken;
@@ -600,7 +606,7 @@ app.get('/api/admin/search-user', verifyUser, checkIfAdmin, requireAdmin, async 
 });
 
 //POST request to disable user by IUD
-app.post('/api/admin/disable-user', async (req, res) => {
+app.post('/api/admin/disable-user', verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
   const { uid } = req.body;
 
   if (!uid) return res.status(400).json({ error: "Missing UID" });
@@ -615,7 +621,7 @@ app.post('/api/admin/disable-user', async (req, res) => {
 });
 
 //POST request to delete user by IUD
-app.post('/api/admin/delete-user', async (req, res) => {
+app.post('/api/admin/delete-user', verifyUser, checkIfAdmin, requireAdmin, async (req, res) => {
   const { uid } = req.body;
 
   if (!uid) return res.status(400).json({ error: "Missing UID" });
@@ -919,14 +925,11 @@ app.delete('/api/saves/:id', verifyUser, async (req, res) => {
 // POST request to mark a conversation as read
 app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
   const { id } = req.params;
-  const { uid, email } = req.user || {};
-  const me = uid || email || "unknown";
+  const me = req.user?.uid || req.user?.email || "unknown";
   try {
-    // Support both ObjectId and string IDs
     const query = ObjectId.isValid(id)
       ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
       : { _id: id };
-    console.log("Marking thread as read:", query);
 
     const result = await db.collection('messages').findOneAndUpdate(
       query,
@@ -935,52 +938,35 @@ app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
     );
 
     if (!result.value) {
-      console.warn("Thread not found for read:", id);
       return res.status(404).json({ error: "Conversation not found" });
     }
-
-    res.json({ success: true });
-    if (result.value) {
-      res.json({ success: true });
-    } else {
-      res.status(404).json({ error: "Conversation not found" });
-    }
+    return res.json({ success: true });
   } catch (e) {
     console.error("Error marking as read:", e);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get('/api/messages/:id', verifyUser, async (req, res) => {
+  try {
+    const me = req.user.uid;
+    const { id } = req.params;
+
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+    const thread = await db.collection('messages').findOne(query);
+    if (!thread) return res.status(404).json({ error: "Conversation not found" });
+
+    const participants = Array.isArray(thread.participants) ? thread.participants : [];
+    if (!participants.includes(me)) {
+      return res.status(403).json({ error: "Not authorized for this thread" });
+    }
+    res.json({ ...thread, _id: String(thread._id) });
+  } catch (err) {
+    console.error('Thread fetch error:', err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-//GET request for a messages
-app.get('/api/messages/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const query = ObjectId.isValid(id)
-      ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
-      : { _id: id };
-    console.log("DirectMessage API: Querying with", query);
-    const message = await db.collection('messages').findOne(query);
-    if (!message) {
-      console.log("DirectMessage API: No message found for", query);
-      return res.status(404).json({ error: 'Message not found.' });
-    }
-    res.json(message);
-  } catch (error) {
-    console.error('DirectMessage API: Database error:', error);
-    res.status(500).json({ error: 'Internal server error.' });
-  }
-});
-
-//GET request for all messages
-app.get('/api/messages/', async (req, res) => {
-  try {
-    const messages = await db.collection('messages').find().toArray(); //Lists all messages in 'messages' array
-    res.status(200).json(messages);
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-    res.status(500).json({ error: "Failed to fetch messages" });
-  }
-});
 
 // POST request for creating a new messages
 app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
@@ -1038,19 +1024,7 @@ app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
   }
 });
 
-// For searching for user exists in database
-app.get('/api/create-message/user-search', verifyUser, async () => {
-  const {uid} = req.body
-  
-  try{
-  const user = await db.collection('users').findOne( { uid : uid}).toArray();
-    res.status(200).json(user);
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({ error: "Failed to fetch user" });
-  }
 
-});
 
 app.get('/api/message/mutual-check', verifyUser, async (req, res) => {
   const { uid, otherUid } = req.query;  // Use query for GET
@@ -1079,63 +1053,8 @@ app.get('/api/message/mutual-check', verifyUser, async (req, res) => {
 
 
 //DELETE request for deleting a message
-app.delete('/api/messages/:id', verifyUser, async (req, res) => {
-  const { id } = req.params;
 
-  try {
-    const result = await db.collection('messages').deleteOne({ _id: new ObjectId(id) }); //Delete messages based on unique ID
 
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ success: false, message: "Messages not found" }); //Sanity check
-    }
-
-    return res.status(200).json({ success: true, message: "Messages deleted successfully" }); //Delete success return message
-  } catch (error) {
-    console.error("Delete error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" }); //Delete failure return message
-  }
-});
-
-//POST request for adding message to messages page
-app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
-  const { id } = req.params;
-  const { uid, email } = req.user || {};
-  const me = uid || email || "unknown";
-  const { body } = req.body;
-
-  if (!body || typeof body !== "string" || body.trim() === "") {
-    return res.status(400).json({ error: "Invalid message body" });
-  }
-
-  try {
-    const query = ObjectId.isValid(id)
-      ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
-      : { _id: id };
-    const now = new Date().toISOString();
-    const message = { from: me, body, at: now };
-
-    const result = await db.collection('messages').findOneAndUpdate(
-      query,
-      {
-        $push: { messages: message },
-        $set: {
-          lastMessage: body,
-          lastMessageAt: now,
-        },
-      },
-      { returnDocument: 'after' }
-    );
-
-    if (result.value && result.value.messages) {
-      res.json({ messages: result.value.messages });
-    } else {
-      res.status(404).json({ error: "Conversation not found" });
-    }
-  } catch (e) {
-    console.error("Error updating messages:", e);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 app.use((req, res, next) => {
   console.log(`[${req.method}] ${req.url}`);
@@ -1249,6 +1168,8 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
 
   res.json({ messages: result.value.messages });
 });
+
+
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000
 
