@@ -46,13 +46,22 @@ export default function DirectMessage() {
       try {
         // Try to get message from the backend
         const { data } = await api.get(`/messages/${id}`);
+        const t = data || {};
+        const meta = t.meta || {};
+        setThread({
+          title: t.listingTitle
+            ? `${meta.other?.name || "User"} – ${t.listingTitle}`
+            : (meta.other?.name || "User"),
+          me: meta.me,
+          other: meta.other,
+        });
+        setMessages(t.messages || []);
         console.log("Thread data received:", data);
         if (!data) {
           console.warn(`Thread ${id} not found in backend`);
         }
         if (cancelled) return;
 
-        const t = data || {};
         const sellerName = t.otherUserName || t.name || "User";
         const composed = t.listingTitle
           ? `${sellerName} – ${t.listingTitle}`
@@ -127,11 +136,19 @@ export default function DirectMessage() {
       <button className="back-button" onClick={() => navigate("/messages")}>Back to Messages</button>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
-        <img src={thread.avatar} alt={thread.sender} width={50} style={{ borderRadius: "50%" }} />
-        <h2 style={{ margin: 0 }}>{thread.sender}</h2>
+        <img src={thread.other?.avatar} alt={thread.other?.name} width={50} style={{ borderRadius: "50%" }} />
+        <h2 style={{ margin: 0 }}>{thread.title}</h2>
       </div>
 
-      <MessageList messages={messages} me={me} />
+      <MessageList
+        messages={messages}
+        meUid={thread.me?.uid}
+        meName={thread.me?.name}
+        meAvatar={thread.me?.avatar}
+        otherUid={thread.other?.uid}
+        otherName={thread.other?.name}
+        otherAvatar={thread.other?.avatar}
+      />
       <MessageMaker onSend={handleSend} sending={sending || !me} />
     </main>
   );

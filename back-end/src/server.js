@@ -937,6 +937,18 @@ app.post('/api/messages/:id/read', verifyUser, async (req, res) => {
       { returnDocument: 'after' }
     );
 
+    const thread = await db.collection('messages').findOne(query);
+if (!thread) return res.status(404).json({ error: "Conversation not found" });
+if (!Array.isArray(thread.participants) || !thread.participants.includes(me)) {
+  return res.status(403).json({ error: "Not authorized for this thread" });
+}
+
+await db.collection('messages').updateOne(
+  { _id: thread._id },
+  { $set: { ["unread." + me]: 0 } }
+);
+
+
     if (!result.value) {
       return res.status(404).json({ error: "Conversation not found" });
     }
@@ -957,10 +969,28 @@ app.get('/api/messages/:id', verifyUser, async (req, res) => {
     if (!thread) return res.status(404).json({ error: "Conversation not found" });
 
     const participants = Array.isArray(thread.participants) ? thread.participants : [];
-    if (!participants.includes(me)) {
-      return res.status(403).json({ error: "Not authorized for this thread" });
-    }
-    res.json({ ...thread, _id: String(thread._id) });
+    if (!participants.includes(me)) return res.status(403).json({ error: "Not authorized for this thread" });
+
+    const otherUid = participants.find(u => u !== me) || me;
+
+    // look up profile info for both sides of the convo
+    const loadUser = async (uid) => {
+      const u = await db.collection('users').findOne({ uid });
+      const p = await db.collection('profile').findOne({ uid });
+      return {
+        uid,
+        name: u?.username || u?.displayName || "User",
+        avatar: p?.profilePhotoUrl || "/images/default-avatar.png",
+      };
+    };
+
+    const [meUser, otherUser] = await Promise.all([loadUser(me), loadUser(otherUid)]);
+
+    res.json({
+      ...thread,
+      _id: String(thread._id),
+      meta: { me: meUser, other: otherUser }
+    });
   } catch (err) {
     console.error('Thread fetch error:', err);
     res.status(500).json({ error: "Internal server error" });
@@ -968,87 +998,7 @@ app.get('/api/messages/:id', verifyUser, async (req, res) => {
 });
 
 
-// POST request for creating a new messages
-app.post('/api/marketplace/create-message', verifyUser, async (req, res) => {
-  try {
-    if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({ error: "Missing request body" });
-    }
 
-    const { uid, email } = req.user || {};
-
-    const {
-      otherUserName,
-      message,
-    } = req.body;
-
-    const newMessages = {
-      otherUserName,
-      lastMessage: message,
-      unread: [otherUserName],   // removed avatar as that is now stored elsewere 
-      messages: [{ from: uid, body: message, at: new Date().toISOString() }],
-      //  ownership fields for Profile "messages"
-      ownerUid: uid || null,
-      
-      //  createdAt to help sort later
-      createdAt: new Date(),
-    };
-
-
-    // checks for values
-    if (!otherUserName || !message) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-    if (!req.user || !req.user.uid) {
-      return res.status(400).json({ error: "User information is missing" });
-    }
-
-    // posting to database
-    const result = await db.collection('messages').insertOne(newMessages);
-
-    if (!result.acknowledged) {
-      if (!res.headersSent) {
-        return res.status(500).json({ error: "Insert failed" });
-      }
-      return;
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: 'Messages created successfully',
-      insertedId: result.insertedId
-    });
-  } catch (err) {
-    console.error('Insert error:', err);
-    return res.status(500).json({ success: false, message: 'Unexpected error', error: err.message });
-  }
-});
-
-
-
-app.get('/api/message/mutual-check', verifyUser, async (req, res) => {
-  const { uid, otherUid } = req.query;  // Use query for GET
-
-  try {
-    const messagesCollection = db.collection('messages');
-
-    const chat = await messagesCollection.findOne({
-      $or: [
-        { ownerUid: uid, otherUserName: otherUid },
-        { ownerUid: otherUid, otherUserName: uid }
-      ]
-    });
-
-    if (chat) {
-      res.status(200).json(chat);
-    } else {
-      res.status(404).json({ message: 'No matching messages found' });
-    }
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({ error: "Failed to fetch user" });
-  }
-});
 
 
 
@@ -1152,7 +1102,20 @@ app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
     ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
     : { _id: id };
   const thread = await db.collection('messages').findOne(query);
+ 
+if (!thread) return res.status(404).json({ error: "Conversation not found" });
+
+if (!Array.isArray(thread.participants) || !thread.participants.includes(me)) {
+  return res.status(403).json({ error: "Not authorized for this thread" });
+}
+
+  
+
   if (!thread) return res.status(404).json({ error: "Conversation not found" });
+
+  if (!Array.isArray(thread.participants) || !thread.participants.includes(me)) {
+    return res.status(403).json({ error: "Not authorized for this thread" });
+  }
 
   const other = thread.participants.find(u => u !== me) || me;
   const now = new Date().toISOString();
