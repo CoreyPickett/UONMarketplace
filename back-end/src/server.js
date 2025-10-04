@@ -969,11 +969,12 @@ app.get('/api/messages/:id', verifyUser, async (req, res) => {
     if (!thread) return res.status(404).json({ error: "Conversation not found" });
 
     const participants = Array.isArray(thread.participants) ? thread.participants : [];
-    if (!participants.includes(me)) return res.status(403).json({ error: "Not authorized for this thread" });
+    if (!participants.includes(me)) {
+      return res.status(403).json({ error: "Not authorized for this thread" });
+    }
 
     const otherUid = participants.find(u => u !== me) || me;
 
-    // look up profile info for both sides of the convo
     const loadUser = async (uid) => {
       const u = await db.collection('users').findOne({ uid });
       const p = await db.collection('profile').findOne({ uid });
@@ -1014,80 +1015,81 @@ app.use((req, res, next) => {
 });
 
 app.post('/api/messages/start', verifyUser, async (req, res) => {
-  const me = req.user.uid; // current user (buyer)
+  const me = req.user.uid;
   const { listingId, sellerUid, listingTitle } = req.body;
-
-  if (!listingId || !sellerUid) {
-    return res.status(400).json({ error: "Need listingId and sellerUid" });
-  }
+  if (!listingId || !sellerUid) return res.status(400).json({ error: "Need listingId and sellerUid" });
 
   const participants = [me, sellerUid].sort();
   const now = new Date().toISOString();
 
-  // look up seller display info (optional but nice)
+  //  seller display info 
   let sellerName = "User";
   let sellerAvatar = "/images/default-avatar.png";
-
   try {
     const u = await db.collection('users').findOne({ uid: sellerUid });
-    if (u?.username) sellerName = u.username;
-
     const p = await db.collection('profile').findOne({ uid: sellerUid });
+    if (u?.username) sellerName = u.username;
     if (p?.profilePhotoUrl) sellerAvatar = p.profilePhotoUrl;
-  } catch (_) {
-    // soft-fail; keep defaults
-  }
+  } catch {}
 
   const baseDoc = {
     listingId,
     listingTitle: listingTitle || "",
-    otherUserName: sellerName,           // <-- persist seller name
-    avatar: sellerAvatar,                // <-- persist avatar
+    otherUserName: sellerName,     
+    avatar: sellerAvatar,
     participants,
     messages: [],
     createdAt: now,
     lastMessage: "",
     lastMessageAt: null,
-    unread: { [me]: 0, [sellerUid]: 1 }, //Set seller to unread of 1 instead of 0
+    unread: { [me]: 0, [sellerUid]: 1 },
   };
 
-  const result = await db.collection('messages').updateOne(
+  await db.collection('messages').updateOne(
     { listingId, participants },
     { $setOnInsert: baseDoc },
     { upsert: true }
   );
 
   const thread = await db.collection('messages').findOne({ listingId, participants });
-
-  if (!thread || !thread._id) {
-    console.error("Thread creation failed or missing _id:", thread);
-    return res.status(500).json({ error: "Thread creation failed" });
-  }
-
-  console.log("Thread created or found:", thread._id);
-  res.json({
-    ...thread,
-    _id: thread._id.toString() // ← Convert existing ObjectId to string
-  });
+  res.json({ ...thread, _id: String(thread._id) });
 });
 
 app.get('/api/messages', verifyUser, async (req, res) => {
   const me = req.user.uid;
 
-  const threads = await db.collection('messages')
+  // fetch all my threads
+  const base = await db.collection('messages')
     .find({ participants: me })
     .sort({ lastMessageAt: -1, createdAt: -1 })
-    .project({
-      listingId: 1,
-      listingTitle: 1,         
-      otherUserName: 1,        
-      avatar: 1,               
-      unread: 1,
-      lastMessage: 1,
-      lastMessageAt: 1,
-    })
     .toArray();
 
+  // map each thread to show the *other* participant’s display info
+  const enrich = async (t) => {
+    const otherUid = (t.participants || []).find(u => u !== me) || me;
+    let otherName = "User";
+    let otherAvatar = "/images/default-avatar.png";
+
+    try {
+      const u = await db.collection('users').findOne({ uid: otherUid });
+      const p = await db.collection('profile').findOne({ uid: otherUid });
+      if (u?.username) otherName = u.username;
+      if (p?.profilePhotoUrl) otherAvatar = p.profilePhotoUrl;
+    } catch {}
+
+    return {
+      _id: String(t._id),
+      listingId: t.listingId,
+      listingTitle: t.listingTitle || "",
+      otherUserName: otherName,
+      avatar: otherAvatar,
+      unread: t.unread || {},
+      lastMessage: t.lastMessage || "",
+      lastMessageAt: t.lastMessageAt || null,
+    };
+  };
+
+  const threads = await Promise.all(base.map(enrich));
   res.json(threads);
 });
 

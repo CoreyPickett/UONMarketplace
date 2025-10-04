@@ -48,14 +48,13 @@ export default function DirectMessage() {
         const { data } = await api.get(`/messages/${id}`);
         const t = data || {};
         const meta = t.meta || {};
-        setThread({
-          title: t.listingTitle
-            ? `${meta.other?.name || "User"} – ${t.listingTitle}`
-            : (meta.other?.name || "User"),
-          me: meta.me,
-          other: meta.other,
-        });
-        setMessages(t.messages || []);
+        const otherName = meta.other?.name || t.otherUserName || "User";
+          setThread({
+            title: t.listingTitle ? `${otherName} - ${t.listingTitle}` : otherName,
+            me: meta.me,
+            other: meta.other,
+          });
+          setMessages(t.messages || []);
         console.log("Thread data received:", data);
         if (!data) {
           console.warn(`Thread ${id} not found in backend`);
@@ -66,10 +65,6 @@ export default function DirectMessage() {
         const composed = t.listingTitle
           ? `${sellerName} – ${t.listingTitle}`
           : (preview?.sender || sellerName);
-          setThread({
-            sender: composed,
-            avatar: t.avatar || preview?.avatar || "/images/default-avatar.png",
-          });
         setMessages(t.messages || []);
         // Mark as read in backend
         if (!id.startsWith("demo-") && isValidObjectId(id)) {
@@ -136,17 +131,15 @@ export default function DirectMessage() {
       <button className="back-button" onClick={() => navigate("/messages")}>Back to Messages</button>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
-        <img src={thread.other?.avatar} alt={thread.other?.name} width={50} style={{ borderRadius: "50%" }} />
+        <img src={thread.other?.avatar || "/images/default-avatar.png"} alt={thread.title} width={50} style={{ borderRadius: "50%" }} />
         <h2 style={{ margin: 0 }}>{thread.title}</h2>
       </div>
 
       <MessageList
         messages={messages}
         meUid={thread.me?.uid}
-        meName={thread.me?.name}
         meAvatar={thread.me?.avatar}
         otherUid={thread.other?.uid}
-        otherName={thread.other?.name}
         otherAvatar={thread.other?.avatar}
       />
       <MessageMaker onSend={handleSend} sending={sending || !me} />
