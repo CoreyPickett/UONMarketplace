@@ -125,6 +125,7 @@ const ConversationList = () => {
   const [loading, setLoading] = useState(true); // Loading state
   const [menuFor, setMenuFor] = useState(null); // Which thread menu is open
   const [confirmDeleteId, setConfirmDeleteId] = useState(null); // Which thread is being deleted
+  const me = getAuth().currentUser?.uid || getAuth().currentUser?.email || "me"; //Add Me for Unread tracking
 
   // fetch all message threads for the user
   
@@ -236,7 +237,7 @@ return (
               </td>
 
               <td onClick={goToThread} style={{ cursor: "pointer" }}>
-                <strong>{(t.unread?.me ?? 0) > 0 ? "Unread" : "Read"}</strong>{" "}
+                <strong>{(t.unread?.[me] ?? 0) > 0 ? "Unread" : "Read"}</strong>{" "}
                 {t.lastMessage}
               </td>
 
@@ -296,18 +297,18 @@ export default function Messages() {
 }
 
 // The actual part that allows you to send messages through the server
-export async function sendMessage(conversationId, messageText) {
+export async function sendMessage(conversationId, messageText, onSuccess) {
   const user = getAuth().currentUser;
   if (!user) throw new Error("Not logged in");
-  const token = await user.getIdToken(); //authentication
+  const token = await user.getIdToken();
 
   await api.post(
-    `/messages/${conversationId}/messages`, //send POST to back-end
-    {
-      body: messageText,
-    },
-    {
-      headers: { authtoken: token },
-    }
+    `/messages/${conversationId}/messages`,
+    { body: messageText },
+    { headers: { authtoken: token } }
   );
+
+  if (typeof onSuccess === "function") {
+    onSuccess(); //refetch threads
+  }
 }

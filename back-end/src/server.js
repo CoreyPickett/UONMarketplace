@@ -949,9 +949,6 @@ await db.collection('messages').updateOne(
 );
 
 
-    if (!result.value) {
-      return res.status(404).json({ error: "Conversation not found" });
-    }
     return res.json({ success: true });
   } catch (e) {
     console.error("Error marking as read:", e);
@@ -998,14 +995,39 @@ app.get('/api/messages/:id', verifyUser, async (req, res) => {
   }
 });
 
-
-
-
-
-
 //DELETE request for deleting a message
+app.delete('/api/messages/:id', verifyUser, async (req, res) => {
+  const { id } = req.params;
+  const me = req.user.uid;
 
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, message: "Invalid thread ID" });
+  }
 
+  const threadId = new ObjectId(id);
+  const thread = await db.collection('messages').findOne({ _id: threadId });
+
+  if (!thread) {
+    return res.status(404).json({ success: false, message: "Thread not found" });
+  }
+
+  if (!Array.isArray(thread.participants) || !thread.participants.includes(me)) {
+    return res.status(403).json({ success: false, message: "Not authorized to delete this thread" });
+  }
+
+  try {
+    const result = await db.collection('messages').deleteOne({ _id: threadId });
+
+    if (result.deletedCount === 0) {
+      return res.status(500).json({ success: false, message: "Thread deletion failed" });
+    }
+
+    return res.status(200).json({ success: true, message: "Thread deleted successfully" });
+  } catch (error) {
+    console.error("Thread deletion error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
 
 app.use((req, res, next) => {
   console.log(`[${req.method}] ${req.url}`);
@@ -1093,47 +1115,73 @@ app.get('/api/messages', verifyUser, async (req, res) => {
   res.json(threads);
 });
 
+//POST request for sending message in Thread
 app.post('/api/messages/:id/messages', verifyUser, async (req, res) => {
-  const { id } = req.params;
+  const rawId = req.params.id;
   const me = req.user.uid;
   const { body } = req.body;
 
-  if (!body?.trim()) return res.status(400).json({ error: "Empty message" });
+  if (!body?.trim()) {
+    return res.status(400).json({ error: "Empty message" });
+  }
 
-  const query = ObjectId.isValid(id)
-    ? { $or: [{ _id: new ObjectId(id) }, { _id: id }] }
-    : { _id: id };
+  if (!ObjectId.isValid(rawId)) {
+    return res.status(400).json({ error: "Invalid thread ID" });
+  }
+
+  const threadId = new ObjectId(rawId);
+  const query = { _id: threadId };
+
   const thread = await db.collection('messages').findOne(query);
- 
-if (!thread) return res.status(404).json({ error: "Conversation not found" });
-
-if (!Array.isArray(thread.participants) || !thread.participants.includes(me)) {
-  return res.status(403).json({ error: "Not authorized for this thread" });
-}
-
-  
-
-  if (!thread) return res.status(404).json({ error: "Conversation not found" });
+  if (!thread) {
+    return res.status(404).json({ error: "Conversation not found" });
+  }
 
   if (!Array.isArray(thread.participants) || !thread.participants.includes(me)) {
     return res.status(403).json({ error: "Not authorized for this thread" });
   }
 
   const other = thread.participants.find(u => u !== me) || me;
+  const otherKey = String(other);
   const now = new Date().toISOString();
+
+  if (typeof thread.unread !== 'object' || thread.unread === null || Array.isArray(thread.unread)) {
+    await db.collection('messages').updateOne(query, { $set: { unread: {} } });
+    thread.unread = {};
+  }
+
+  const unreadCount = (thread.unread[otherKey] || 0) + 1;
+
+  const setPayload = {
+    lastMessage: body,
+    lastMessageAt: now
+  };
+  setPayload[`unread.${otherKey}`] = unreadCount;
+
+  const updatePayload = {
+    $push: { messages: { from: me, body, at: now } },
+    $set: {
+      lastMessage: body,
+      lastMessageAt: now,
+      [`unread.${otherKey}`]: unreadCount
+    }
+  };
+
+  console.log("Final update payload:", updatePayload);
 
   const result = await db.collection('messages').findOneAndUpdate(
     query,
-    {
-      $push: { messages: { from: me, body, at: now } },
-      $set: { lastMessage: body, lastMessageAt: now, [`unread.${other}`]: (thread.unread?.[other] || 0) + 1 }
-    },
+    updatePayload,
     { returnDocument: 'after' }
   );
 
+  if (!result.value) {
+    console.error("Message update failed for thread:", rawId);
+    return res.status(500).json({ error: "Failed to update message thread" });
+  }
+
   res.json({ messages: result.value.messages });
 });
-
 
 
 const PORT = process.env.PORT || 8000; // this just allows for the enviroment to choose what port it runs on with the default of 8000

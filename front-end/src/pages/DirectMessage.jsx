@@ -108,8 +108,23 @@ export default function DirectMessage() {
     setMessages((prev) => [...prev, temp]);
 
     try {
+      // Send the message
       const { data } = await api.post(`/messages/${id}/messages`, { body });
+
+      // Update message list from backend
       setMessages(data?.messages || []);
+
+      // Refresh thread metadata
+      const updatedThread = await api.get(`/messages/${id}`);
+      const meta = updatedThread.data?.meta || {};
+      setThread((prev) => ({
+        ...prev,
+        lastMessage: updatedThread.data?.lastMessage,
+        lastMessageAt: updatedThread.data?.lastMessageAt,
+        unread: updatedThread.data?.unread,
+        me: meta.me,
+        other: meta.other,
+      }));
     } catch (e) {
       console.warn("Send failed; keeping optimistic message", e);
     } finally {
