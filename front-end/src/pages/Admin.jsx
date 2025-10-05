@@ -399,7 +399,7 @@ const setUserDisabled = async (uid, disabled) => {
                                   })
                                 : "—"}
                             </td>
-                            <td className="hide-md">{l.seller || "—"}</td>
+                            <td className="hide-md">{l.ownerEmail || "—"}</td>
                             <td>{l.upvotes ?? 0}</td>
                             <td>
                               <button

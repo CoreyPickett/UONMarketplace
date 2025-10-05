@@ -163,7 +163,7 @@ export default function Listing() {
           ? listing.content.map((para, i) => (
               <p key={i} style={{ lineHeight: 1.6 }}>{para}</p>
             ))
-          : listing.description
+          : listing.description 
           ? <p style={{ lineHeight: 1.6 }}>{listing.description}</p>
           : listing.content
           ? <p style={{ lineHeight: 1.6 }}>{listing.content}</p>
@@ -196,52 +196,58 @@ export default function Listing() {
             Buy Now
           </button>
 
-          {(listing.ownerUid || listing.ownerEmail) ? (
-            <button
-  className="ListingOptions secondary"
-  onClick={async () => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) { 
-      navigate("/login"); 
-      return; 
-    }
+          {/* Conditional: Show "Message seller" if not owner, else show message */}
+          {user && listing ? (
+            listing.ownerUid !== user?.uid && listing.ownerEmail !== user?.email ? (
+              <button
+                className="ListingOptions secondary"
+                onClick={async () => {
+                  const auth = getAuth();
+                  const currentUser = auth.currentUser;
 
-    const token = await user.getIdToken();
-    const res = await api.post("/messages/start", {
-      listingId: listing._id,
-      sellerUid: listing.ownerUid,
-      listingTitle: listing.title
-    }, {
-      headers: { authtoken: token }
-    });
+                  if (!currentUser) {
+                    navigate("/login");
+                    return;
+                  }
 
-    const thread = res.data;
-    console.log("Thread received:", thread);
+                  const token = await currentUser.getIdToken();
+                  const res = await api.post(
+                    "/messages/start",
+                    {
+                      listingId: listing._id,
+                      sellerUid: listing.ownerUid,
+                      listingTitle: listing.title,
+                    },
+                    {
+                      headers: { authtoken: token },
+                    }
+                  );
 
-    if (!thread?._id) {
-      console.error("Thread creation failed or missing _id:", thread);
-      alert("Failed to start conversation. Please try again.");
-      return;
-    }
+                  const thread = res.data;
 
-    navigate(`/messages/${thread._id}`, {
-      state: {
-        preview: {
-          sender: `${sellerProfile?.username || listing.ownerEmail?.split("@")[0] || "User"} – ${listing.title}`,
-          avatar: sellerProfile?.profilePhotoUrl || "/images/default-avatar.png",
-        },
-      },
-    });
-  }}
->
-  Message seller
-</button>
-          ) : (
-            <Link className="ListingOptions secondary" to="/messages">
-              Message seller
-            </Link>
-          )}
+                  if (!thread?._id) {
+                    console.error("Thread creation failed or missing _id:", thread);
+                    alert("Failed to start conversation. Please try again.");
+                    return;
+                  }
+
+                  navigate(`/messages/${thread._id}`, {
+                    state: {
+                      preview: {
+                        sender:
+                          `${sellerProfile?.username || listing.ownerEmail?.split("@")[0] || "User"} – ${listing.title}`,
+                        avatar: sellerProfile?.profilePhotoUrl || "/images/default-avatar.png",
+                      },
+                    },
+                  });
+                }}
+              >
+                Message seller
+              </button>
+            ) : (
+              <div className="owner-message">This is your listing.</div>
+            )
+          ) : null}
         </div>
       </section>
 
