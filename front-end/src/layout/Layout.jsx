@@ -2,7 +2,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import { useState } from 'react';
-import Sidebar from './components/SideBar';
+import Sidebar from '../components/SideBar';
 
 export default function Layout() {
   const location = useLocation();
