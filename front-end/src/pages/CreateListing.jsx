@@ -14,6 +14,9 @@ export default function CreateListing() {
     price: "",
     condition: "",
     location: "",
+    address: "",
+    postcode: "",
+    state: "NSW",
     delivery_options: "",   
     images: [],
     quantity: 1,            
@@ -236,32 +239,78 @@ export default function CreateListing() {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 15 }}>
-            <select
-              name="condition"
-              value={formData.condition}
-              onChange={handleChange}
-              required
-            >
-              <option value="" disabled>
-                Current Condition
-              </option>
-              <option value="Brand New">Brand New</option>
-              <option value="New">New</option>
-              <option value="Barely Used">Barely Used</option>
-              <option value="Used">Used</option>
-              <option value="Well Used">Well Used</option>
-            </select>
+          <div className="form-row">
+  <select
+    name="condition"
+    value={formData.condition}
+    onChange={handleChange}
+    required
+  >
+    <option value="" disabled>Current Condition</option>
+    <option value="Brand New">Brand New</option>
+    <option value="New">New</option>
+    <option value="Barely Used">Barely Used</option>
+    <option value="Used">Used</option>
+    <option value="Well Used">Well Used</option>
+  </select>
+</div>
 
-            <input
-              name="location"
-              placeholder="Location (e.g. Callaghan Campus)"
-              value={formData.location}
-              onChange={handleChange}
-              required
-            />
-          </div>
+{/* ROW: Location (separate from condition) */}
+<div className="form-row">
+  <input
+    name="location"
+    placeholder="Location (e.g. Callaghan Campus)"
+    value={formData.location}
+    onChange={handleChange}
+  />
+</div>
 
+<div className="address-row">
+  <input
+    name="streetAddress"                
+    placeholder="Street address"
+    value={formData.streetAddress}
+    onChange={handleChange}
+    required
+  />
+
+  <input
+    name="postcode"
+    type="text"                         
+    inputMode="numeric"
+    pattern="^\d{4}"
+    minLength={4}
+    maxLength={4}
+    placeholder="Postcode"
+    value={formData.postcode}
+    onChange={(e) => {
+    //  allow only digits
+    const digitsOnly = e.target.value.replace(/\D/g, "");
+    //  4 characters only
+    if (digitsOnly.length <= 4) handleChange({
+      target: { name: "postcode", value: digitsOnly },
+    });
+  }}
+  required
+  />
+
+  <select
+    name="state"                        
+    value={formData.state}              
+    onChange={handleChange}
+    required
+    className="state-select"
+  >
+    <option value="NSW">NSW</option>
+    <option value="VIC">VIC</option>
+    <option value="QLD">QLD</option>
+    <option value="SA">SA</option>
+    <option value="WA">WA</option>
+    <option value="TAS">TAS</option>
+    <option value="ACT">ACT</option>
+    <option value="NT">NT</option>
+  </select>
+</div>
           <select
             name="delivery_options"
             value={formData.delivery_options}
@@ -332,6 +381,7 @@ export default function CreateListing() {
             <h3 className="listing-title">{formData.title || "Listing title"}</h3>
             {formData.category && <p className="listing-category">{formData.category}</p>}
             {formData.location && <p className="listing-location">📍 {formData.location}</p>}
+            {formData.state && <p className="listing-state"> {formData.state}</p>}
           </div>
         </div>
 

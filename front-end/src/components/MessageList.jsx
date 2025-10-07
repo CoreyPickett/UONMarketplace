@@ -9,7 +9,7 @@ export default function MessageList({ messages, meUid, meAvatar, otherAvatar }) 
     <div className="message-list">
       {messages?.map((m) => {
         const mine = m.from === meUid;
-        const cls = `bubble ${mine ? "me" : "them"}`; // <- matches your CSS
+        const cls = `bubble ${mine ? "me" : "them"}`; 
         const avatar = mine ? meAvatar : otherAvatar;
         return (
           <div key={m._id || m.at} style={{ display: "flex", gap: 8, alignItems: "flex-end", justifyContent: mine ? "flex-end" : "flex-start" }}>
