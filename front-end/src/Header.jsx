@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useEffect, useState } from "react";
 import { getAuth, signOut } from "firebase/auth";
-import { api } from "../api";
+import { api } from "./api";
 import useUser from "./useUser";
 import Layout from "./Layout";
 import "./Header.css"; 
