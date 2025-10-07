@@ -48,18 +48,33 @@ export default function Admin() {
   }, [tab]);
 
   const fetchAllUsers = async () => {
-    try {
-      setULoading(true);
-      const res = await fetch("/api/admin/users"); // Adjust endpoint as needed
-      const data = await res.json();
-      setUsers(data);
-      setUError("");
-    } catch (err) {
-      setUError("Failed to fetch users.");
-    } finally {
-      setULoading(false);
-    }
-  };
+  try {
+    setULoading(true);
+
+    const user = getAuth().currentUser;
+    if (!user) throw new Error("Not signed in");
+
+    const token = await user.getIdToken();
+
+    const res = await fetch("/api/admin/users", {
+      headers: { authtoken: token },            
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const array = Array.isArray(data) ? data : (Array.isArray(data?.users) ? data.users : []);
+    setUsers(array);
+    setUError("");
+  } catch (err) {
+    console.error(err);
+    setUsers([]);                                
+    setUError("Failed to fetch users. Are you signed in as an admin?");
+  } finally {
+    setULoading(false);
+  }
+};
+
 
   const filtered = useMemo(() => {
     let out = [...listings];
@@ -140,11 +155,13 @@ export default function Admin() {
   const [busyUid, setBusyUid] = useState(null); // uid currently being toggled (disable/enable)
 
 
-  const filteredUsers = users.filter(u =>
-    u.email?.toLowerCase().includes(uQuery.toLowerCase()) ||
-    u.displayName?.toLowerCase().includes(uQuery.toLowerCase()) ||
-    (u.uid || u.id || u._id)?.toLowerCase().includes(uQuery.toLowerCase())
-  );
+  const list = Array.isArray(users) ? users : [];
+  const filteredUsers = list.filter(u => {
+  const t = uQuery.toLowerCase();
+  return u.email?.toLowerCase().includes(t)
+      || u.displayName?.toLowerCase().includes(t)
+      || (u.uid || u.id || u._id)?.toLowerCase().includes(t);
+  });
 
   const requestDeleteUser = (uid) => setDeleteUid(uid);
   const cancelDeleteUser = () => setDeleteUid(null);
