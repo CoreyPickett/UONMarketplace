@@ -6,87 +6,75 @@ import { api } from "../api";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "./DirectMessage.css";
 
-// Demo if API fails
-const DEMO_MESSAGES = {
-  "demo-1": [
-    { _id: "m1", from: "u_jane", body: "Have you delivered the textbooks yet?", at: "2025-08-19T09:19:00Z" },
-    { _id: "m2", from: "me",     body: "Yes",          at: "2025-08-19T09:20:37Z" },
-  ],
-};
-
 export default function DirectMessage() {
-  const { id } = useParams(); // Get convo ID from URL
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { state } = useLocation();
-  const preview = state?.preview; // Info from previous page
-  const [me, setMe] = useState(null); // Replaced hardcoed me with Firebase user UID
+  const location = useLocation();
+
+  const [me, setMe] = useState(null);
+
+  // preview from previous page (may be undefined on hard reload)
+  const preview = location.state?.preview || null;
 
   const [loading, setLoading] = useState(true);
-  const [thread, setThread] = useState(preview || null);
-  const [messages, setMessages] = useState([]);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
 
-  const isValidObjectId = (id) =>
-  typeof id === "string" && /^[a-f\d]{24}$/i.test(id);
+  // seed thread + messages from preview if we have it
+  const [thread, setThread] = useState(
+    preview
+      ? {
+          title: preview.listingTitle
+            ? `${preview.other?.name || "User"} - ${preview.listingTitle}`
+            : (preview.other?.name || "User"),
+          me: preview.meta?.me,
+          other: preview.meta?.other,
+        }
+      : null
+  );
+  const [messages, setMessages] = useState(preview?.messages || []);
 
-  // Keep Bubbles on correct side
+  const isValidObjectId = (s) =>
+    typeof s === "string" && /^[a-f\d]{24}$/i.test(s);
+
+  // wait for Firebase auth, then fetch the real thread (works on hard reload)
   useEffect(() => {
-    const unsub = onAuthStateChanged(getAuth(), (user) => {
+    const unsub = onAuthStateChanged(getAuth(), async (user) => {
       setMe(user?.uid || null);
+      if (!isValidObjectId(id)) {
+        setError("Bad conversation id.");
+        setLoading(false);
+        return;
+      }
+      try {
+        setError("");
+        setLoading(true);
+        // NOTE: use "/messages/..." if baseURL === "/api"; otherwise use "/api/messages/..."
+        const { data } = await api.get(`/messages/${id}`);
+        const meta = data?.meta || {};
+        const otherName = meta.other?.name || "User";
+        setThread({
+          title: data.listingTitle
+            ? `${otherName} - ${data.listingTitle}`
+            : otherName,
+          me: meta.me,
+          other: meta.other,
+        });
+        setMessages(data?.messages || []);
+        api.post(`/messages/${id}/read`).catch(() => {});
+      } catch (e) {
+        setError(
+          e?.response?.status === 401
+            ? "Please sign in again."
+            : "Conversation not found."
+        );
+      } finally {
+        setLoading(false);
+      }
     });
     return () => unsub();
-  }, []);
-
-
-  // Load messages 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        // Try to get message from the backend
-        const { data } = await api.get(`/messages/${id}`);
-        const t = data || {};
-        const meta = t.meta || {};
-        const otherName = meta.other?.name || t.otherUserName || "User";
-          setThread({
-            title: t.listingTitle ? `${otherName} - ${t.listingTitle}` : otherName,
-            me: meta.me,
-            other: meta.other,
-          });
-          setMessages(t.messages || []);
-        console.log("Thread data received:", data);
-        if (!data) {
-          console.warn(`Thread ${id} not found in backend`);
-        }
-        if (cancelled) return;
-
-        const sellerName = t.otherUserName || t.name || "User";
-        const composed = t.listingTitle
-          ? `${sellerName} – ${t.listingTitle}`
-          : (preview?.sender || sellerName);
-        setMessages(t.messages || []);
-        // Mark as read in backend
-        if (!id.startsWith("demo-") && isValidObjectId(id)) {
-          setTimeout(() => {
-            api.post(`/messages/${id}/read`).catch((e) =>
-              console.warn(`POST /messages/${id}/read failed`, e)
-            );
-          }, 300); // Optional delay to avoid race conditions
-        }
-      } catch (e) {
-        // If API fails use demo 
-        console.warn(`GET /api/messages/${id} failed; using demo/preview`, e);
-        if (!cancelled) {
-          setThread(preview || { sender: "User", avatar: "/images/default-avatar.png" });
-          setMessages(DEMO_MESSAGES[id] || []);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [id, preview]);
+  }, [id]);
+  
 
   // Send new message
   const handleSend = async (body) => {
