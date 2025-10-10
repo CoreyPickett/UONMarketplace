@@ -4,120 +4,6 @@ import { api } from "../api";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "./Messages.css";
 
-// Lets users search for profiles
-const ProfileSearch = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [profiles, setProfiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
-  const me = getAuth().currentUser;
-
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setProfiles([]);
-    try {
-      if (!searchTerm.trim()) {
-        setError("Please enter an email to search.");
-        setLoading(false);
-        return;
-      }
-      const current = getAuth().currentUser;
-      if (!current) {
-        setError("You must be logged in to search users.");
-        setLoading(false);
-        return;
-      }
-      const token = await current.getIdToken();
-      // Use the same endpoint as Admin.jsx
-      const res = await api.get("/admin/search-user", {
-        params: { email: searchTerm.trim() },
-        headers: { authtoken: token },
-      });
-      const u = res.data;
-      setProfiles(
-        u && (u.uid || u.id || u._id)
-          ? [
-              {
-                uid: u.uid || u.id || u._id,
-                email: u.email,
-                displayName: u.displayName,
-                disabled: u.disabled,
-                isAdmin: u.customClaims?.isAdmin === true,
-              },
-            ]
-          : []
-      );
-      if (!u || !(u.uid || u.id || u._id)) {
-        setError("No user found with that email.");
-      }
-    } catch (err) {
-      console.error("Error fetching user:", err);
-      setProfiles([]);
-      setError(
-        err?.response?.data?.error || "Failed to fetch user. Check email and permissions."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-
-      <div>
-      <h2>Search Profiles</h2>
-      <a className="btn btn-ghost" href="/create-message" data-discover="true">+ New Message</a>
-      </div>
-      
-      <form onSubmit={handleSearch}>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search profiles..."
-        />
-        <button className="btn" type="submit" disabled={loading}>
-          {loading ? "Searching..." : "Search"}
-        </button>
-      </form>
-      {error && <div className="alert error">{error}</div>}
-      {profiles.length > 0 && (
-        <ul style={{ marginTop: 10 }}>
-          {profiles.map((p) => (
-            <li key={p.uid}>
-              <button className="profile-button" onClick={() => navigate(`/messages/${p.uid}`)}>
-                <strong>{p.displayName || "Unnamed User"}</strong> <br />
-                <span>{p.email}</span> <br />
-                <span>{p.isAdmin ? "Admin" : "User"}</span> <br />
-                <span>{p.disabled ? "Disabled" : "Active"}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-};
-
-
-
-
-
-// just as a demo
-const DEMO_THREADS = [
-  {
-    _id: "demo-1",
-    otherUserName: "Jane Smith",
-    lastMessage: "Have you delivered the textbooks yet?",
-    lastMessageAt: new Date().toISOString(),
-    unread: { me: 1 },
-    avatar: "/images/default-avatar.png",
-  },
-];
-
 // Shows all message threads for logged-in user
 const ConversationList = () => {
   const navigate = useNavigate();
@@ -290,7 +176,6 @@ export default function Messages() {
   return (
     <main className="messages-content">
       <h1 className="page-title">Messages</h1>
-      <ProfileSearch />
       <ConversationList />
     </main>
   );
