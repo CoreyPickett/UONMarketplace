@@ -63,25 +63,18 @@ async function handleConfirm() {
       const paymentLabel =
         paymentMethod === "cash" ? "cash (meet in person)" : "credit card";
 
-      // send a plain text message (covering multiple field names)
+      // send as message 
       const msgPayload = {
         kind: "text",
         text: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
         body: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
         content: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
-        from: user.uid,                       // many backends require this
-        createdAt: new Date().toISOString(),  // harmless if ignored
+        from: user.uid,                       
+        createdAt: new Date().toISOString(),  
       };
 
       const msgRes = await api.post(`/messages/${threadId}/messages`, msgPayload);
       console.log("post message res:", msgRes.data);
-
-      // optional: also send meetup line as a second text
-      // await api.post(`/messages/${threadId}/messages`, {
-      //   kind: "text",
-      //   text: `📍 Meetup: ${listing.location || "TBA"}`,
-      //   from: user.uid,
-      // });
 
       navigate(`/messages/${threadId}`);
     }
