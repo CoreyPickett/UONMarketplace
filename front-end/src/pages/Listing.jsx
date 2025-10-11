@@ -153,7 +153,6 @@ export default function Listing() {
       <div style={{ display: "flex", gap: 8, margin: "8px 0 18px 0", flexWrap: "wrap" }}>
         {listing.condition ? <span className="badge">{listing.condition}</span> : null}
         {priceText ? <span className="badge badge-primary">{priceText}</span> : null}
-        {listing.location ? <span className="badge">📍 {listing.location}</span> : null}
         {listing.category ? <span className="badge">{listing.category}</span> : null}
       </div>
 

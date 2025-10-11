@@ -4,7 +4,10 @@ import { createPortal } from "react-dom";
 import axios from "axios";
 import useUser from "../useUser";
 import "./BuyNow.css";
+import { useNavigate } from "react-router-dom"; 
+import api from "../api";
 
+const API = "http://localhost:8000";
 const formatAUD = (n) =>
   Number.isFinite(Number(n))
     ? Number(n).toLocaleString("en-AU", { style: "currency", currency: "AUD" })
@@ -18,6 +21,8 @@ export default function BuyNowModal({ listing, onClose }) {
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVC, setCardCVC] = useState("");
   const [showCVC, setShowCVC] = useState(false);
+  const navigate = useNavigate();
+  const [revealed, setRevealed] = useState(false);
 
   // Close on escape button
   useEffect(() => {
@@ -26,39 +31,70 @@ export default function BuyNowModal({ listing, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  async function handleConfirm() {
-    try {
-      if (!user) {
-        alert("Please sign in first.");
-        return;
-      }
-      if (paymentMethod === "credit") {
-        if (!cardNumber || !cardExpiry || !cardCVC) {
-          alert("Please fill in all credit card details.");
-          return;
-        }
-        // Optionally: Add more validation here
-      }
-      setIsSubmitting(true);
-      const token = await user.getIdToken();
-      const headers = { authtoken: token };
-      // TODO: implement to server
-      await axios.post(`/api/marketplace/${listing._id}/orders`, {
-        qty,
-        paymentMethod,
-        ...(paymentMethod === "credit"
-          ? { cardNumber, cardExpiry, cardCVC }
-          : {}),
-      }, { headers });
-      onClose(true); // signal success
-    } catch (e) {
-      console.error(e);
-      alert("Sorry, something went wrong placing the order.");
-      onClose(false);
-    } finally {
-      setIsSubmitting(false);
+async function handleConfirm() {
+  if (!user || isSubmitting) return;
+  setIsSubmitting(true);
+
+  try {
+  const sellerUid =
+    listing.ownerUid ??
+    listing.sellerUid ??
+    listing.owner?.uid ??
+    listing.userUid ??
+    listing.user?.uid ??
+    null;
+
+  if (!sellerUid) {
+    console.warn("No sellerUid on listing; skipping DM.");
+  } else {
+    // create/fetch thread
+    const startRes = await api.post(`/messages/start`, {
+      listingId: listing._id,
+      sellerUid,
+      listingTitle: listing.title,
+    });
+    console.log("start thread res:", startRes.data);
+
+    const thread = startRes.data || {};
+    const threadId = thread._id || thread.id || thread.threadId;
+    if (!threadId) {
+      console.warn("No thread id in /messages/start response:", thread);
+    } else {
+      const paymentLabel =
+        paymentMethod === "cash" ? "cash (meet in person)" : "credit card";
+
+      // send a plain text message (covering multiple field names)
+      const msgPayload = {
+        kind: "text",
+        text: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
+        body: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
+        content: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
+        from: user.uid,                       // many backends require this
+        createdAt: new Date().toISOString(),  // harmless if ignored
+      };
+
+      const msgRes = await api.post(`/messages/${threadId}/messages`, msgPayload);
+      console.log("post message res:", msgRes.data);
+
+      // optional: also send meetup line as a second text
+      // await api.post(`/messages/${threadId}/messages`, {
+      //   kind: "text",
+      //   text: `📍 Meetup: ${listing.location || "TBA"}`,
+      //   from: user.uid,
+      // });
+
+      navigate(`/messages/${threadId}`);
     }
   }
+} catch (e) {
+  console.warn("DM to seller failed:", e?.response?.data || e.message);
+} finally {
+    setIsSubmitting(false);
+  }
+}
+
+
+
 
   return createPortal(
     <div
@@ -130,11 +166,12 @@ export default function BuyNowModal({ listing, onClose }) {
               Pay in Cash (in person)
             </label>
           </div>
-        {paymentMethod === "cash" && listing.location && (
-          <div className="modal-row" style={{ marginBottom: 12, color: '#374151', fontSize: 15 }}>
-            <strong>Meet up at:</strong> {listing.location}
-          </div>
-        )}
+        {paymentMethod === "cash" && (
+  <div className="modal-row" style={{ marginBottom: 12, color: '#374151', fontSize: 15 }}>
+    <strong>Meet up:</strong>{" "}
+    {revealed ? (listing.location || "TBA") : "Hidden — shown after purchase"}
+  </div>
+)}
         </div>
 
         {paymentMethod === "credit" && (
@@ -220,6 +257,7 @@ export default function BuyNowModal({ listing, onClose }) {
           >
             {isSubmitting ? "Placing order..." : "Confirm purchase"}
           </button>
+          
           <button
             onClick={() => onClose(false)}
             className="btn-secondary"

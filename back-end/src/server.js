@@ -12,9 +12,12 @@ import userRoutes from './routes/userRoutes.js';
 import saveRoutes from './routes/saveRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 
+
 // Initialise express
 const app = express();
 app.use(express.json());
+
+
 
 // Backend Logging
 app.use((req, res, next) => {
@@ -23,6 +26,8 @@ app.use((req, res, next) => {
   console.log("Body:", req.body);
   next();
 });
+
+
 
 // ROUTES
 // Marketplace

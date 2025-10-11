@@ -1,6 +1,6 @@
 // Makes API requests to backend
 import axios from "axios";
-import { getAuth } from "firebase/auth"; // <-- add this
+import { getAuth } from "firebase/auth"; 
 
 export const api = axios.create({
   baseURL: "/api",
