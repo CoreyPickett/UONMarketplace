@@ -9,6 +9,12 @@ const toAUD = (n) =>
     ? Number(n).toLocaleString("en-AU", { style: "currency", currency: "AUD" })
     : n ?? "";
 
+// Limit text to N chars and add an ellipsis
+const ellipsize = (str, max = 20) =>
+  typeof str === "string" && str.length > max
+    ? str.slice(0, max).trimEnd() + "…"
+    : str ?? "";
+
 export default function MarketPlaceList() {
   const [sellerProfiles, setSellerProfiles] = useState({});
   const { listings, loading } = useListings();
@@ -17,18 +23,17 @@ export default function MarketPlaceList() {
 
   const filtered = (listings || []).filter((l) => {
     if (!q) return true;
-    const hay =
-      [
-        l.title,
-        l.description,
-        l.content,
-        l.category,
-        l.location,
-        Array.isArray(l.tagsOrKeywords) ? l.tagsOrKeywords.join(" ") : "",
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    const hay = [
+      l.title,
+      l.description,
+      l.content,
+      l.category,
+      l.location,
+      Array.isArray(l.tagsOrKeywords) ? l.tagsOrKeywords.join(" ") : "",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
     return hay.includes(q);
   });
 
@@ -88,19 +93,29 @@ export default function MarketPlaceList() {
           <article key={l._id} className="listing-card">
             <Link className="listing-link" to={`/marketplace/${l._id}`}>
               <div className="listing-image">
-                <img className="listing-thumb" src={thumb} alt={l.title} loading="lazy"
-                     onError={(e)=> (e.currentTarget.src="/placeholder-listing.jpg")} />
+                <img
+                  className="listing-thumb"
+                  src={thumb}
+                  alt={l.title || "Listing image"}
+                  loading="lazy"
+                  onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
+                />
                 <div className="saved-pill">{saves} saved</div>
               </div>
 
               <div className="listing-info">
-                <h3 className="listing-title">{l.title}</h3>
+                <h3 className="listing-title" title={l.title}>
+                  {ellipsize(l.title, 20)}
+                </h3>
+
                 {"price" in l && <div className="listing-price">{toAUD(l.price)}</div>}
+
                 {l.content && (
                   <div className="listing-content">
                     {Array.isArray(l.content) ? l.content[0] : l.content}
                   </div>
                 )}
+
                 <div className="listing-name">
                   <UsernameDisplay
                     username={sellerProfiles[l.ownerUid]?.username}

@@ -14,6 +14,7 @@ export default function MarketPlace() {
   const [sort, setSort] = useState("recent");
   const [rangeNote, setRangeNote] = useState("");
 
+  // load listings
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -34,6 +35,7 @@ export default function MarketPlace() {
     };
   }, []);
 
+  // range warning note
   useEffect(() => {
     const min = minPrice === "" ? undefined : Number(minPrice);
     const max = maxPrice === "" ? undefined : Number(maxPrice);
@@ -50,36 +52,71 @@ export default function MarketPlace() {
     }
   }, [minPrice, maxPrice]);
 
+  // helper: safest “recent” time (updatedAt → createdAt → ObjectId time → 0)
+  const getTime = (l) => {
+    if (l?.updatedAt) {
+      const t = Date.parse(l.updatedAt);
+      if (!Number.isNaN(t)) return t;
+    }
+    if (l?.createdAt) {
+      const t = Date.parse(l.createdAt);
+      if (!Number.isNaN(t)) return t;
+    }
+    // ObjectId timestamp fallback (if hex string)
+    const id = typeof l?._id === "string" ? l._id : String(l?._id || "");
+    if (id && id.length >= 8) {
+      const sec = parseInt(id.slice(0, 8), 16);
+      if (Number.isFinite(sec)) return sec * 1000;
+    }
+    return 0;
+  };
+
   const filteredListings = useMemo(() => {
-    let out = [...listings];
+    let out = Array.isArray(listings) ? [...listings] : [];
     const q = search.trim().toLowerCase();
 
+    // text search
     if (q) {
       out = out.filter((l) =>
-        [l.title, l.description, l.category, l.location, l.ownerEmail]
+        [l?.title, l?.description, l?.category, l?.location, l?.ownerEmail]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q))
       );
     }
 
-    if (category) out = out.filter((l) => String(l.category) === category);
+    // category
+    if (category) out = out.filter((l) => String(l?.category) === category);
 
+    // price range (accept numbers or numeric strings)
     const min = minPrice !== "" ? Number(minPrice) : undefined;
     const max = maxPrice !== "" ? Number(maxPrice) : undefined;
 
     if (!Number.isNaN(min) && min !== undefined) {
-      out = out.filter((l) => typeof l.price === "number" && l.price >= min);
+      out = out.filter((l) => {
+        const p = Number(l?.price);
+        return Number.isFinite(p) && p >= min;
+        });
     }
     if (!Number.isNaN(max) && max !== undefined) {
-      out = out.filter((l) => typeof l.price === "number" && l.price <= max);
+      out = out.filter((l) => {
+        const p = Number(l?.price);
+        return Number.isFinite(p) && p <= max;
+      });
     }
 
+    // sort
     out.sort((a, b) => {
-      if (sort === "priceAsc") return (a.price ?? Infinity) - (b.price ?? Infinity);
-      if (sort === "priceDesc") return (b.price ?? -Infinity) - (a.price ?? -Infinity);
-      if (sort === "titleAsc")
-        return String(a.title || "").localeCompare(String(b.title || ""));
-      return String(b._id || "").localeCompare(String(a._id || "")); // recent
+      switch (sort) {
+        case "priceAsc":
+          return (Number(a?.price) || Infinity) - (Number(b?.price) || Infinity);
+        case "priceDesc":
+          return (Number(b?.price) || -Infinity) - (Number(a?.price) || -Infinity);
+        case "titleAsc":
+          return String(a?.title || "").localeCompare(String(b?.title || ""));
+        case "recent":
+        default:
+          return getTime(b) - getTime(a);
+      }
     });
 
     return out;
@@ -114,7 +151,7 @@ export default function MarketPlace() {
     <div className="mp-wrap">
       {/* Sticky toolbar */}
       <div className="mp-toolbar">
-        {/* Big search bar (icon removed) */}
+        {/* Big search bar */}
         <div className="mp-search">
           <input
             className="mp-input"
@@ -179,7 +216,7 @@ export default function MarketPlace() {
             <option value="titleAsc">Title A–Z</option>
           </select>
 
-          {/* Actions: Search + Reset side-by-side */}
+          {/* Actions: Search (acts as apply/confirm) + Reset */}
           <div className="mp-actions">
             <button
               className="mp-btn"

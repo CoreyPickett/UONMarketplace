@@ -4,6 +4,12 @@ import { getAuth } from "firebase/auth";
 import axios from "axios";
 import "./Admin.css";
 
+// helper: limit text to N chars and add an ellipsis
+const ellipsize = (str, max = 20) =>
+  typeof str === "string" && str.length > max
+    ? str.slice(0, max).trimEnd() + "…"
+    : str ?? "";
+
 export default function Admin() {
   // ----- Tabs -----
   const [tab, setTab] = useState("listings"); // "listings" | "users"
@@ -48,33 +54,32 @@ export default function Admin() {
   }, [tab]);
 
   const fetchAllUsers = async () => {
-  try {
-    setULoading(true);
+    try {
+      setULoading(true);
 
-    const user = getAuth().currentUser;
-    if (!user) throw new Error("Not signed in");
+      const user = getAuth().currentUser;
+      if (!user) throw new Error("Not signed in");
 
-    const token = await user.getIdToken();
+      const token = await user.getIdToken();
 
-    const res = await fetch("/api/admin/users", {
-      headers: { authtoken: token },            
-    });
+      const res = await fetch("/api/admin/users", {
+        headers: { authtoken: token },
+      });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const data = await res.json();
-    const array = Array.isArray(data) ? data : (Array.isArray(data?.users) ? data.users : []);
-    setUsers(array);
-    setUError("");
-  } catch (err) {
-    console.error(err);
-    setUsers([]);                                
-    setUError("Failed to fetch users. Are you signed in as an admin?");
-  } finally {
-    setULoading(false);
-  }
-};
-
+      const data = await res.json();
+      const array = Array.isArray(data) ? data : (Array.isArray(data?.users) ? data.users : []);
+      setUsers(array);
+      setUError("");
+    } catch (err) {
+      console.error(err);
+      setUsers([]);
+      setUError("Failed to fetch users. Are you signed in as an admin?");
+    } finally {
+      setULoading(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     let out = [...listings];
@@ -147,20 +152,21 @@ export default function Admin() {
   // USERS (new)
   // =======================
   const [uQuery, setUQuery] = useState(""); // email to search
-  const [users, setUsers] = useState([]); // results array (we’ll put the single result in an array)
+  const [users, setUsers] = useState([]); // results array
   const [uLoading, setULoading] = useState(false);
   const [uError, setUError] = useState("");
   const [deleteUid, setDeleteUid] = useState(null); // uid we’re about to delete
   const [deleting, setDeleting] = useState(false);
-  const [busyUid, setBusyUid] = useState(null); // uid currently being toggled (disable/enable)
-
+  const [busyUid, setBusyUid] = useState(null); // uid currently being toggled
 
   const list = Array.isArray(users) ? users : [];
-  const filteredUsers = list.filter(u => {
-  const t = uQuery.toLowerCase();
-  return u.email?.toLowerCase().includes(t)
-      || u.displayName?.toLowerCase().includes(t)
-      || (u.uid || u.id || u._id)?.toLowerCase().includes(t);
+  const filteredUsers = list.filter((u) => {
+    const t = uQuery.toLowerCase();
+    return (
+      u.email?.toLowerCase().includes(t) ||
+      u.displayName?.toLowerCase().includes(t) ||
+      (u.uid || u.id || u._id)?.toLowerCase().includes(t)
+    );
   });
 
   const requestDeleteUser = (uid) => setDeleteUid(uid);
@@ -187,56 +193,42 @@ export default function Admin() {
         );
       }
 
-      // Remove from UI
-      setUsers((prev) =>
-        prev.filter((u) => (u.uid || u.id || u._id) !== deleteUid)
-      );
+      setUsers((prev) => prev.filter((u) => (u.uid || u.id || u._id) !== deleteUid));
       setDeleteUid(null);
     } catch (e) {
       console.error(e);
-      alert(
-        e?.response?.data?.error ||
-          "Failed to delete user. Ensure your account has admin privileges."
-      );
+      alert(e?.response?.data?.error || "Failed to delete user. Ensure your account has admin privileges.");
     } finally {
       setDeleting(false);
     }
   };
-  
-// Disable or enable a user by uid
-const setUserDisabled = async (uid, disabled) => {
-  try {
-    // safety: don't let the admin lock themselves
-    const me = getAuth().currentUser?.uid;
-    if (me && uid === me) {
-      alert("You cannot change your own disable/enable status.");
-      return;
+
+  // Disable or enable a user by uid
+  const setUserDisabled = async (uid, disabled) => {
+    try {
+      const me = getAuth().currentUser?.uid;
+      if (me && uid === me) {
+        alert("You cannot change your own disable/enable status.");
+        return;
+      }
+
+      setBusyUid(uid);
+
+      const token = await getAuth().currentUser.getIdToken();
+      const url = disabled ? "/api/admin/disable-user" : "/api/admin/enable-user";
+
+      await axios.post(url, { uid }, { headers: { authtoken: token } });
+
+      setUsers((prev) =>
+        prev.map((u) => ((u.uid || u.id || u._id) === uid ? { ...u, disabled } : u))
+      );
+    } catch (e) {
+      console.error(e);
+      alert(e?.response?.data?.error || "Failed to update user status.");
+    } finally {
+      setBusyUid(null);
     }
-
-    setBusyUid(uid);
-
-    const token = await getAuth().currentUser.getIdToken();
-    const url = disabled ? "/api/admin/disable-user" : "/api/admin/enable-user";
-
-    await axios.post(
-      url,
-      { uid },
-      { headers: { authtoken: token } }
-    );
-
-    // update the row locally
-    setUsers(prev =>
-      prev.map(u =>
-        (u.uid || u.id || u._id) === uid ? { ...u, disabled } : u
-      )
-    );
-  } catch (e) {
-    console.error(e);
-    alert(e?.response?.data?.error || "Failed to update user status.");
-  } finally {
-    setBusyUid(null);
-  }
-};
+  };
 
   const currentUid = getAuth().currentUser?.uid;
 
@@ -278,11 +270,7 @@ const setUserDisabled = async (uid, disabled) => {
                   aria-label="Search listings"
                 />
                 {q && (
-                  <button
-                    className="icon-btn"
-                    onClick={() => setQ("")}
-                    title="Clear"
-                  >
+                  <button className="icon-btn" onClick={() => setQ("")} title="Clear">
                     ✕
                   </button>
                 )}
@@ -321,11 +309,7 @@ const setUserDisabled = async (uid, disabled) => {
                 />
               </div>
 
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                aria-label="Sort by"
-              >
+              <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
                 <option value="recent">Sort: Recent</option>
                 <option value="priceAsc">Price ↑</option>
                 <option value="priceDesc">Price ↓</option>
@@ -366,9 +350,7 @@ const setUserDisabled = async (uid, disabled) => {
                     {filtered.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={{ textAlign: "center" }}>
-                          <div className="empty">
-                            No results. Try adjusting filters.
-                          </div>
+                          <div className="empty">No results. Try adjusting filters.</div>
                         </td>
                       </tr>
                     ) : (
@@ -376,19 +358,26 @@ const setUserDisabled = async (uid, disabled) => {
                         const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
                         const region = import.meta.env.VITE_AWS_REGION;
 
-                        const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string"
-                          ? l.images[0]
-                          : null;
+                        const imageKey =
+                          Array.isArray(l.images) && typeof l.images[0] === "string"
+                            ? l.images[0]
+                            : null;
 
                         const thumbnail = imageKey?.startsWith("http")
                           ? imageKey
                           : imageKey
-                            ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
-                            : l.image?.startsWith("http")
-                              ? l.image
-                              : l.image
-                                ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
-                                : "/placeholder-listing.jpg";
+                          ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                          : l.image?.startsWith("http")
+                          ? l.image
+                          : l.image
+                          ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                          : "/placeholder-listing.jpg";
+
+                        const titleFull = l.title || "Untitled";
+                        const priceFull =
+                          typeof l.price === "number"
+                            ? l.price.toLocaleString("en-AU", { style: "currency", currency: "AUD" })
+                            : "—";
 
                         return (
                           <tr key={String(l._id)}>
@@ -397,24 +386,23 @@ const setUserDisabled = async (uid, disabled) => {
                                 <div className="thumb">
                                   <img
                                     src={thumbnail}
-                                    alt={l.title || "Listing"}
+                                    alt={titleFull}
                                     onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
                                   />
                                 </div>
                                 <div className="meta">
-                                  <div className="title">{l.title || "Untitled"}</div>
+                                  <div className="title" title={titleFull}>
+                                    {ellipsize(titleFull, 20)}
+                                  </div>
                                   <div className="sub muted">{l.location || "Location N/A"}</div>
                                 </div>
                               </div>
                             </td>
                             <td className="hide-sm">{l.category || "—"}</td>
                             <td>
-                              {typeof l.price === "number"
-                                ? l.price.toLocaleString("en-AU", {
-                                    style: "currency",
-                                    currency: "AUD",
-                                  })
-                                : "—"}
+                              <span className="admin-price" title={priceFull}>
+                                {ellipsize(priceFull, 20)}
+                              </span>
                             </td>
                             <td className="hide-md">{l.ownerEmail || "—"}</td>
                             <td>{l.upvotes ?? 0}</td>
@@ -436,122 +424,111 @@ const setUserDisabled = async (uid, disabled) => {
               </div>
 
               <div className="table-footer">
-                <span className="muted">
-                  Showing {filtered.length} of {listings.length}
-                </span>
+                <span className="muted">Showing {filtered.length} of {listings.length}</span>
               </div>
             </>
           )}
         </section>
       )}
 
-{/* ================= USERS TAB ================= */}
-{tab === "users" && (
-  <section className="admin-card">
-    <div className="toolbar">
-      <div className="inputs">
-        <div className="searchbox">
-          <input
-            value={uQuery}
-            onChange={(e) => setUQuery(e.target.value)}
-            placeholder="Search user by email, name, or UID…"
-            aria-label="Search users"
-          />
-          {uQuery && (
-            <button
-              className="icon-btn"
-              onClick={() => setUQuery("")}
-              title="Clear"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* ================= USERS TAB ================= */}
+      {tab === "users" && (
+        <section className="admin-card">
+          <div className="toolbar">
+            <div className="inputs">
+              <div className="searchbox">
+                <input
+                  value={uQuery}
+                  onChange={(e) => setUQuery(e.target.value)}
+                  placeholder="Search user by email, name, or UID…"
+                  aria-label="Search users"
+                />
+                {uQuery && (
+                  <button className="icon-btn" onClick={() => setUQuery("")} title="Clear">
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
-    {uError && <div className="alert error">{uError}</div>}
+          {uError && <div className="alert error">{uError}</div>}
 
-    <div className="table-wrap">
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th className="hide-sm">Email</th>
-            <th>Role</th>
-            <th className="hide-sm">Status</th>
-            <th style={{ width: 1 }} />
-            <th style={{ width: 1 }} />
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredUsers.length === 0 ? (
-            <tr>
-              <td colSpan={6} style={{ textAlign: "center" }}>
-                <div className="empty">No matching users.</div>
-              </td>
-            </tr>
-          ) : (
-            filteredUsers.map((u) => {
-              const uid = u.uid || u.id || u._id;
-              const isSelf = currentUid && uid === currentUid;
-              return (
-                <tr key={uid}>
-                  <td>
-                    <div className="meta">
-                      <div className="title">
-                        {u.displayName || (u.email ? `(${u.email})` : "Unnamed")}
-                      </div>
-                      <div className="sub muted">{uid}</div>
-                    </div>
-                  </td>
-                  <td className="hide-sm">{u.email || "—"}</td>
-                  <td>{u.isAdmin ? "Admin" : "User"}</td>
-                  <td className="hide-sm">{u.disabled ? "Disabled" : "Active"}</td>
-
-                  {/* Toggle Disable/Enable */}
-                  <td style={{ textAlign: "right" }}>
-                    <button
-                      className="icon-btn"
-                      title={u.disabled ? "Enable user" : "Disable user"}
-                      onClick={() => setUserDisabled(uid, !u.disabled)}
-                      disabled={busyUid === uid || isSelf}
-                    >
-                      {busyUid === uid ? "…" : (u.disabled ? "Enable" : "Disable")}
-                    </button>
-                  </td>
-
-                  {/* Delete */}
-                  <td style={{ textAlign: "right" }}>
-                    <button
-                      className="icon-btn danger"
-                      title={isSelf ? "You cannot delete your own account" : "Delete user"}
-                      onClick={() => !isSelf && requestDeleteUser(uid)}
-                      disabled={isSelf}
-                    >
-                      🗑
-                    </button>
-                  </td>
+          <div className="table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th className="hide-sm">Email</th>
+                  <th>Role</th>
+                  <th className="hide-sm">Status</th>
+                  <th style={{ width: 1 }} />
+                  <th style={{ width: 1 }} />
                 </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
-    </div>
-  </section>
-)}
+              </thead>
 
+              <tbody>
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: "center" }}>
+                      <div className="empty">No matching users.</div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((u) => {
+                    const uid = u.uid || u.id || u._id;
+                    const isSelf = currentUid && uid === currentUid;
+                    return (
+                      <tr key={uid}>
+                        <td>
+                          <div className="meta">
+                            <div className="title">
+                              {u.displayName || (u.email ? `(${u.email})` : "Unnamed")}
+                            </div>
+                            <div className="sub muted">{uid}</div>
+                          </div>
+                        </td>
+                        <td className="hide-sm">{u.email || "—"}</td>
+                        <td>{u.isAdmin ? "Admin" : "User"}</td>
+                        <td className="hide-sm">{u.disabled ? "Disabled" : "Active"}</td>
+
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            className="icon-btn"
+                            title={u.disabled ? "Enable user" : "Disable user"}
+                            onClick={() => setUserDisabled(uid, !u.disabled)}
+                            disabled={busyUid === uid || isSelf}
+                          >
+                            {busyUid === uid ? "…" : u.disabled ? "Enable" : "Disable"}
+                          </button>
+                        </td>
+
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            className="icon-btn danger"
+                            title={isSelf ? "You cannot delete your own account" : "Delete user"}
+                            onClick={() => !isSelf && requestDeleteUser(uid)}
+                            disabled={isSelf}
+                          >
+                            🗑
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Listing delete modal */}
       {confirmId && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal">
             <h3>Delete listing?</h3>
-            <p className="muted">
-              This action can’t be undone. The listing will be removed permanently.
-            </p>
+            <p className="muted">This action can’t be undone. The listing will be removed permanently.</p>
             <div className="modal-actions">
               <button className="btn btn-danger" onClick={confirmDeleteListing}>
                 Delete
@@ -569,15 +546,9 @@ const setUserDisabled = async (uid, disabled) => {
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal">
             <h3>Delete this user?</h3>
-            <p className="muted">
-              This removes their account. You can’t undo this.
-            </p>
+            <p className="muted">This removes their account. You can’t undo this.</p>
             <div className="modal-actions">
-              <button
-                className="btn btn-danger"
-                onClick={confirmDeleteUser}
-                disabled={deleting}
-              >
+              <button className="btn btn-danger" onClick={confirmDeleteUser} disabled={deleting}>
                 {deleting ? "Deleting…" : "Delete"}
               </button>
               <button className="btn" onClick={cancelDeleteUser} disabled={deleting}>
