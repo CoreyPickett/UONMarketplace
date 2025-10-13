@@ -124,7 +124,7 @@ return (
 
               <td onClick={goToThread} style={{ cursor: "pointer" }}>
                 <strong>{(t.unread?.[me] ?? 0) > 0 ? "Unread" : "Read"}</strong>{" "}
-                {t.lastMessage}
+                <span className="msg-preview">{t.lastMessage}</span>
               </td>
 
               <td>{t.lastMessageAt ? new Date(t.lastMessageAt).toLocaleString() : ""}</td>

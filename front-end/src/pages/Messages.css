@@ -213,3 +213,43 @@
 .profile-result-row:hover {
   background: #f0f6ff;
 }
+
+/* keep page from stretching */
+.messages-content { max-width: 1100px; margin: 0 auto; }
+
+
+.messages-table {
+  width: 100%;
+  table-layout: fixed;           /* prevent cells from growing past  table width */
+  border-collapse: collapse;
+}
+.messages-table td {
+  padding: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;              
+}
+
+.messages-table td:nth-child(3) { width: 20%; min-width: 150px; }
+.messages-table td:nth-child(2) { width: 40%; }  
+.messages-table td:nth-child(1) { width: 40%; }  
+
+.sender {
+  margin-left: 8px;
+  display: inline-block;
+  max-width: calc(100% - 56px);  /* room for avatar */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  overflow-wrap: anywhere;       /* breaks long words */
+}
+
+
+.msg-preview {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  overflow-wrap: anywhere;   
+}    
