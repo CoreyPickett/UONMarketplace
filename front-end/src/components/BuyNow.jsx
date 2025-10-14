@@ -36,52 +36,41 @@ async function handleConfirm() {
   setIsSubmitting(true);
 
   try {
-  const sellerUid =
-    listing.ownerUid ??
-    listing.sellerUid ??
-    listing.owner?.uid ??
-    listing.userUid ??
-    listing.user?.uid ??
-    null;
+    // show address 
+    setRevealed(true);
 
-  if (!sellerUid) {
-    console.warn("No sellerUid on listing; skipping DM.");
-  } else {
-    // create/fetch thread
-    const startRes = await api.post(`/messages/start`, {
-      listingId: listing._id,
-      sellerUid,
-      listingTitle: listing.title,
-    });
-    console.log("start thread res:", startRes.data);
+    // DM seller 
+    const sellerUid =
+      listing.ownerUid ?? listing.sellerUid ?? listing.owner?.uid ?? listing.userUid ?? listing.user?.uid ?? null;
 
-    const thread = startRes.data || {};
-    const threadId = thread._id || thread.id || thread.threadId;
-    if (!threadId) {
-      console.warn("No thread id in /messages/start response:", thread);
-    } else {
-      const paymentLabel =
-        paymentMethod === "cash" ? "cash (meet in person)" : "credit card";
+    if (sellerUid) {
+      const startRes = await api.post(`/messages/start`, {
+        listingId: listing._id,
+        sellerUid,
+        listingTitle: listing.title,
+      });
+      const thread = startRes.data || {};
+      const threadId = thread._id || thread.id || thread.threadId;
 
-      // send as message 
-      const msgPayload = {
-        kind: "text",
-        text: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
-        body: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
-        content: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
-        from: user.uid,                       
-        createdAt: new Date().toISOString(),  
-      };
+      if (threadId) {
+        const paymentLabel = paymentMethod === "cash" ? "cash (meet in person)" : "credit card";
+        await api.post(`/messages/${threadId}/messages`, {
+          kind: "text",
+          text: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
+          from: user.uid,
+        });
 
-      const msgRes = await api.post(`/messages/${threadId}/messages`, msgPayload);
-      console.log("post message res:", msgRes.data);
+        {chatThreadId && (
+  <button className="btn-secondary" onClick={() => navigate(`/messages/${chatThreadId}`)}>
+    Open chat
+  </button>
+)}
 
-      navigate(`/messages/${threadId}`);
+      }
     }
-  }
-} catch (e) {
-  console.warn("DM to seller failed:", e?.response?.data || e.message);
-} finally {
+  } catch (e) {
+    console.warn("DM to seller failed:", e?.response?.data || e.message);
+  } finally {
     setIsSubmitting(false);
   }
 }
