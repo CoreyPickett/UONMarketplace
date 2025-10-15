@@ -70,7 +70,6 @@ export async function getAllThreads(req, res) {
         _id: String(t._id),
         listingId: t.listingId,
         listingTitle: t.listingTitle || "",
-        ownerUid,
         otherUserName: otherName,
         avatar: otherAvatar,
         unread: t.unread || {},
