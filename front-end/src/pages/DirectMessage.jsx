@@ -14,7 +14,11 @@ export default function DirectMessage() {
   const [me, setMe] = useState(null);
 
   // preview from previous page (may be undefined on hard reload)
-  const preview = location.state?.preview || null;
+  const preview = location.state?.preview || {};
+  const listingId = preview.listingId || null;
+  const ownerUid = preview.ownerUid || null;
+  
+
 
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -120,6 +124,44 @@ export default function DirectMessage() {
     }
   };
 
+  async function handleMarkAsSold() {
+    if (!listingId || !me || thread?.me?.uid !== me) return;
+
+    console.log("Me:", me);
+    console.log("Listing ID:", listingId);
+
+    try {
+      const token = await getAuth().currentUser.getIdToken();
+      const res = await api.post(`/marketplace/${listingId}/sell`, {
+        buyerUid: thread.other?.uid,
+        soldAt: new Date().toISOString()
+      }, {
+        headers: { authtoken: token }
+      });
+
+      if (res.data?.success) {
+        alert("Item marked as sold.");
+
+        // Add a system message
+        setMessages((prev) => [
+          ...prev,
+          {
+            _id: `sys_${Date.now()}`,
+            from: "system",
+            body: "Item has been marked as sold.",
+            at: new Date().toISOString(),
+            kind: "system"
+          }
+        ]);
+      } else {
+        throw new Error("Failed to mark item as sold");
+      }
+    } catch (e) {
+      console.error("Mark as sold failed:", e);
+      alert("Could not mark item as sold. Please try again.");
+    }
+  }
+
   // Scroll to bottom of messages
   useEffect(() => {
     const el = document.querySelector(".message-list");
@@ -136,6 +178,22 @@ export default function DirectMessage() {
       <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
         <img src={thread.other?.avatar || "/images/default-avatar.png"} alt={thread.title} width={50} style={{ borderRadius: "50%" }} />
         <h2 style={{ margin: 0 }}>{thread.title}</h2>
+        {me === ownerUid && listingId && (
+          <button
+            onClick={handleMarkAsSold}
+            style={{
+              marginLeft: "auto",
+              background: "#003057",
+              color: "#fff",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              fontWeight: "bold",
+              cursor: "pointer"
+            }}
+          >
+            Mark as Sold
+          </button>
+        )}
       </div>
 
       <MessageList

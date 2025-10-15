@@ -110,10 +110,18 @@ return (
             navigate(`/messages/${t._id}`, {
               state: {
                 preview: {
-                  sender: title, // <-- use composed title here
+                  sender: title,
                   avatar: t.avatar ?? "/images/default-avatar.png",
-                },
-              },
+                  listingId: t.listingId,
+                  listingTitle: t.listingTitle,
+                  ownerUid: t.ownerUid,
+                  meta: {
+                    me: t.meta?.me,
+                    other: t.meta?.other
+                  },
+                  messages: t.messages // optional if available
+                }
+              }
             });
 
           return (

@@ -70,3 +70,47 @@ export async function searchListings(req, res) {
     res.status(500).json({ error: "Failed to perform search" });
   }
 }
+
+// GET request for purchased listings by buyer
+export async function getPurchasedListings(req, res) {
+  try {
+    const db = await getDb();
+    const uid = req.query.uid;
+
+    if (!uid) {
+      return res.status(400).json({ error: "Missing UID" });
+    }
+
+    const listings = await db.collection('items')
+      .find({ buyerUid: uid })
+      .sort({ soldAt: -1 }) // optional: sort by purchase date
+      .toArray();
+
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error("Error fetching purchased listings:", error);
+    res.status(500).json({ error: "Failed to fetch purchased listings" });
+  }
+}
+
+// GET request for sold listings by owner
+export async function getSoldListings(req, res) {
+  try {
+    const db = await getDb();
+    const uid = req.query.uid;
+
+    if (!uid) {
+      return res.status(400).json({ error: "Missing UID" });
+    }
+
+    const listings = await db.collection('items')
+      .find({ ownerUid: uid, sold: true })
+      .sort({ soldAt: -1 }) // sort by sale date
+      .toArray();
+
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error("Error fetching sold listings:", error);
+    res.status(500).json({ error: "Failed to fetch sold listings" });
+  }
+}

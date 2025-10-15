@@ -82,7 +82,28 @@ export default function Listing() {
     return urls.length ? urls : ["/placeholder-listing.jpg"];
   }, [listing]);
 
+  const handleMarkAsSold = async () => {
+    try {
+      const res = await fetch(`/api/listings/${listing._id}/mark-sold`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buyerUid: null }) // or pass buyerUid if available
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        navigate(0); // reload to reflect sold status
+      } else {
+        console.error("Failed to mark as sold:", result.error);
+      }
+    } catch (err) {
+      console.error("Error marking as sold:", err);
+    }
+  };
+
   const priceText = toAUD(listing?.price);
+
+  const isOwner = listing?.ownerUid === user?.uid;
 
   return (
     <main style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
@@ -244,7 +265,25 @@ export default function Listing() {
                 Message seller
               </button>
             ) : (
-              <div className="owner-message">This is your listing.</div>
+              <div className="owner-message">
+                This is your listing.
+                {!listing?.sold && (
+                  <button
+                    onClick={handleMarkAsSold}
+                    style={{
+                      background: "#003057",
+                      color: "#fff",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      fontWeight: "bold",
+                      marginLeft: "12px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Mark as Sold
+                  </button>
+                )}
+              </div>
             )
           ) : null}
         </div>

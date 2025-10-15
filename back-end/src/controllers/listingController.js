@@ -262,14 +262,19 @@ export async function markListingAsSold(req, res) {
     const db = await getDb();
     const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
 
-    if (!listing) return res.status(404).json({ error: "Listing not found" });
-    if (listing.sold) return res.status(400).json({ error: "Item already sold" });
+    console.log("Authenticated UID:", uid);
+    console.log("Listing owner UID:", listing.ownerUid);
 
-    // Prevent self-purchase
-    const buyer = buyerUid || uid;
-    if (listing.ownerUid === buyer) {
-      return res.status(403).json({ error: "Owner cannot buy their own item" });
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    if (listing.sold) return res.status(400).json({ error: "Item already marked as sold" });
+
+    // Only allow owner to mark as sold
+    if (listing.ownerUid !== uid) {
+      return res.status(403).json({ error: "Only the owner can mark this item as sold" });
     }
+
+    // Use provided buyerUid or fallback to null
+    const buyer = buyerUid || null;
 
     const result = await db.collection('items').updateOne(
       { _id: new ObjectId(id), sold: false },
@@ -283,7 +288,7 @@ export async function markListingAsSold(req, res) {
     );
 
     if (result.modifiedCount === 1) {
-      res.json({ success: true, message: "Item marked as sold" });
+      res.json({ success: true, message: "Item successfully marked as sold" });
     } else {
       res.status(500).json({ error: "Failed to update item status" });
     }

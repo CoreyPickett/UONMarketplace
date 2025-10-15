@@ -1,5 +1,6 @@
 // Creates list of messages in a convo
 import { useEffect, useRef } from "react";
+import "./MessageList.css";
 
 export default function MessageList({ messages, meUid, meAvatar, otherAvatar }) {
   const endRef = useRef(null);
@@ -8,17 +9,51 @@ export default function MessageList({ messages, meUid, meAvatar, otherAvatar }) 
   return (
     <div className="message-list">
       {messages?.map((m) => {
+        if (m.kind === "system") {
+          return (
+            <div key={m._id || m.at} className="system-message">
+              <em>{m.body}</em>
+              <div className="metadata">{m.at ? new Date(m.at).toLocaleString() : ""}</div>
+            </div>
+          );
+        }
+
         const mine = m.from === meUid;
-        const cls = `bubble ${mine ? "me" : "them"}`; 
+        const cls = `bubble ${mine ? "me" : "them"}`;
         const avatar = mine ? meAvatar : otherAvatar;
+
         return (
-          <div key={m._id || m.at} style={{ display: "flex", gap: 8, alignItems: "flex-end", justifyContent: mine ? "flex-end" : "flex-start" }}>
-            {!mine && <img src={otherAvatar || "/images/default-avatar.png"} alt="" width={28} height={28} style={{ borderRadius: "50%" }} />}
+          <div
+            key={m._id || m.at}
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "flex-end",
+              justifyContent: mine ? "flex-end" : "flex-start"
+            }}
+          >
+            {!mine && (
+              <img
+                src={otherAvatar || "/images/default-avatar.png"}
+                alt=""
+                width={28}
+                height={28}
+                style={{ borderRadius: "50%" }}
+              />
+            )}
             <div className={cls}>
               <div>{m.body}</div>
               <div className="metadata">{m.at ? new Date(m.at).toLocaleString() : ""}</div>
             </div>
-            {mine && <img src={meAvatar || "/images/default-avatar.png"} alt="" width={28} height={28} style={{ borderRadius: "50%" }} />}
+            {mine && (
+              <img
+                src={meAvatar || "/images/default-avatar.png"}
+                alt=""
+                width={28}
+                height={28}
+                style={{ borderRadius: "50%" }}
+              />
+            )}
           </div>
         );
       })}

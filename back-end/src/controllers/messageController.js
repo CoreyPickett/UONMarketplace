@@ -70,6 +70,7 @@ export async function getAllThreads(req, res) {
         _id: String(t._id),
         listingId: t.listingId,
         listingTitle: t.listingTitle || "",
+        ownerUid,
         otherUserName: otherName,
         avatar: otherAvatar,
         unread: t.unread || {},
@@ -113,7 +114,27 @@ export async function getThreadById(req, res) {
 
     const [meUser, otherUser] = await Promise.all([loadUser(me), loadUser(otherUid)]);
 
-    res.json({ ...thread, _id: String(thread._id), meta: { me: meUser, other: otherUser } });
+    let ownerUid = null;
+    try {
+      const listingQuery = ObjectId.isValid(thread.listingId)
+        ? { _id: new ObjectId(thread.listingId) }
+        : { _id: thread.listingId };
+
+
+      const listing = await db.collection('items').findOne(listingQuery);
+      if (listing?.ownerUid) ownerUid = listing.ownerUid;
+      if (!listing) {
+        console.warn("Listing not found for ID:", thread.listingId);
+      } else if (!listing.ownerUid) {
+        console.warn("Listing found but missing ownerUid:", listing);
+      }
+
+      console.log("Fetched listing:", listing);
+    } catch (e) {
+      console.warn("Failed to fetch listing for ownerUid:", e);
+    }
+
+    res.json({ ...thread, _id: String(thread._id), ownerUid, meta: { me: meUser, other: otherUser } });
   } catch {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -123,7 +144,7 @@ export async function getThreadById(req, res) {
 export async function sendMessage(req, res) {
   const rawId = req.params.id;
   const me = req.user.uid;
-  const { text } = req.body; // ✅ frontend sends 'text', not 'body'
+  const { text } = req.body; // frontend sends 'text', not 'body'
 
   if (!text?.trim()) return res.status(400).json({ error: "Empty message" });
   if (!ObjectId.isValid(rawId)) return res.status(400).json({ error: "Invalid thread ID" });

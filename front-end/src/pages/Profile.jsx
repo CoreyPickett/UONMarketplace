@@ -12,6 +12,8 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("overview"); // overview | my | saved | settings
 
   const [allListings, setAllListings] = useState([]);
+  const [purchasedListings, setPurchasedListings] = useState([]);
+  const [soldListings, setSoldListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [profileData, setProfileData] = useState(null);
@@ -43,6 +45,54 @@ export default function Profile() {
       alive = false;
     };
   }, []);
+
+  //Load ourchased listings for 'My Purchases'
+  useEffect(() => {
+    if (!user?.uid) return;
+    let alive = true;
+
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/marketplace/purchases?uid=${user.uid}`, {
+          headers: { authtoken: token }
+        });
+        const data = await res.json();
+        if (alive) setPurchasedListings(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("Failed to fetch purchased listings:", e);
+        if (alive) setPurchasedListings([]);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [user]);
+
+  // Load sold listings for 'My Sales'
+  useEffect(() => {
+    if (!user?.uid) return;
+    let alive = true;
+
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/marketplace/sold?uid=${user.uid}`, {
+          headers: { authtoken: token }
+        });
+        const data = await res.json();
+        if (alive) setSoldListings(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("Failed to fetch sold listings:", e);
+        if (alive) setSoldListings([]);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [user]);
 
   // Load saved IDs:
   //  - If signed in: GET /api/saves?idsOnly=1 with authtoken
@@ -127,14 +177,14 @@ export default function Profile() {
   const myPurchases = useMemo(() => {
     if (!user) return [];
     const uid = user.uid;
-    return allListings.filter((l) => l.buyerUid === uid);
-  }, [allListings, user]);
+    return purchasedListings.filter((l) => l.buyerUid === uid);
+  }, [purchasedListings, user]);
 
   const mySales = useMemo(() => {
     if (!user) return [];
     const uid = user.uid;
-    return allListings.filter((l) => l.ownerUid === uid && l.sold);
-  }, [allListings, user]);
+    return soldListings.filter((l) => l.ownerUid === uid);
+  }, [soldListings, user]);
 
   async function deleteListing(id) {
     if (!user) return;

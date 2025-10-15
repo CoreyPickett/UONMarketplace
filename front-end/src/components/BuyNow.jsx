@@ -95,21 +95,6 @@ async function handleConfirm() {
       }
     }
 
-    console.log("Marking item as sold...");
-
-    const sellRes = await api.post(`/marketplace/${listing._id}/sell`, {
-      buyerUid: user.uid,
-      soldAt: new Date().toISOString()
-    }, {
-      headers: { authtoken: token }
-    });
-
-    if (!sellRes.data?.success) {
-      throw new Error("Failed to mark item as sold");
-    }
-
-    console.log("Purchase successful. Redirecting...");
-
     setRevealed(true);
     if (threadId) navigate(`/messages/${threadId}`);
     alert("Purchase successful!");
