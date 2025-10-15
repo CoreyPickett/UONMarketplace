@@ -8,7 +8,8 @@ import {
   upvoteListing,
   addComment,
   deleteListing,
-  editListing
+  editListing,
+  markListingAsSold
 } from '../controllers/listingController.js';
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.get('/:id', getListingById);
 router.post('/create-listing', verifyUser, createListing);
 router.post('/:id/upvote', verifyUser, upvoteListing);
 router.post('/:id/comments', verifyUser, addComment);
+router.post('/:id/sell', verifyUser, markListingAsSold);
 router.delete('/:id', verifyUser, deleteListing);
 router.put('/:id', verifyUser, editListing);
 

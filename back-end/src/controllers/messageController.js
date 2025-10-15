@@ -123,9 +123,9 @@ export async function getThreadById(req, res) {
 export async function sendMessage(req, res) {
   const rawId = req.params.id;
   const me = req.user.uid;
-  const { body } = req.body;
+  const { text } = req.body; // ✅ frontend sends 'text', not 'body'
 
-  if (!body?.trim()) return res.status(400).json({ error: "Empty message" });
+  if (!text?.trim()) return res.status(400).json({ error: "Empty message" });
   if (!ObjectId.isValid(rawId)) return res.status(400).json({ error: "Invalid thread ID" });
 
   try {
@@ -150,13 +150,18 @@ export async function sendMessage(req, res) {
     const unreadCount = (thread.unread[otherKey] || 0) + 1;
 
     const updatePayload = {
-      $push: { messages: { from: me, body, at: now } },
+      $push: { messages: { from: me, body: text, at: now } }, 
       $set: {
-        lastMessage: body,
+        lastMessage: text,
         lastMessageAt: now,
         [`unread.${otherKey}`]: unreadCount
       }
     };
+
+    if (!otherKey || !text) {
+      console.warn("Invalid update payload:", { otherKey, text });
+      return res.status(400).json({ error: "Invalid message data" });
+    }
 
     const result = await db.collection('messages').findOneAndUpdate(
       { _id: threadId },
@@ -164,12 +169,17 @@ export async function sendMessage(req, res) {
       { returnDocument: 'after' }
     );
 
-    if (!result.value) {
+    if (!result) {
+      console.warn("Update failed — result.value is null");
+      console.warn("Thread ID:", threadId.toHexString());
+      console.warn("Update query:", { _id: threadId });
+      console.warn("Update payload:", updatePayload);
       return res.status(500).json({ error: "Failed to update message thread" });
     }
 
-    res.json({ messages: result.value.messages });
-  } catch {
+    res.json({ messages: result.messages });
+  } catch (err) {
+    console.error("Message send error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

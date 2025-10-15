@@ -6,6 +6,7 @@ import useUser from "../useUser";
 import "./BuyNow.css";
 import { useNavigate } from "react-router-dom"; 
 import api from "../api";
+import { getAuth } from "firebase/auth";
 
 const API = "http://localhost:8000";
 const formatAUD = (n) =>
@@ -32,51 +33,96 @@ export default function BuyNowModal({ listing, onClose }) {
   }, [onClose]);
 
 async function handleConfirm() {
+  if (listing.sold) {
+    alert("This item has already been Sold.");
+    return;
+  }
+
   if (!user || isSubmitting) return;
   setIsSubmitting(true);
 
   try {
-    // show address 
-    setRevealed(true);
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    const token = await currentUser.getIdToken();
 
-    // DM seller 
-    const sellerUid =
-      listing.ownerUid ?? listing.sellerUid ?? listing.owner?.uid ?? listing.userUid ?? listing.user?.uid ?? null;
+    const sellerUid = listing.ownerUid ?? listing.sellerUid;
+    let threadId = null;
 
     if (sellerUid) {
+      console.log("Starting thread with seller:", sellerUid);
+
       const startRes = await api.post(`/messages/start`, {
         listingId: listing._id,
         sellerUid,
         listingTitle: listing.title,
+      }, {
+        headers: { authtoken: token }
       });
-      const thread = startRes.data || {};
-      const threadId = thread._id || thread.id || thread.threadId;
 
-      if (threadId) {
-        const paymentLabel = paymentMethod === "cash" ? "cash (meet in person)" : "credit card";
-        await api.post(`/messages/${threadId}/messages`, {
+      const thread = startRes.data || {};
+      threadId = thread._id || thread.id || thread.threadId;
+      console.log("Thread created:", threadId);
+
+      if (!threadId) {
+        throw new Error("Failed to create message thread");
+      }
+
+      const rawTitle = listing?.title ?? "";
+      const safeTitle = rawTitle.replace(/\s+/g, " ").trim() || "your item";
+      const paymentLabel = paymentMethod === "cash" ? "cash (meet in person)" : "credit card";
+      const messageText = `Hello, I just purchased your "${safeTitle}" through ${paymentLabel}!`.replace(/\s+/g, " ").trim();
+
+      if (!messageText || messageText.length < 10) {
+        throw new Error("Message text is empty or too short");
+      }
+
+      console.log("Sending message:", messageText);
+
+      try {
+        const messageRes = await api.post(`/messages/${threadId}/messages`, {
           kind: "text",
-          text: `hello, I just purchased your "${listing.title}" through ${paymentLabel}!`,
+          text: messageText,
           from: user.uid,
+        }, {
+          headers: { authtoken: token }
         });
 
-        {chatThreadId && (
-  <button className="btn-secondary" onClick={() => navigate(`/messages/${chatThreadId}`)}>
-    Open chat
-  </button>
-)}
-
+        console.log("Message response:", messageRes.data);
+      } catch (err) {
+        console.warn("Message send failed:", err?.response?.data?.error || err.message);
+        throw new Error("Message send failed");
       }
     }
+
+    console.log("Marking item as sold...");
+
+    const sellRes = await api.post(`/marketplace/${listing._id}/sell`, {
+      buyerUid: user.uid,
+      soldAt: new Date().toISOString()
+    }, {
+      headers: { authtoken: token }
+    });
+
+    if (!sellRes.data?.success) {
+      throw new Error("Failed to mark item as sold");
+    }
+
+    console.log("Purchase successful. Redirecting...");
+
+    setRevealed(true);
+    if (threadId) navigate(`/messages/${threadId}`);
+    alert("Purchase successful!");
+    onClose(false);
+
   } catch (e) {
-    console.warn("DM to seller failed:", e?.response?.data || e.message);
+    const errorMsg = e?.response?.data?.error || e?.message || "Unknown error";
+    console.warn("Purchase flow failed:", errorMsg);
+    alert("Something went wrong. Please try again.");
   } finally {
     setIsSubmitting(false);
   }
 }
-
-
-
 
   return createPortal(
     <div

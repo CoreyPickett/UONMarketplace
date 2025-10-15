@@ -124,6 +124,18 @@ export default function Profile() {
     return allListings.filter((l) => set.has(String(l._id)));
   }, [savedIds, allListings]);
 
+  const myPurchases = useMemo(() => {
+    if (!user) return [];
+    const uid = user.uid;
+    return allListings.filter((l) => l.buyerUid === uid);
+  }, [allListings, user]);
+
+  const mySales = useMemo(() => {
+    if (!user) return [];
+    const uid = user.uid;
+    return allListings.filter((l) => l.ownerUid === uid && l.sold);
+  }, [allListings, user]);
+
   async function deleteListing(id) {
     if (!user) return;
     const ok = window.confirm("Delete this listing permanently?");
@@ -218,6 +230,18 @@ export default function Profile() {
             onClick={() => setActiveTab("saved")}
           >
             Saved
+          </button>
+          <button
+            className={`tab ${activeTab === "purchases" ? "active" : ""}`}
+            onClick={() => setActiveTab("purchases")}
+          >
+            My Purchases
+          </button>
+          <button
+            className={`tab ${activeTab === "sales" ? "active" : ""}`}
+            onClick={() => setActiveTab("sales")}
+          >
+            My Sales
           </button>
           <button
             className={`tab ${activeTab === "settings" ? "active" : ""}`}
@@ -453,6 +477,118 @@ export default function Profile() {
             >
               Sign Out
             </button>
+          </div>
+        )}
+        
+        {/* My Purchases */}
+        {activeTab === "purchases" && (
+          <div className="panel">
+            <h3>My Purchases</h3>
+            {loadingListings ? (
+              <p>Loading…</p>
+            ) : myPurchases.length === 0 ? (
+              <div className="empty">
+                <p>You haven’t purchased anything yet.</p>
+                <p className="muted">Listings you buy will appear here.</p>
+              </div>
+            ) : (
+              <div className="cards-grid">
+                {myPurchases.map((l) => {
+                  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+                  const region = import.meta.env.VITE_AWS_REGION;
+                  const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string" ? l.images[0] : null;
+                  const thumbnail = imageKey?.startsWith("http")
+                    ? imageKey
+                    : imageKey
+                      ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                      : l.image?.startsWith("http")
+                        ? l.image
+                        : l.image
+                          ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                          : "/placeholder-listing.jpg";
+
+                  return (
+                    <article className="card" key={l._id}>
+                      <div className="card-img">
+                        <img src={thumbnail} alt={l.title} onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")} />
+                        <div className="badges">
+                          {l.condition && <span className="badge">{l.condition}</span>}
+                          {"price" in l && (
+                            <span className="badge badge-primary">
+                              {Number(l.price || 0).toLocaleString("en-AU", { style: "currency", currency: "AUD" })}
+                            </span>
+                          )}
+                          <span className="badge badge-secondary">Purchased</span>
+                        </div>
+                      </div>
+                      <div className="card-body">
+                        <h4 title={l.title}>{l.title}</h4>
+                        {l.location && <div className="loc">📍 {l.location}</div>}
+                        <div className="actions">
+                          <Link className="btn" to={`/marketplace/${l._id}`}>View</Link>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* My Sales */}
+        {activeTab === "sales" && (
+          <div className="panel">
+            <h3>My Sales</h3>
+            {loadingListings ? (
+              <p>Loading…</p>
+            ) : mySales.length === 0 ? (
+              <div className="empty">
+                <p>You haven’t sold anything yet.</p>
+                <p className="muted">Listings you sell will appear here.</p>
+              </div>
+            ) : (
+              <div className="cards-grid">
+                {mySales.map((l) => {
+                  const bucket = import.meta.env.VITE_S3_BUCKET_NAME;
+                  const region = import.meta.env.VITE_AWS_REGION;
+                  const imageKey = Array.isArray(l.images) && typeof l.images[0] === "string" ? l.images[0] : null;
+                  const thumbnail = imageKey?.startsWith("http")
+                    ? imageKey
+                    : imageKey
+                      ? `https://${bucket}.s3.${region}.amazonaws.com/${imageKey}`
+                      : l.image?.startsWith("http")
+                        ? l.image
+                        : l.image
+                          ? `https://${bucket}.s3.${region}.amazonaws.com/${l.image}`
+                          : "/placeholder-listing.jpg";
+
+                  return (
+                    <article className="card" key={l._id}>
+                      <div className="card-img">
+                        <img src={thumbnail} alt={l.title} onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")} />
+                        <div className="badges">
+                          {l.condition && <span className="badge">{l.condition}</span>}
+                          {"price" in l && (
+                            <span className="badge badge-primary">
+                              {Number(l.price || 0).toLocaleString("en-AU", { style: "currency", currency: "AUD" })}
+                            </span>
+                          )}
+                          <span className="badge badge-secondary">Sold</span>
+                        </div>
+                      </div>
+                      <div className="card-body">
+                        <h4 title={l.title}>{l.title}</h4>
+                        {l.location && <div className="loc">📍 {l.location}</div>}
+                        <div className="actions">
+                          <Link className="btn" to={`/marketplace/${l._id}`}>View</Link>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </section>

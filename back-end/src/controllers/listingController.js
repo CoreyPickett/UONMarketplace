@@ -52,6 +52,9 @@ export async function createListing(req, res) {
       upvoteIds: [],
       comments: [],
       createdAt: new Date(),
+      sold: false, // Boolean statement for if an item is sold
+      buyerUid: null, // UID of buyer
+      soldAt: null // Date item is sold
     };
 
     const db = await getDb();
@@ -242,5 +245,50 @@ export async function editListing(req, res) {
     }
   } catch (e) {
     res.status(400).json({ error: "Invalid listing id or update payload." });
+  }
+}
+
+// POST request to mark item as sold
+export async function markListingAsSold(req, res) {
+  const { id } = req.params;
+  const { uid } = req.user; // Authenticated user
+  const { buyerUid, soldAt } = req.body;
+
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ error: "Invalid listing ID format." });
+  }
+
+  try {
+    const db = await getDb();
+    const listing = await db.collection('items').findOne({ _id: new ObjectId(id) });
+
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    if (listing.sold) return res.status(400).json({ error: "Item already sold" });
+
+    // Prevent self-purchase
+    const buyer = buyerUid || uid;
+    if (listing.ownerUid === buyer) {
+      return res.status(403).json({ error: "Owner cannot buy their own item" });
+    }
+
+    const result = await db.collection('items').updateOne(
+      { _id: new ObjectId(id), sold: false },
+      {
+        $set: {
+          sold: true,
+          buyerUid: buyer,
+          soldAt: soldAt ? new Date(soldAt) : new Date()
+        }
+      }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ success: true, message: "Item marked as sold" });
+    } else {
+      res.status(500).json({ error: "Failed to update item status" });
+    }
+  } catch (err) {
+    console.error("markListingAsSold error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 }

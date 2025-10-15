@@ -72,7 +72,7 @@ export default function MarketPlace() {
   };
 
   const filteredListings = useMemo(() => {
-    let out = Array.isArray(listings) ? [...listings] : [];
+    let out = Array.isArray(listings) ? listings.filter((l) => !l.sold) : [];
     const q = search.trim().toLowerCase();
 
     // text search

@@ -4,9 +4,10 @@ import { getDb } from '../config/db.js'; // optional if you expose db this way
 // GET request for Whole Marketplace
 export async function getAllListings(req, res) {
   try {
-    const db = await getDb(); // or use global db if already connected
+    const db = await getDb();
+
     const listings = await db.collection('items')
-      .find()
+      .find({ sold: { $ne: true } }) // exclude sold items
       .sort({ createdAt: -1 })
       .toArray();
     res.status(200).json(listings);
