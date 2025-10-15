@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { sendMessage } from "../components/MessageUtils";
 import "./Messages.css";
 
 // Shows all message threads for logged-in user
@@ -13,8 +14,7 @@ const ConversationList = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null); // Which thread is being deleted
   const me = getAuth().currentUser?.uid || getAuth().currentUser?.email || "me"; //Add Me for Unread tracking
 
-  // fetch all message threads for the user
-  
+// fetch all message threads for the user
 useEffect(() => {
   const auth = getAuth();
   setLoading(true);
@@ -72,17 +72,23 @@ useEffect(() => {
 
   // Delete conversation
   const handleDelete = async (id) => {
-    // API call is commented out for demo will uncomment when backend is ready
     try {
-      await api.delete(`/messages/${id}`);
+      const token = await getAuth().currentUser?.getIdToken();
+      await api.delete(`/messages/${id}`, {
+        headers: { authtoken: token }
+      });
     } catch (e) {
       console.error("Failed to delete conversation", e);
+      alert("Could not delete conversation. Please try again.");
     }
-    // Remove the thread from local state
     setThreads((prev) => prev.filter((t) => t._id !== id));
     setConfirmDeleteId(null);
     setMenuFor(null);
   };
+
+  useEffect(() => {
+   console.log("menuFor updated:", menuFor);
+ }, [menuFor]);
 
   // loading message
   if (loading) return <div>Loading messages…</div>;
@@ -133,7 +139,8 @@ return (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setMenuFor(menuFor === t._id ? null : t._id);
+                    console.log("Opening menu for:", t._id);
+                    setMenuFor(menuFor === String(t._id) ? null : String(t._id));
                   }}
                   style={{ background: "none", border: "none", cursor: "pointer" }}
                   aria-label="Open message menu"
@@ -141,7 +148,7 @@ return (
                   ⋮
                 </button>
 
-                {menuFor === t._id && (
+                {menuFor === String(t._id) && (
                   <div className="dropdown">
                     <button onClick={() => handleMarkAsRead(t._id)}>Mark as read</button>
                     <button style={{ color: "red" }} onClick={() => setConfirmDeleteId(t._id)}>
@@ -179,21 +186,4 @@ export default function Messages() {
       <ConversationList />
     </main>
   );
-}
-
-// The actual part that allows you to send messages through the server
-export async function sendMessage(conversationId, messageText, onSuccess) {
-  const user = getAuth().currentUser;
-  if (!user) throw new Error("Not logged in");
-  const token = await user.getIdToken();
-
-  await api.post(
-    `/messages/${conversationId}/messages`,
-    { body: messageText },
-    { headers: { authtoken: token } }
-  );
-
-  if (typeof onSuccess === "function") {
-    onSuccess(); //refetch threads
-  }
 }
