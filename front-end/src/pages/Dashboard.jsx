@@ -130,12 +130,7 @@ export default function Dashboard() {
       (l) => l.ownerUid === uid || l.ownerEmail === email
     );
 
-    const myThreads = (allThreads || []).filter((t) => {
-      if (t.ownerUid === uid || t.ownerEmail === email) return true;
-      if (Array.isArray(t.reciverIds) && t.reciverIds.includes(uid)) return true;
-      if (Array.isArray(t.reciverEmails) && t.reciverEmails.includes(email)) return true;
-      return false;
-    });
+    const myThreads = allThreads || [];
 
     return { listings: myListings, threads: myThreads };
   }, [user, allListings, allThreads]);
@@ -166,7 +161,11 @@ export default function Dashboard() {
   const latestThreads = useMemo(
     () =>
       [...my.threads]
-        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .sort((a, b) => {
+          const aTime = new Date(a.lastMessageAt || a.createdAt || 0);
+          const bTime = new Date(b.lastMessageAt || b.createdAt || 0);
+          return bTime - aTime;
+        })
         .slice(0, 4),
     [my.threads]
   );
@@ -240,7 +239,7 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="stat-card__label">Threads</div>
           <div className="stat-card__value">{stats.totalThreads}</div>
-          <div className="stat-card__hint">Messages you’re part of</div>
+          <div className="stat-card__hint">Messages you're part of</div>
         </div>
       </section>
 
