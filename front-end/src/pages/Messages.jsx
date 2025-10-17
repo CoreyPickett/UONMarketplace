@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import Avatar from "../components/Avatar";
 import { sendMessage } from "../components/MessageUtils";
 import "./Messages.css";
 
@@ -101,10 +102,7 @@ return (
     <table className="messages-table">
       <tbody>
         {threads.map((t) => {
-          // Build "Seller – Listing" once per row
-          const title = `${t.otherUserName ?? "User"}${
-            t.listingTitle ? " – " + t.listingTitle : ""
-          }`;
+          const title = `${t.otherUserName ?? "User"}${t.listingTitle ? " – " + t.listingTitle : ""}`;
 
           const goToThread = () =>
             navigate(`/messages/${t._id}`, {
@@ -119,19 +117,18 @@ return (
                     me: t.meta?.me,
                     other: t.meta?.other
                   },
-                  messages: t.messages // optional if available
+                  messages: t.messages
                 }
               }
             });
 
           return (
             <tr key={t._id}>
-              <td onClick={goToThread} style={{ cursor: "pointer" }}>
-                <img
-                  src={t.avatar ?? "/images/default-avatar.png"}
-                  alt=""
-                  width={40}
-                  style={{ borderRadius: "50%" }}
+              <td onClick={goToThread} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
+                <Avatar
+                  src={t.avatar}
+                  fallbackText={t.otherUserName?.[0]?.toUpperCase() || "U"}
+                  size="sm"
                 />
                 <span className="sender">{title}</span>
               </td>
@@ -147,7 +144,6 @@ return (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log("Opening menu for:", t._id);
                     setMenuFor(menuFor === String(t._id) ? null : String(t._id));
                   }}
                   style={{ background: "none", border: "none", cursor: "pointer" }}
