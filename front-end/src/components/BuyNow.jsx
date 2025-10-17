@@ -191,8 +191,6 @@ async function handleConfirm() {
           </div>
         {paymentMethod === "cash" && (
   <div className="modal-row" style={{ marginBottom: 12, color: '#374151', fontSize: 15 }}>
-    <strong>Meet up:</strong>{" "}
-    {revealed ? (listing.location || "TBA") : "Hidden — shown after purchase"}
   </div>
 )}
         </div>

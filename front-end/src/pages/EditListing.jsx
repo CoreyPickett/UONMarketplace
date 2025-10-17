@@ -283,60 +283,26 @@ export default function CreateListing() {
 
 
           <div className="form-row">
-            <input
-              name="location"
-              placeholder="Location (e.g. Callaghan Campus)"
-              value={formData.location}
-              onChange={handleChange}
-            />
-          </div>
+  <select
+    name="location"
+    value={formData.location}
+    onChange={handleChange}
+    required
+  >
+    <option value="" disabled>Select Suburb</option>
+    <option value="Callaghan">Callaghan</option>
+    <option value="Charlestown">Charlestown</option>
+    <option value="Newcastle CBD">Newcastle CBD</option>
+    <option value="Hamilton">Hamilton</option>
+    <option value="Jesmond">Jesmond</option>
+    <option value="Waratah">Waratah</option>
+    <option value="New Lambton">New Lambton</option>
+    <option value="Kotara">Kotara</option>
+    <option value="Other">Other</option>
+  </select>
+</div>
 
-          <div className="address-row">
-            <input
-              name="streetAddress"                
-              placeholder="Street address"
-              value={formData.streetAddress}
-              onChange={handleChange}
-              required
-            />
-
-            <input
-              name="postcode"
-              type="text"                         
-              inputMode="numeric"
-              pattern="^\d{4}"
-              minLength={4}
-              maxLength={4}
-              placeholder="Postcode"
-              value={formData.postcode}
-              onChange={(e) => {
-              //  allow only digits
-              const digitsOnly = e.target.value.replace(/\D/g, "");
-              //  4 characters only
-              if (digitsOnly.length <= 4) handleChange({
-                target: { name: "postcode", value: digitsOnly },
-              });
-            }}
-            required
-            />
-
-            <select
-              name="state"                        
-              value={formData.state}              
-              onChange={handleChange}
-              required
-              className="state-select"
-            >
-              <option value="NSW">NSW</option>
-              <option value="VIC">VIC</option>
-              <option value="QLD">QLD</option>
-              <option value="SA">SA</option>
-              <option value="WA">WA</option>
-              <option value="TAS">TAS</option>
-              <option value="ACT">ACT</option>
-              <option value="NT">NT</option>
-            </select>
-          </div>
+          
 
           <select
             name="delivery_options"

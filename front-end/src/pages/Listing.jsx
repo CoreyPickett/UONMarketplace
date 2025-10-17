@@ -213,6 +213,8 @@ export default function Listing() {
         {localListing.condition ? <span className="badge">{localListing.condition}</span> : null}
         {priceText ? <span className="badge badge-primary">{priceText}</span> : null}
         {localListing.category ? <span className="badge">{localListing.category}</span> : null}
+        {localListing.location ? <span className="badge">📍 {localListing.location}</span> : null}
+        
       </div>
 
       {/* Description / content */}
