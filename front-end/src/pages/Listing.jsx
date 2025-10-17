@@ -142,10 +142,16 @@ export default function Listing() {
       {/* Title + Save + saved count */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <h1 style={{ margin: "12px 0 16px" }}>{localListing.title}</h1>
-        <SaveButton
-          listingId={localListing._id}
-          onChange={(_, delta) => setSaves((s) => Math.max(0, (s || 0) + (delta || 0)))}
-        />
+
+        {localListing.ownerUid !== user?.uid && (
+          <SaveButton
+            listingId={localListing._id}
+            onChange={(_, delta) =>
+              setSaves((s) => Math.max(0, (s || 0) + (delta || 0)))
+            }
+          />
+        )}
+
         <span className="badge">{saves} saved</span>
       </div>
 
@@ -240,13 +246,15 @@ export default function Listing() {
         </div>
 
         <div className="listing-actions-row">
-          <button
-            className="ListingOptions"
-            onClick={() => setShowBuyNow(true)}
-            title={user ? "Buy now" : "Sign in required to purchase"}
-          >
-            Buy Now
-          </button>
+          {localListing.ownerUid !== user?.uid && (
+            <button
+              className="ListingOptions"
+              onClick={() => setShowBuyNow(true)}
+              title={user ? "Buy now" : "Sign in required to purchase"}
+            >
+              Buy Now
+            </button>
+          )}
 
           {/* Conditional: Show "Message seller" if not owner, else show message */}
           {user && localListing ? (
