@@ -69,7 +69,13 @@ export async function getUserProfile(req, res) {
       return res.status(404).json({ error: "Profile not found" });
     }
 
-    res.json({ ...profile, username: user?.username || null });
+    const isAdmin = ['admin@uon.edu', 'tester@uon.edu', 'demo2@uon.edu', 'tester100@uon.edu.au'].includes(user?.email);
+
+    res.json({
+      ...profile,
+      username: user?.username || null,
+      isAdmin
+    });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }

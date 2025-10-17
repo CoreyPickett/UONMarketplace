@@ -96,7 +96,9 @@ useEffect(() => {
           <li><Link to="/saved" style={linkStyle(isActive("/saved"))}>Saved</Link></li>
           <li><Link to="/create-listing" style={linkStyle(isActive("/create-listing"))}>Create Listing</Link></li>
           <li><Link to="/messages" style={linkStyle(isActive("/messages"))}>Messages</Link></li>
-          <li><Link to="/admin" style={linkStyle(isActive("/admin"))}>Admin</Link></li>
+          {profileData?.isAdmin && (
+            <li><Link to="/admin" style={linkStyle(isActive("/admin"))}>Admin</Link></li>
+          )}
         </ul>
 
         {/* Right: auth controls */}
