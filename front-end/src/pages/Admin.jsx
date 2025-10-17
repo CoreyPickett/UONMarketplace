@@ -298,7 +298,7 @@ export default function Admin() {
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
                 />
-                <span>–</span>
+                <span>-</span>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -313,7 +313,7 @@ export default function Admin() {
                 <option value="recent">Sort: Recent</option>
                 <option value="priceAsc">Price ↑</option>
                 <option value="priceDesc">Price ↓</option>
-                <option value="titleAsc">Title A–Z</option>
+                <option value="titleAsc">Title A-Z</option>
               </select>
             </div>
 
@@ -342,7 +342,7 @@ export default function Admin() {
                       <th className="hide-sm">Category</th>
                       <th>Price (AUD)</th>
                       <th className="hide-md">Seller</th>
-                      <th>Upvotes</th>
+                      <th>Saves</th>
                       <th style={{ width: 1 }} />
                     </tr>
                   </thead>
@@ -405,7 +405,13 @@ export default function Admin() {
                               </span>
                             </td>
                             <td className="hide-md">{l.ownerEmail || "—"}</td>
-                            <td>{l.upvotes ?? 0}</td>
+                            <td>
+                              {Number.isFinite(Number(l?.saves))
+                                ? l.saves
+                                : Array.isArray(l?.saveIds)
+                                ? l.saveIds.length
+                                : 0}
+                            </td>
                             <td>
                               <button
                                 className="icon-btn danger"
