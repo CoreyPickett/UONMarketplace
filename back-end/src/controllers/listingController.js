@@ -287,13 +287,57 @@ export async function markListingAsSold(req, res) {
       }
     );
 
+    let threadId = null;
+
+    if (buyer) {
+      const thread = await db.collection("messages").findOne({
+        listingId: new ObjectId(id),
+        participants: { $all: [uid, buyer] }
+      });
+
+      if (thread?._id) {
+        threadId = String(thread._id);
+      }
+    }
+
+    if (!threadId && buyer) {
+      console.warn("No thread found between seller and buyer for listing:", id);
+    }
+
     if (result.modifiedCount === 1) {
-      res.json({ success: true, message: "Item successfully marked as sold" });
+      res.json({success: true, message: "Item successfully marked as sold", threadId });
     } else {
       res.status(500).json({ error: "Failed to update item status" });
     }
   } catch (err) {
     console.error("markListingAsSold error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// POST Route to record Buyer UID when selecting Buy Now
+export async function recordPurchase(req, res) {
+  const { id } = req.params;
+  const buyerUid = req.user.uid;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ error: "Invalid listing ID" });
+  }
+
+  try {
+    const db = await getDb();
+    const result = await db.collection("items").updateOne(
+      { _id: new ObjectId(id), buyerUid: null }, // prevent overwriting
+      { $set: { buyerUid } }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Purchase already recorded or listing not found" });
+    }
+  } catch (err) {
+    console.error("Purchase error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

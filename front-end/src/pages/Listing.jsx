@@ -34,8 +34,12 @@ export default function Listing() {
   const listing = useLoaderData();
   const { user } = useUser();
 
+  //Loading State for Listing and Marking as sold
+  const [localListing, setLocalListing] = useState(listing);
+  const [markingSold, setMarkingSold] = useState(false);
+  
   // Saved count (replaces upvotes)
-  const [saves, setSaves] = useState(Number(listing?.saves || 0));
+  const [saves, setSaves] = useState(Number(localListing?.saves || 0));
 
   // Image carousel + modal state
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -43,15 +47,15 @@ export default function Listing() {
 
   // Keep saves in sync if loader brings in a different listing
   useEffect(() => {
-    setSaves(Number(listing?.saves || 0));
+    setSaves(Number(localListing?.saves || 0));
     setCurrentImageIndex(0);
-  }, [listing?._id]);
+  }, [localListing?._id]);
 
   useEffect(() => {
     const fetchSellerProfile = async () => {
       try {
-        if (!listing?.ownerUid) return; // assuming you store UID on listing
-        const res = await fetch(`/api/profile/${listing.ownerUid}`);
+        if (!localListing?.ownerUid) return; // assuming you store UID on listing
+        const res = await fetch(`/api/profile/${localListing.ownerUid}`);
         if (!res.ok) throw new Error("Seller profile fetch failed");
         const data = await res.json();
         setSellerProfile(data);
@@ -61,9 +65,9 @@ export default function Listing() {
     };
 
     fetchSellerProfile();
-  }, [listing?.ownerUid]);
+  }, [localListing?.ownerUid]);
 
-  if (!listing) {
+  if (!localListing) {
     return (
       <main style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
         <h1>Listing not found</h1>
@@ -75,43 +79,71 @@ export default function Listing() {
 
   // Normalise images → array of public URLs (fallback to placeholder)
   const images = useMemo(() => {
-    const srcs = Array.isArray(listing?.images) && listing.images.length
-      ? listing.images
-      : (listing?.image ? [listing.image] : []);
+    const srcs = Array.isArray(localListing?.images) && localListing.images.length
+      ? localListing.images
+      : (localListing?.image ? [localListing.image] : []);
     const urls = srcs.map(buildImageUrl).filter(Boolean);
     return urls.length ? urls : ["/placeholder-listing.jpg"];
-  }, [listing]);
+  }, [localListing]);
 
   const handleMarkAsSold = async () => {
+    if (localListing.sold) {
+      alert("This item is already marked as sold.");
+      return;
+    }
+
+    setMarkingSold(true);
     try {
-      const res = await fetch(`/api/listings/${listing._id}/mark-sold`, {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      const token = await currentUser.getIdToken();
+
+      const res = await fetch(`/api/marketplace/${localListing._id}/sell`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ buyerUid: null }) // or pass buyerUid if available
+        headers: {
+          "Content-Type": "application/json",
+          authtoken: token
+        },
+        body: JSON.stringify({ buyerUid: localListing.buyerUid || null })
       });
 
       const result = await res.json();
       if (result.success) {
-        navigate(0); // reload to reflect sold status
+        setLocalListing(prev => ({ ...prev, sold: true }));
+
+        if (result.threadId) {
+          navigate(`/messages/${result.threadId}`, {
+            state: {
+              preview: {
+                sender: `${localListing.title} - Sold`,
+                avatar: sellerProfile?.profilePhotoUrl || "/images/default-avatar.png"
+              }
+            }
+          });
+        }
       } else {
         console.error("Failed to mark as sold:", result.error);
+        alert("Failed to mark as sold. Please try again.");
       }
     } catch (err) {
       console.error("Error marking as sold:", err);
+      alert("Something went wrong while marking as sold.");
+    } finally {
+      setMarkingSold(false);
     }
   };
 
-  const priceText = toAUD(listing?.price);
+  const priceText = toAUD(localListing?.price);
 
-  const isOwner = listing?.ownerUid === user?.uid;
+  const isOwner = localListing?.ownerUid === user?.uid;
 
   return (
     <main style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
       {/* Title + Save + saved count */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <h1 style={{ margin: "12px 0 16px" }}>{listing.title}</h1>
+        <h1 style={{ margin: "12px 0 16px" }}>{localListing.title}</h1>
         <SaveButton
-          listingId={listing._id}
+          listingId={localListing._id}
           onChange={(_, delta) => setSaves((s) => Math.max(0, (s || 0) + (delta || 0)))}
         />
         <span className="badge">{saves} saved</span>
@@ -131,7 +163,7 @@ export default function Listing() {
       >
         <img
           src={images[currentImageIndex]}
-          alt={listing.title || `Image ${currentImageIndex + 1}`}
+          alt={localListing.title || `Image ${currentImageIndex + 1}`}
           onError={(e) => (e.currentTarget.src = "/placeholder-listing.jpg")}
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
@@ -172,21 +204,21 @@ export default function Listing() {
 
       {/* Badges below image */}
       <div style={{ display: "flex", gap: 8, margin: "8px 0 18px 0", flexWrap: "wrap" }}>
-        {listing.condition ? <span className="badge">{listing.condition}</span> : null}
+        {localListing.condition ? <span className="badge">{localListing.condition}</span> : null}
         {priceText ? <span className="badge badge-primary">{priceText}</span> : null}
-        {listing.category ? <span className="badge">{listing.category}</span> : null}
+        {localListing.category ? <span className="badge">{localListing.category}</span> : null}
       </div>
 
       {/* Description / content */}
       <section className="listing-details" style={{ marginTop: 8 }}>
-        {Array.isArray(listing.content)
-          ? listing.content.map((para, i) => (
+        {Array.isArray(localListing.content)
+          ? localListing.content.map((para, i) => (
               <p key={i} style={{ lineHeight: 1.6 }}>{para}</p>
             ))
-          : listing.description 
-          ? <p style={{ lineHeight: 1.6 }}>{listing.description}</p>
-          : listing.content
-          ? <p style={{ lineHeight: 1.6 }}>{listing.content}</p>
+          : localListing.description 
+          ? <p style={{ lineHeight: 1.6 }}>{localListing.description}</p>
+          : localListing.content
+          ? <p style={{ lineHeight: 1.6 }}>{localListing.content}</p>
           : null}
       </section>
 
@@ -195,14 +227,14 @@ export default function Listing() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
           <Avatar
             src={sellerProfile?.profilePhotoUrl}
-            fallbackText={listing.ownerEmail?.[0]?.toUpperCase() || "U"}
+            fallbackText={localListing.ownerEmail?.[0]?.toUpperCase() || "U"}
             size="sm"
             alt="Seller avatar"
           />
           <div style={{ fontSize: 14, color: "#6b7280" }}>
             Listed by <UsernameDisplay
                         username={sellerProfile?.username}
-                        fallback={listing.ownerEmail?.split("@")[0]}
+                        fallback={localListing.ownerEmail?.split("@")[0]}
                       />
           </div>
         </div>
@@ -217,8 +249,8 @@ export default function Listing() {
           </button>
 
           {/* Conditional: Show "Message seller" if not owner, else show message */}
-          {user && listing ? (
-            listing.ownerUid !== user?.uid && listing.ownerEmail !== user?.email ? (
+          {user && localListing ? (
+            localListing.ownerUid !== user?.uid && localListing.ownerEmail !== user?.email ? (
               <button
                 className="ListingOptions secondary"
                 onClick={async () => {
@@ -234,9 +266,9 @@ export default function Listing() {
                   const res = await api.post(
                     "/messages/start",
                     {
-                      listingId: listing._id,
-                      sellerUid: listing.ownerUid,
-                      listingTitle: listing.title,
+                      listingId: localListing._id,
+                      sellerUid: localListing.ownerUid,
+                      listingTitle: localListing.title,
                     },
                     {
                       headers: { authtoken: token },
@@ -255,7 +287,7 @@ export default function Listing() {
                     state: {
                       preview: {
                         sender:
-                          `${sellerProfile?.username || listing.ownerEmail?.split("@")[0] || "User"} – ${listing.title}`,
+                          `${sellerProfile?.username || localListing.ownerEmail?.split("@")[0] || "User"} – ${localListing.title}`,
                         avatar: sellerProfile?.profilePhotoUrl || "/images/default-avatar.png",
                       },
                     },
@@ -267,20 +299,22 @@ export default function Listing() {
             ) : (
               <div className="owner-message">
                 This is your listing.
-                {!listing?.sold && (
+                {!localListing?.sold && (
                   <button
                     onClick={handleMarkAsSold}
+                    disabled={markingSold}
                     style={{
                       background: "#003057",
                       color: "#fff",
                       padding: "8px 12px",
                       borderRadius: "6px",
                       fontWeight: "bold",
-                      marginLeft: "12px",
-                      cursor: "pointer"
+                      marginTop: "12px",
+                      cursor: markingSold ? "not-allowed" : "pointer",
+                      opacity: markingSold ? 0.6 : 1
                     }}
                   >
-                    Mark as Sold
+                    {markingSold ? "Marking as Sold…" : "Mark as Sold"}
                   </button>
                 )}
               </div>
@@ -290,8 +324,8 @@ export default function Listing() {
       </section>
 
       {/* Buy Now Modal */}
-      {showBuyNow && listing && (
-        <BuyNowModal listing={listing} onClose={() => setShowBuyNow(false)} />
+      {showBuyNow && localListing && (
+        <BuyNowModal listing={localListing} onClose={() => setShowBuyNow(false)} />
       )}
     </main>
   );

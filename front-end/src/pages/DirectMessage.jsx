@@ -100,13 +100,12 @@ export default function DirectMessage() {
     setMessages((prev) => [...prev, temp]);
 
     try {
-      // Send the message
-      const { data } = await api.post(`/messages/${id}/messages`, { body });
+      console.log("Sending message:", { threadId: id, body });
 
-      // Update message list from backend
+      const { data } = await api.post(`/messages/${id}/messages`, { text: body });
+
       setMessages(data?.messages || []);
 
-      // Refresh thread metadata
       const updatedThread = await api.get(`/messages/${id}`);
       const meta = updatedThread.data?.meta || {};
       setThread((prev) => ({

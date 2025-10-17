@@ -9,7 +9,8 @@ import {
   addComment,
   deleteListing,
   editListing,
-  markListingAsSold
+  markListingAsSold,
+  recordPurchase
 } from '../controllers/listingController.js';
 
 const router = express.Router();
@@ -22,5 +23,6 @@ router.post('/:id/comments', verifyUser, addComment);
 router.post('/:id/sell', verifyUser, markListingAsSold);
 router.delete('/:id', verifyUser, deleteListing);
 router.put('/:id', verifyUser, editListing);
+router.post('/:id/purchase', verifyUser, recordPurchase);
 
 export default router;

@@ -93,6 +93,16 @@ async function handleConfirm() {
         console.warn("Message send failed:", err?.response?.data?.error || err.message);
         throw new Error("Message send failed");
       }
+
+      // Record buyerUid
+      try {
+        const purchaseRes = await api.post(`/marketplace/${listing._id}/purchase`, {}, {
+          headers: { authtoken: token }
+        });
+        console.log("Buyer UID recorded:", purchaseRes.data);
+      } catch (err) {
+        console.warn("Failed to record buyer UID:", err?.response?.data?.error || err.message);
+      }
     }
 
     setRevealed(true);
