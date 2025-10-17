@@ -346,3 +346,17 @@ a.chip:hover {
   .item-cell { min-width: 0; }   /* allows text to wrap instead of growing the row */
   .meta .title { word-break: break-word; }
 }
+.item-cell,
+.meta {
+  min-width: 0;                 
+}
+
+.meta .title,
+.meta .sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: anywhere;  /* breaks strings */
+}
+
+.row-actions { white-space: nowrap; }
