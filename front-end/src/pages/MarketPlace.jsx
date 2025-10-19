@@ -218,6 +218,7 @@ export default function MarketPlace() {
 
           {/* Actions: Search (acts as apply/confirm) + Reset */}
           <div className="mp-actions">
+            {/*
             <button
               className="mp-btn"
               disabled={searchDisabled}
@@ -225,7 +226,7 @@ export default function MarketPlace() {
               title={searchDisabled ? "Fix price inputs to apply" : "Apply filters"}
             >
               Search
-            </button>
+            </button>  */}
             <button className="mp-btn mp-btn-ghost" onClick={handleReset}>
               Reset
             </button>
