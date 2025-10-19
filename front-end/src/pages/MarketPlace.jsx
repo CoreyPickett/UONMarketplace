@@ -243,7 +243,7 @@ export default function MarketPlace() {
         ) : filteredListings.length === 0 ? (
           <p>No listings found.</p>
         ) : (
-          <MarketPlaceList listings={filteredListings} />
+          <MarketPlaceList listings={filteredListings} loading={loading} />
         )}
       </div>
     </div>

@@ -1,6 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import useListings from "./useListings";
+import { useEffect, useState, useMemo } from "react";
 import UsernameDisplay from "./components/UsernameDisplay";
 import "./MarketPlaceList.css";
 
@@ -9,59 +8,46 @@ const toAUD = (n) =>
     ? Number(n).toLocaleString("en-AU", { style: "currency", currency: "AUD" })
     : n ?? "";
 
-// Limit text to N chars and add an ellipsis
 const ellipsize = (str, max = 20) =>
   typeof str === "string" && str.length > max
     ? str.slice(0, max).trimEnd() + "…"
     : str ?? "";
 
-export default function MarketPlaceList() {
+export default function MarketPlaceList({ listings, loading = false }) {
   const [sellerProfiles, setSellerProfiles] = useState({});
-  const { listings, loading } = useListings();
-  const [params] = useSearchParams();
-  const q = (params.get("query") || "").trim().toLowerCase();
 
-  const filtered = (listings || []).filter((l) => {
-    if (!q) return true;
-    const hay = [
-      l.title,
-      l.description,
-      l.content,
-      l.category,
-      l.location,
-      Array.isArray(l.tagsOrKeywords) ? l.tagsOrKeywords.join(" ") : "",
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return hay.includes(q);
-  });
+  // Fetch seller profiles only for filtered listings
+useEffect(() => {
+  const fetchProfiles = async () => {
+    const uids = listings.map((l) => l.ownerUid).filter(Boolean);
+    const uniqueUids = [...new Set(uids)];
 
-  useEffect(() => {
-    const fetchProfiles = async () => {
-      const uids = filtered.map((l) => l.ownerUid).filter(Boolean);
-      const uniqueUids = [...new Set(uids)];
+    const profileMap = {};
+    await Promise.all(
+      uniqueUids.map(async (uid) => {
+        try {
+          const res = await fetch(`/api/profile/${uid}`);
+          if (!res.ok) throw new Error("Profile fetch failed");
+          const data = await res.json();
+          profileMap[uid] = data;
+        } catch (err) {
+          console.error(`Failed to fetch profile for UID ${uid}`, err);
+        }
+      })
+    );
 
-      const profileMap = {};
-      await Promise.all(
-        uniqueUids.map(async (uid) => {
-          try {
-            const res = await fetch(`/api/profile/${uid}`);
-            if (!res.ok) throw new Error("Profile fetch failed");
-            const data = await res.json();
-            profileMap[uid] = data;
-          } catch (err) {
-            console.error(`Failed to fetch profile for UID ${uid}`, err);
-          }
-        })
-      );
+    setSellerProfiles(profileMap);
+  };
 
-      setSellerProfiles(profileMap);
-    };
-
+  if (listings.length) {
     fetchProfiles();
-  }, [filtered]);
+  } else {
+    setSellerProfiles({});
+  }
+}, [listings]);
 
+
+  // Loading skeleton
   if (loading) {
     return (
       <div className="marketplace-grid" aria-busy="true">
@@ -72,19 +58,21 @@ export default function MarketPlaceList() {
     );
   }
 
-  if (!filtered.length) {
+  // If there are no results
+  if (!listings.length) {
     return (
       <div className="marketplace-grid">
         <div className="no-listings-message">
-          No listings found{q ? ` for “${q}”` : ""}. Try different keywords.
+          No listings found. Try different keywords or filters.
         </div>
       </div>
     );
   }
 
+  // Rendering filtered listings
   return (
     <div className="marketplace-grid">
-      {filtered.map((l) => {
+      {listings.map((l) => {
         const thumb =
           (Array.isArray(l.images) && l.images[0]) || l.image || "/placeholder-listing.jpg";
         const saves = Number(l.saves || 0);
