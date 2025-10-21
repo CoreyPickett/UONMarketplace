@@ -123,8 +123,8 @@ return (
             });
 
           return (
-            <tr key={t._id}>
-              <td onClick={goToThread} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
+                        <tr key={t._id} onClick={goToThread} style={{ cursor: "pointer" }}>
+              <td style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Avatar
                   src={t.avatar}
                   fallbackText={t.otherUserName?.[0]?.toUpperCase() || "U"}
@@ -132,14 +132,11 @@ return (
                 />
                 <span className="sender">{title}</span>
               </td>
-
-              <td onClick={goToThread} style={{ cursor: "pointer" }}>
+              <td>
                 <strong>{(t.unread?.[me] ?? 0) > 0 ? "Unread" : "Read"}</strong>{" "}
                 <span className="msg-preview">{t.lastMessage}</span>
               </td>
-
               <td>{t.lastMessageAt ? new Date(t.lastMessageAt).toLocaleString() : ""}</td>
-
               <td style={{ position: "relative" }}>
                 <button
                   onClick={(e) => {
@@ -151,7 +148,6 @@ return (
                 >
                   ⋮
                 </button>
-
                 {menuFor === String(t._id) && (
                   <div className="dropdown">
                     <button onClick={() => handleMarkAsRead(t._id)}>Mark as read</button>
