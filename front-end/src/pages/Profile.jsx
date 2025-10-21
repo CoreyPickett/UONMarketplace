@@ -526,7 +526,7 @@ export default function Profile() {
               <p>Loading…</p>
             ) : myPurchases.length === 0 ? (
               <div className="empty">
-                <p>You haven’t purchased anything yet.</p>
+                <p>You haven't purchased anything yet.</p>
                 <p className="muted">Listings you buy will appear here.</p>
               </div>
             ) : (

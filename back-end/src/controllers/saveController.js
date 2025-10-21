@@ -17,7 +17,10 @@ export async function getSavedItems(req, res) {
     }
 
     const items = itemIds.length
-      ? await db.collection('items').find({ _id: { $in: itemIds } }).toArray()
+      ? await db.collection('items').find({
+          _id: { $in: itemIds },
+          status: { $ne: "sold" } // Exclude sold items
+        }).toArray()
       : [];
 
     res.json(items);
@@ -30,6 +33,11 @@ export async function getSavedItems(req, res) {
 export async function saveItem(req, res) {
   const { id } = req.params;
   const uid = req.user.uid;
+
+  const item = await db.collection('items').findOne({ _id: new ObjectId(id) });
+  if (!item || item.status === "sold") {
+    return res.status(400).json({ error: "Cannot save a sold item." });
+  }
 
   try {
     const db = await getDb();

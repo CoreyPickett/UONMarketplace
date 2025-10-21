@@ -34,7 +34,7 @@ export default function Listing() {
   const listing = useLoaderData();
   const { user } = useUser();
 
-  //Loading State for Listing and Marking as sold
+  // Loading State for Listing and Marking as sold
   const [localListing, setLocalListing] = useState(listing);
   const [markingSold, setMarkingSold] = useState(false);
   
@@ -136,6 +136,7 @@ export default function Listing() {
   const priceText = toAUD(localListing?.price);
 
   const isOwner = localListing?.ownerUid === user?.uid;
+  const hasPurchased = localListing?.buyerUid === user?.uid;
 
   return (
     <main style={{ maxWidth: 980, margin: "16px auto", padding: "0 16px" }}>
@@ -143,7 +144,7 @@ export default function Listing() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <h1 style={{ margin: "12px 0 16px" }}>{localListing.title}</h1>
 
-        {localListing.ownerUid !== user?.uid && (
+        {localListing.ownerUid !== user?.uid && !hasPurchased && (
           <SaveButton
             listingId={localListing._id}
             onChange={(_, delta) =>
@@ -248,7 +249,7 @@ export default function Listing() {
         </div>
 
         <div className="listing-actions-row">
-          {localListing.ownerUid !== user?.uid && (
+          {localListing.ownerUid !== user?.uid && !hasPurchased && (
             <button
               className="ListingOptions"
               onClick={() => setShowBuyNow(true)}
@@ -260,7 +261,7 @@ export default function Listing() {
 
           {/* Conditional: Show "Message seller" if not owner, else show message */}
           {user && localListing ? (
-            localListing.ownerUid !== user?.uid && localListing.ownerEmail !== user?.email ? (
+            localListing.ownerUid !== user?.uid && localListing.ownerEmail !== user?.email && !hasPurchased ? (
               <button
                 className="ListingOptions secondary"
                 onClick={async () => {

@@ -11,7 +11,7 @@ export default function Saved() {
 
   const current = getAuth().currentUser;
   if (!current) {
-    return <NotLoggedIn title="You’re not logged in" message="Sign in to see saved items." />;
+    return <NotLoggedIn title="You're not logged in" message="Sign in to see saved items." />;
   }
 
   useEffect(() => {
