@@ -111,8 +111,30 @@ export default function Listing() {
       if (result.success) {
         setLocalListing(prev => ({ ...prev, sold: true }));
 
-        if (result.threadId) {
-          navigate(`/messages/${result.threadId}`, {
+        const threadId = result.threadId;
+
+        if (threadId) {
+          const safeTitle = (localListing.title || "your item").replace(/\s+/g, " ").trim();
+          const messageText = `Hi, I'm marking "${safeTitle}" as sold. Thanks for the transaction!`;
+
+          try {
+            await fetch(`/api/messages/${threadId}/messages`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                authtoken: token
+              },
+              body: JSON.stringify({
+                kind: "text",
+                text: messageText,
+                from: currentUser.uid
+              })
+            });
+          } catch (err) {
+            console.warn("Failed to send automatic message:", err?.message || err);
+          }
+
+          navigate(`/messages/${threadId}`, {
             state: {
               preview: {
                 sender: `${localListing.title} - Sold`,
