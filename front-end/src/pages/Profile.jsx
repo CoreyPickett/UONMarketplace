@@ -294,10 +294,6 @@ export default function Profile() {
         </div>
       </section>
 
-<button className="btn" onClick={() => navigate("/create-listing")}>
-              + Create Listing
-            </button>
-
       {/* Content */}
       <section className="profile-content">
         {activeTab === "overview" && (
