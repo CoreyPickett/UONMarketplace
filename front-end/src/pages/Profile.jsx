@@ -243,14 +243,6 @@ export default function Profile() {
               <span className="uid-value" title={user.uid}>
                 {user.uid}
               </span>
-              <button
-                type="button"
-                className="btn-copy btn-xs"
-                onClick={() => navigator.clipboard.writeText(user.uid)}
-                aria-label="Copy UID"
-              >
-                Copy
-              </button>
             </div>
 
               {/* Display Username */}
