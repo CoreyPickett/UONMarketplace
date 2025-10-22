@@ -150,8 +150,22 @@ return (
                 </button>
                 {menuFor === String(t._id) && (
                   <div className="dropdown">
-                    <button onClick={() => handleMarkAsRead(t._id)}>Mark as read</button>
-                    <button style={{ color: "red" }} onClick={() => setConfirmDeleteId(t._id)}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // ✅ Prevents row click
+                        handleMarkAsRead(t._id);
+                      }}
+                    >
+                      Mark as read
+                    </button>
+
+                    <button
+                      style={{ color: "red" }}
+                      onClick={(e) => {
+                        e.stopPropagation(); // ✅ Prevents row click
+                        setConfirmDeleteId(t._id);
+                      }}
+                    >
                       Delete
                     </button>
                   </div>
