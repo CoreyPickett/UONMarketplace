@@ -9,12 +9,32 @@ export default function MarketPlace() {
   // filters
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [sort, setSort] = useState("recent");
+
+  // price slider state
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(0);
+  const [priceBounds, setPriceBounds] = useState({ min: 0, max: 1000, step: 1 });
+
+  const [sort, setSort] = useState("recent"); // recent | priceAsc | priceDesc | titleAsc | saved
   const [rangeNote, setRangeNote] = useState("");
 
-  // load listings
+  // helper to compute nice slider bounds from data
+  const computePriceBounds = (arr) => {
+    const prices = (Array.isArray(arr) ? arr : [])
+      .map((l) => Number(l?.price))
+      .filter((n) => Number.isFinite(n) && n >= 0);
+
+    if (prices.length === 0) return { min: 0, max: 1000, step: 1 };
+
+    const rawMin = Math.min(...prices);
+    const rawMax = Math.max(...prices);
+    const step = rawMax > 500 ? 5 : 1;
+    const niceMin = Math.max(0, Math.floor(rawMin / step) * step);
+    const niceMax = Math.ceil(rawMax / step) * step;
+    return { min: niceMin, max: Math.max(niceMin + step, niceMax), step };
+  };
+
+  // load listings, then initialize slider to lowest/highest
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -22,10 +42,23 @@ export default function MarketPlace() {
         setLoading(true);
         const res = await fetch("/api/marketplace/");
         const data = await res.json();
-        if (alive) setListings(Array.isArray(data) ? data : []);
+        if (!alive) return;
+        const arr = Array.isArray(data) ? data : [];
+        setListings(arr);
+
+        const bounds = computePriceBounds(arr);
+        setPriceBounds(bounds);
+        setMinPrice(bounds.min); 
+        setMaxPrice(bounds.max); 
       } catch (e) {
         console.error("Failed to load listings:", e);
-        if (alive) setListings([]);
+        if (alive) {
+          setListings([]);
+          // keep default bounds, still show slider
+          setPriceBounds({ min: 0, max: 1000, step: 1 });
+          setMinPrice(0);
+          setMaxPrice(1000);
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -35,47 +68,42 @@ export default function MarketPlace() {
     };
   }, []);
 
-  // range warning note
+  // if bounds ever change (e.g., new data), keep values inside range without overriding user choices
   useEffect(() => {
-    const min = minPrice === "" ? undefined : Number(minPrice);
-    const max = maxPrice === "" ? undefined : Number(maxPrice);
-    if (
-      min !== undefined &&
-      max !== undefined &&
-      !Number.isNaN(min) &&
-      !Number.isNaN(max) &&
-      max < min
-    ) {
-      setRangeNote("Max price is below Min price.");
-    } else {
-      setRangeNote("");
-    }
+    setMinPrice((v) => Math.min(Math.max(v, priceBounds.min), priceBounds.max));
+    setMaxPrice((v) => Math.max(Math.min(v, priceBounds.max), priceBounds.min));
+  }, [priceBounds.min, priceBounds.max]);
+
+  // slider handlers
+  const onMinSlide = (val) => {
+    const v = Number(val);
+    if (!Number.isFinite(v)) return;
+    setMinPrice(Math.min(v, maxPrice));
+  };
+  const onMaxSlide = (val) => {
+    const v = Number(val);
+    if (!Number.isFinite(v)) return;
+    setMaxPrice(Math.max(v, minPrice));
+  };
+
+  useEffect(() => {
+    setRangeNote(minPrice > maxPrice ? "Max price is below Min price." : "");
   }, [minPrice, maxPrice]);
 
-  // helper: safest “recent” time (updatedAt → createdAt → ObjectId time → 0)
-  const getTime = (l) => {
-    if (l?.updatedAt) {
-      const t = Date.parse(l.updatedAt);
-      if (!Number.isNaN(t)) return t;
-    }
-    if (l?.createdAt) {
-      const t = Date.parse(l.createdAt);
-      if (!Number.isNaN(t)) return t;
-    }
-    // ObjectId timestamp fallback (if hex string)
-    const id = typeof l?._id === "string" ? l._id : String(l?._id || "");
-    if (id && id.length >= 8) {
-      const sec = parseInt(id.slice(0, 8), 16);
-      if (Number.isFinite(sec)) return sec * 1000;
-    }
+  // robust saves getter
+  const getSaves = (l) => {
+    if (typeof l?.saves === "number") return l.saves;
+    if (Array.isArray(l?.saves)) return l.saves.length;
+    if (typeof l?.saveCount === "number") return l.saveCount;
+    if (Array.isArray(l?.savedBy)) return l.savedBy.length;
+    if (l?.savedBy && typeof l.savedBy === "object") return Object.keys(l.savedBy).length;
     return 0;
   };
 
   const filteredListings = useMemo(() => {
-    let out = Array.isArray(listings) ? listings.filter((l) => !l.sold) : [];
+    let out = Array.isArray(listings) ? [...listings] : [];
     const q = search.trim().toLowerCase();
 
-    // text search
     if (q) {
       out = out.filter((l) =>
         [l?.title, l?.description, l?.category, l?.location, l?.ownerEmail]
@@ -84,29 +112,22 @@ export default function MarketPlace() {
       );
     }
 
-    // category
     if (category) out = out.filter((l) => String(l?.category) === category);
 
-    // price range (accept numbers or numeric strings)
-    const min = minPrice !== "" ? Number(minPrice) : undefined;
-    const max = maxPrice !== "" ? Number(maxPrice) : undefined;
+    out = out.filter((l) => {
+      const p = Number(l?.price);
+      if (!Number.isFinite(p)) return false;
+      return p >= minPrice && p <= maxPrice;
+    });
 
-    if (!Number.isNaN(min) && min !== undefined) {
-      out = out.filter((l) => {
-        const p = Number(l?.price);
-        return Number.isFinite(p) && p >= min;
-        });
-    }
-    if (!Number.isNaN(max) && max !== undefined) {
-      out = out.filter((l) => {
-        const p = Number(l?.price);
-        return Number.isFinite(p) && p <= max;
-      });
-    }
-
-    // sort
     out.sort((a, b) => {
       switch (sort) {
+        case "saved": {
+          const sa = getSaves(a);
+          const sb = getSaves(b);
+          if (sb !== sa) return sb - sa; // desc
+          return String(b?._id || "").localeCompare(String(a?._id || ""));
+        }
         case "priceAsc":
           return (Number(a?.price) || Infinity) - (Number(b?.price) || Infinity);
         case "priceDesc":
@@ -115,7 +136,7 @@ export default function MarketPlace() {
           return String(a?.title || "").localeCompare(String(b?.title || ""));
         case "recent":
         default:
-          return getTime(b) - getTime(a);
+          return String(b?._id || "").localeCompare(String(a?._id || ""));
       }
     });
 
@@ -125,31 +146,21 @@ export default function MarketPlace() {
   const handleReset = () => {
     setSearch("");
     setCategory("");
-    setMinPrice("");
-    setMaxPrice("");
     setSort("recent");
+    setMinPrice(priceBounds.min);
+    setMaxPrice(priceBounds.max);
     setRangeNote("");
   };
 
-  const searchDisabled = useMemo(() => {
-    const min = Number(minPrice);
-    const max = Number(maxPrice);
-    if (minPrice !== "" && Number.isNaN(min)) return true;
-    if (maxPrice !== "" && Number.isNaN(max)) return true;
-    if (
-      minPrice !== "" &&
-      maxPrice !== "" &&
-      !Number.isNaN(min) &&
-      !Number.isNaN(max) &&
-      max < min
-    )
-      return true;
-    return false;
-  }, [minPrice, maxPrice]);
+  const sliderRangePct = useMemo(() => {
+    const span = priceBounds.max - priceBounds.min || 1;
+    const a = Math.max(0, Math.min(100, ((minPrice - priceBounds.min) / span) * 100));
+    const b = Math.max(0, Math.min(100, ((maxPrice - priceBounds.min) / span) * 100));
+    return { a, b };
+  }, [minPrice, maxPrice, priceBounds]);
 
   return (
     <div className="mp-wrap">
-      {/* Sticky toolbar */}
       <div className="mp-toolbar">
         {/* Big search bar */}
         <div className="mp-search">
@@ -163,8 +174,9 @@ export default function MarketPlace() {
           />
         </div>
 
-        {/* Filter row */}
+        {/* Filters row */}
         <div className="mp-row">
+          {/* Category */}
           <select
             className="mp-select"
             value={category}
@@ -179,31 +191,43 @@ export default function MarketPlace() {
             <option value="Other">Other</option>
           </select>
 
-          {/* Min/Max kept snug inside one box */}
-          <div className="mp-price">
-            <input
-              className="mp-price-input"
-              type="number"
-              inputMode="numeric"
-              min="0"
-              placeholder="Min"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              aria-label="Minimum price"
-            />
-            <span className="mp-price-sep">–</span>
-            <input
-              className="mp-price-input"
-              type="number"
-              inputMode="numeric"
-              min="0"
-              placeholder="Max"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              aria-label="Maximum price"
-            />
+          {/* Price dual slider */}
+          <div
+            className="mp-dual"
+            style={{
+              ["--range-a"]: `${sliderRangePct.a}%`,
+              ["--range-b"]: `${sliderRangePct.b}%`,
+            }}
+          >
+            <div className="vals">
+              <span>${Math.round(minPrice)}</span>
+              <span>${Math.round(maxPrice)}</span>
+            </div>
+            <div className="sliders">
+              <input
+                className="mp-range-input"
+                type="range"
+                min={priceBounds.min}
+                max={priceBounds.max}
+                step={priceBounds.step}
+                value={minPrice}
+                onChange={(e) => onMinSlide(e.target.value)}
+                aria-label="Minimum price"
+              />
+              <input
+                className="mp-range-input"
+                type="range"
+                min={priceBounds.min}
+                max={priceBounds.max}
+                step={priceBounds.step}
+                value={maxPrice}
+                onChange={(e) => onMaxSlide(e.target.value)}
+                aria-label="Maximum price"
+              />
+            </div>
           </div>
 
+          {/* Sort select */}
           <select
             className="mp-select"
             value={sort}
@@ -214,19 +238,18 @@ export default function MarketPlace() {
             <option value="priceAsc">Price: Low to High</option>
             <option value="priceDesc">Price: High to Low</option>
             <option value="titleAsc">Title A–Z</option>
+            <option value="saved">Most Saved</option>
           </select>
 
-          {/* Actions: Search (acts as apply/confirm) + Reset */}
+          {/* Actions */}
           <div className="mp-actions">
-            {/*
             <button
-              className="mp-btn"
-              disabled={searchDisabled}
-              onClick={() => {}}
-              title={searchDisabled ? "Fix price inputs to apply" : "Apply filters"}
+              className={`mp-btn ${sort === "saved" ? "active" : ""}`}
+              onClick={() => setSort("saved")}
+              title="Sort by most saved"
             >
-              Search
-            </button>  */}
+              Most Saved
+            </button>
             <button className="mp-btn mp-btn-ghost" onClick={handleReset}>
               Reset
             </button>
@@ -244,7 +267,7 @@ export default function MarketPlace() {
         ) : filteredListings.length === 0 ? (
           <p>No listings found.</p>
         ) : (
-          <MarketPlaceList listings={filteredListings} loading={loading} />
+          <MarketPlaceList listings={filteredListings} />
         )}
       </div>
     </div>

@@ -187,3 +187,133 @@
     padding: 10px 8px;
   }
 }
+/* Fixed toolbar container under the main header  */
+:root{
+  --header-height: 64px;      /* height of your sticky top navbar */
+  --mp-toolbar-maxw: 1200px;  /* toolbar max width */
+  --mp-toolbar-pad: 16px;     /* side padding */
+  --mp-toolbar-height: 168px; /* spacer height for desktop */
+}
+
+.mp-wrap{ overflow: visible !important; }
+
+/* the fixed wrapper keeps the toolbar pinned */
+.mp-toolbar-fixed{
+  position: fixed;
+  z-index: 90;
+  top: calc(var(--header-height) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(var(--mp-toolbar-maxw), calc(100% - 2 * var(--mp-toolbar-pad)));
+}
+
+.mp-toolbar{
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+/* reserve vertical space so content doesn't slide under the fixed bar */
+.mp-toolbar-spacer{
+  height: var(--mp-toolbar-height);
+}
+
+@media (max-width: 720px){
+  :root{
+    --mp-toolbar-height: 220px; /* the toolbar gets taller on small screens */
+  }
+}
+
+.mp-dual {
+  border: 1px solid #d7dde5;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+.mp-dual .vals {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  color: #003057;
+  margin-bottom: 6px;
+}
+
+.mp-dual .sliders {
+  position: relative;
+  height: 28px;
+}
+
+/* overlap the two range inputs to simulate a double-thumb */
+.mp-range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  top: 6px;
+  background: transparent;
+  pointer-events: none; /* track clicks fall through; thumbs are still draggable */
+}
+
+/* track with selected range tinted between --range-a and --range-b */
+.mp-range-input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(to right,
+      #e5e7eb 0%,
+      #e5e7eb var(--range-a, 0%),
+      #003057 var(--range-a, 0%),
+      #003057 var(--range-b, 0%),
+      #e5e7eb var(--range-b, 0%),
+      #e5e7eb 100%
+    );
+}
+.mp-range-input::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(to right,
+      #e5e7eb 0%,
+      #e5e7eb var(--range-a, 0%),
+      #003057 var(--range-a, 0%),
+      #003057 var(--range-b, 0%),
+      #e5e7eb var(--range-b, 0%),
+      #e5e7eb 100%
+    );
+}
+
+/* thumbs */
+.mp-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #003057;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  pointer-events: auto; /* enable dragging */
+}
+.mp-range-input::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #003057;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  pointer-events: auto;
+}
+
+/* "Most Saved" button active state */
+.mp-btn.active {
+  background: #0a6;           /* a “selected” tint */
+  border-color: #0a6;
+}
+.mp-btn.active:hover {
+  filter: brightness(0.95);
+}
+
