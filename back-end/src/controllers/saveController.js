@@ -33,14 +33,16 @@ export async function getSavedItems(req, res) {
 export async function saveItem(req, res) {
   const { id } = req.params;
   const uid = req.user.uid;
-
-  const item = await db.collection('items').findOne({ _id: new ObjectId(id) });
-  if (!item || item.status === "sold") {
-    return res.status(400).json({ error: "Cannot save a sold item." });
-  }
+  console.log("Save request from:", req.user?.uid);
+  console.log("Saving item ID:", req.params.id);
 
   try {
     const db = await getDb();
+
+    const item = await db.collection('items').findOne({ _id: new ObjectId(id) });
+    if (!item || item.status === "sold") {
+      return res.status(400).json({ error: "Cannot save a sold item." });
+    }
 
     // upsert user saves doc
     await db.collection('saves').updateOne(
@@ -60,7 +62,8 @@ export async function saveItem(req, res) {
 
     res.status(204).send();
   } catch (e) {
-    res.status(400).json({ error: "Failed to save item" });
+    console.error("Save failed:", e);
+    res.status(500).json({ error: "Failed to save item" }); // ✅ Use 500 for server error
   }
 }
 
