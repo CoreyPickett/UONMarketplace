@@ -50,12 +50,18 @@ export async function disableUser(req, res) {
 // Enable user in Admin page
 export async function enableUser(req, res) {
   const { uid } = req.body;
+
   if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+  if (!req.user?.isAdmin && !req.user?.admin) {
+    return res.status(403).json({ error: "Admin privileges required" });
+  }
 
   try {
     await admin.auth().updateUser(uid, { disabled: false });
     res.json({ success: true, message: "User enabled" });
   } catch (error) {
+    console.error("Enable user failed:", error);
     res.status(500).json({ error: "Failed to enable user" });
   }
 }

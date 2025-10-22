@@ -14,7 +14,11 @@ export async function verifyUser(req, res, next) {
     if (!token) return res.status(401).json({ error: 'Missing auth token' });
 
     const decoded = await admin.auth().verifyIdToken(token);
-    req.user = { uid: decoded.uid, email: decoded.email || null };
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email || null,
+      admin: decoded.admin || false 
+    };
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid or expired token' });

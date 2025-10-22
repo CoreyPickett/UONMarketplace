@@ -552,7 +552,7 @@ export default function Admin() {
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal">
             <h3>Delete this user?</h3>
-            <p className="muted">This removes their account. You can’t undo this.</p>
+            <p className="muted">This removes their account. You can't undo this.</p>
             <div className="modal-actions">
               <button className="btn btn-danger" onClick={confirmDeleteUser} disabled={deleting}>
                 {deleting ? "Deleting…" : "Delete"}

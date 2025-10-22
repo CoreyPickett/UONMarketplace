@@ -18,6 +18,6 @@ router.get('/search-user', verifyUser, checkIfAdmin, requireAdmin, searchUserByE
 router.delete('/users/:uid', verifyUser, checkIfAdmin, requireAdmin, deleteUserByUid);
 router.post('/delete-user', verifyUser, checkIfAdmin, requireAdmin, deleteUserByBody);
 router.post('/disable-user', verifyUser, checkIfAdmin, requireAdmin, disableUser);
-router.post('/enable-user', verifyUser, requireAdmin, enableUser);
+router.post('/enable-user', verifyUser, checkIfAdmin, requireAdmin, enableUser);
 
 export default router;

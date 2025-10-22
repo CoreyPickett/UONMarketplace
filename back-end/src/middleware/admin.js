@@ -3,8 +3,6 @@ const adminEmails = ['admin@uon.edu', 'tester@uon.edu', 'demo2@uon.edu', 'tester
 
 // Function to check if email is admin verified
 export function checkIfAdmin(req, res, next) {
-  console.log("checkIfAdmin triggered");
-
   const userEmail = req.user?.email;
 
   if (!userEmail) {
