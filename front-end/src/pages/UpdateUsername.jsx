@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { api } from "../api";
 
@@ -6,6 +7,8 @@ export default function UpdateUsername({ currentUsername }) {
   const [username, setUsername] = useState(currentUsername || "");
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const validateUsername = (name) => /^[a-zA-Z0-9_-]{3,20}$/.test(name);
 
@@ -19,7 +22,12 @@ export default function UpdateUsername({ currentUsername }) {
     setLoading(true);
     try {
       const res = await api.put("/user/updateUsername", { username });
-      setStatus({ type: "success", message: `Username updated to "${res.data.username}"` });
+      navigate("/UpdateSuccess", {
+        state: {
+          type: "username",
+          message: `Your username has been updated to "${res.data.username}".`
+        }
+      });
     } catch (err) {
       const msg = err.response?.data?.error || "Unexpected error";
       setStatus({ type: "error", message: msg });
