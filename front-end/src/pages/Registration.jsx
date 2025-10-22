@@ -21,7 +21,7 @@ export default function Registration() {
     }
     try {
       await createUserWithEmailAndPassword(getAuth(), email, password);
-      navigate('/'); //Navigate to Dashboard
+       navigate('/profile?new=1'); //Navigate to Dashboard
     } catch (e) {
       setError(e.message);
     }

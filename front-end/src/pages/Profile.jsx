@@ -293,6 +293,74 @@ export default function Profile() {
           </button>
         </div>
       </section>
+      
+     {/* Profile completion nudge (Dashboard) */}
+{(() => {
+  const needsUsername = !profileData?.username;
+  const needsAvatar = !profileData?.profilePhotoUrl;
+
+  // Only show if something is missing
+  if (!needsUsername && !needsAvatar) return null;
+
+  // Show automatically for brand new sign ups if not dont show
+  const isNew = new URLSearchParams(window.location.search).get("new") === "1";
+  const dismissed = localStorage.getItem("dashProfileNudgeDismissed") === "1";
+  if (!isNew && dismissed) return null;
+
+  return (
+    <div
+      className="callout callout-warn"
+      style={{
+        margin: "12px 0 20px",
+        padding: "12px 14px",
+        borderRadius: 10,
+        border: "1px solid #f2c46e",
+        background: "#fff8e6",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        justifyContent: "space-between",
+        flexWrap: "wrap"
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 18 }}>⚠️</span>
+        <div>
+          <div style={{ fontWeight: 600 }}>Complete your profile</div>
+          <div className="muted" style={{ fontSize: 14 }}>
+            {needsUsername && needsAvatar
+              ? "Add a username and profile avatar so buyers/sellers can recognise you."
+              : needsUsername
+                ? "Add a username so others can mention and recognise you."
+                : "Add a profile avatar so others can recognise you."}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        {needsUsername && (
+          <Link className="btn btn-primary" to="/updateUsername">
+            Set username
+          </Link>
+        )}
+        {needsAvatar && (
+          <Link className="btn" to="/updatePhoto">
+            Add photo
+          </Link>
+        )}
+        <button
+          className="btn btn-secondary"
+          onClick={() => localStorage.setItem("dashProfileNudgeDismissed", "1")}
+          title="Hide this reminder"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+})()}
+
+
 
       {/* Content */}
       <section className="profile-content">
