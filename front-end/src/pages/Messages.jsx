@@ -124,13 +124,24 @@ return (
 
           return (
                         <tr key={t._id} onClick={goToThread} style={{ cursor: "pointer" }}>
-              <td style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Avatar
-                  src={t.avatar}
-                  fallbackText={t.otherUserName?.[0]?.toUpperCase() || "U"}
+                                            <td
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    overflow: "visible",   
+                    minWidth: 0            
+                  }}
+                >
+                  <Avatar
+                  src={t.avatar || "/images/default-avatar.png"}
+                  fallbackText={(t.otherUserName?.[0] || "U").toUpperCase()}
                   size="sm"
+                  style={{ flex: "0 0 40px", width: 40, height: 40 }}
                 />
-                <span className="sender">{title}</span>
+                <span className="sender" style={{ flex: 1, minWidth: 0 }}>
+                  {title}  
+                </span>
               </td>
               <td>
                 <strong>{(t.unread?.[me] ?? 0) > 0 ? "Unread" : "Read"}</strong>{" "}
@@ -152,7 +163,7 @@ return (
                   <div className="dropdown">
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // ✅ Prevents row click
+                        e.stopPropagation(); //  Prevents row click
                         handleMarkAsRead(t._id);
                       }}
                     >
@@ -162,7 +173,7 @@ return (
                     <button
                       style={{ color: "red" }}
                       onClick={(e) => {
-                        e.stopPropagation(); // ✅ Prevents row click
+                        e.stopPropagation(); //  Prevents row click
                         setConfirmDeleteId(t._id);
                       }}
                     >
