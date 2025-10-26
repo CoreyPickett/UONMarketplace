@@ -1,12 +1,32 @@
-import { NavLink } from "react-router-dom";   // <— swap Link -> NavLink
-import { useEffect } from "react";
+import { NavLink } from "react-router-dom";   
+import { useEffect, useMemo, useState } from "react";
+import useUser from "../useUser";
 
 export default function Sidebar({ open, onClose }) {
+  const { user } = useUser();
+  const [profileData, setProfileData] = useState(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`/api/profile/${user.uid}`);
+        if (!res.ok) throw new Error("Profile fetch failed");
+        const data = await res.json();
+        setProfileData(data);
+      } catch (err) {
+        console.error("Failed to fetch profile in Sidebar:", err);
+      }
+    };
+    if (user?.uid) fetchProfile();
+  }, [user]);
+
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     if (open) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  
 
   // shared styles for links
   const linkBase = {
@@ -18,6 +38,20 @@ export default function Sidebar({ open, onClose }) {
     transition: "background .15s ease, color .15s ease, font-weight .05s ease",
     position: "relative",
   };
+
+  const items = useMemo(() => {
+    const base = [
+      { to: "/", label: "Dashboard", end: true },
+      { to: "/marketplace", label: "Browse Marketplace" },
+      { to: "/create-listing", label: "Create Listing" },
+      { to: "/messages", label: "Messages" },
+      { to: "/profile", label: "Profile" },
+    ];
+    if (profileData?.isAdmin) {
+      base.push({ to: "/admin", label: "Admin" });
+    }
+    return base;
+  }, [profileData]);
 
   return (
     <>
@@ -70,14 +104,8 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         <nav style={{ padding: 8 }}>
-          {[
-            { to: "/", label: "Dashboard", end: true },
-            { to: "/marketplace", label: "Browse Marketplace" },
-            { to: "/create-listing", label: "Create Listing" },
-            { to: "/messages", label: "Messages" },
-            { to: "/profile", label: "Profile" },
-            { to: "/admin", label: "Admin" },
-          ].map((item) => (
+          
+          {items.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
