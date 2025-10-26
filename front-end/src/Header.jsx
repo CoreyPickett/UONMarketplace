@@ -153,6 +153,24 @@ const INK = "#0f172a";
 const MUTED = "#6b7280";
 const RADIUS = 10;
 
+const baseButton = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  padding: "8px 12px",
+  borderRadius: 10,
+  fontFamily: "inherit",
+  fontSize: "1rem",
+  fontWeight: 600,
+  height: "40px",
+  cursor: "pointer",
+  userSelect: "none",
+  lineHeight: 1,
+  transition: "transform .06s ease, box-shadow .12s ease",
+};
+
+
 const s = {
   wrap: {
     position: "sticky",
@@ -246,39 +264,20 @@ const s = {
     boxShadow: "0 1px 4px rgba(0,0,0,.06)",
   },
   btnPrimary: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: "8px 12px",
-    borderRadius: RADIUS,
-    background: NAVY,
+    ...baseButton,
+   background: NAVY,
     color: "#fff",
     border: "1px solid transparent",
-    cursor: "pointer",
-    lineHeight: 1,
-    userSelect: "none",
-    transition: "transform .06s ease, filter .12s ease, box-shadow .12s ease",
     boxShadow: "0 1px 4px rgba(0,0,0,.10)",
   },
   btnSecondary: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: "8px 12px",
-    borderRadius: RADIUS,
+    ...baseButton,
     background: "#fff",
     color: NAVY,
     border: `1px solid ${NAVY}`,
-    textDecoration: "none",
-    lineHeight: 1,
-    userSelect: "none",
-    transition: "transform .06s ease, box-shadow .12s ease",
     boxShadow: "0 1px 4px rgba(0,0,0,.06)",
   },
 
-  muted: { color: MUTED },
 };
 
 /** Link styles with active/hover/focus polish */

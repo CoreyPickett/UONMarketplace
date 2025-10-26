@@ -39,10 +39,19 @@
   border: none;
   background: transparent;
   outline: none;
-  font-size: 15px;
+  font-size: 16px;
   color: #111827;
+  font-weight: 500;
+  padding-top: 20px;           
+  line-height: 5px;
+  ;
 }
-.mp-input::placeholder { color: #9ca3af; }
+.mp-input::placeholder { 
+  color: #9ca3af; 
+   opacity: 1;  
+   padding-top: 4px;           
+   line-height: 5px;
+}
 
 /* Filter row */
 .mp-row {
@@ -231,6 +240,10 @@
   border-radius: 10px;
   padding: 10px;
   background: #fff;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .mp-dual .vals {
@@ -239,11 +252,16 @@
   font-weight: 700;
   color: #003057;
   margin-bottom: 6px;
+  align-items: center;
+  font-size: 14px;
+  line-height: 0.5;
 }
 
 .mp-dual .sliders {
   position: relative;
-  height: 28px;
+  height: 36px;
+  display: flex;
+  align-items: center;
 }
 
 /* overlap the two range inputs to simulate a double-thumb */
@@ -253,14 +271,17 @@
   width: 100%;
   position: absolute;
   left: 0;
-  top: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
   background: transparent;
-  pointer-events: none; /* track clicks fall through; thumbs are still draggable */
+  pointer-events: none; 
+  height: 32px;/* track clicks fall through; thumbs are still draggable */
 }
 
 /* track with selected range tinted between --range-a and --range-b */
 .mp-range-input::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background:
     linear-gradient(to right,
@@ -273,7 +294,7 @@
     );
 }
 .mp-range-input::-moz-range-track {
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background:
     linear-gradient(to right,
@@ -290,22 +311,32 @@
 .mp-range-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 18px;
-  width: 18px;
+  height: 20px;
+  width: 20px;
   border-radius: 50%;
-  background: #fff;
-  border: 2px solid #003057;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  background: #003057;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
   pointer-events: auto; /* enable dragging */
+  cursor: pointer;
+  position: relative;
+  transform: translateY(-5px); 
 }
 .mp-range-input::-moz-range-thumb {
-  height: 18px;
-  width: 18px;
-  border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
+  height: 20px;
+  width: 20x;
+  border-radius: 999px;
   background: #fff;
   border: 2px solid #003057;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1);
-  pointer-events: auto;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  position: relative;
+  transform: translateY(-5px); 
+}
+
+.mp-range-input::-moz-focus-outer {
+  border: 0;
 }
 
 /* "Most Saved" button active state */
