@@ -45,6 +45,7 @@ app.use('/api/messages', messageRoutes);
 
 // Error Handler
 app.use(errorHandler);
+app.disable('etag');
 
 //import path from 'path';
 

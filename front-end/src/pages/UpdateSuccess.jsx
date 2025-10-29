@@ -12,7 +12,7 @@ export default function UpdateSuccess() {
     <div className="panel">
       <h2>✅ {type === "username" ? "Username Updated" : "Update Successful"}</h2>
       <p>{message}</p>
-      <button className="btn" onClick={() => navigate("/profile")}>
+      <button className="btn" onClick={() => navigate("/profile?refresh=" + Date.now())}>
         Return to Profile
       </button>
     </div>
