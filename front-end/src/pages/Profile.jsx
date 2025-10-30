@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { getAuth } from "firebase/auth";
 import useUser from "../useUser";
@@ -17,6 +17,9 @@ export default function Profile() {
   const [loadingListings, setLoadingListings] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [profileData, setProfileData] = useState(null);
+
+  const location = useLocation();
+
 
 
 
@@ -155,7 +158,7 @@ export default function Profile() {
     if (user?.uid) {
       fetchProfileData();
     }
-  }, [user]);
+  }, [user, location.search]);
 
   const myListings = useMemo(() => {
     if (!user) return [];
@@ -232,7 +235,7 @@ export default function Profile() {
       <section className="profile-card">
         <div className="profile-header">
           <Avatar
-            src={profileData?.profilePhotoUrl}
+            src={profileData?.profilePhotoUrl ? `${profileData.profilePhotoUrl}?v=${profileData.updatedAt}` : undefined}
             fallbackText={user.email?.[0]?.toUpperCase() || "U"}
             size="md"
           />

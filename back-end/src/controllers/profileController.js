@@ -71,6 +71,11 @@ export async function getUserProfile(req, res) {
 
     const isAdmin = ['admin@uon.edu', 'tester@uon.edu', 'demo2@uon.edu', 'tester100@uon.edu.au'].includes(user?.email);
 
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
+
     res.json({
       ...profile,
       username: user?.username || null,
