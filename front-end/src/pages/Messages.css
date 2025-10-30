@@ -229,7 +229,13 @@
   border-bottom: 1px solid var(--border);
   overflow: hidden;              
 }
-.messages-table td:first-child { overflow: visible; }
+.messages-table td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;  /* important so child can ellipsis within */
+  min-width: 0;      /* allow flex child to shrink */
+}
 .messages-table td:first-child img,
 .messages-table td:first-child .avatar {
   width: 40px;
@@ -239,18 +245,17 @@
   flex: 0 0 40px;
 }
 .messages-table td:nth-child(4) { width: 40px; text-align: right; overflow: visible; position: relative;}
-.messages-table td:nth-child(3) { width: 20%; min-width: 150px; }
-.messages-table td:nth-child(2) { width: 40%; }  
-.messages-table td:nth-child(1) { width: 40%; }  
+.messages-table td:nth-child(1) { width: 48%; }     /* avatar + username */
+.messages-table td:nth-child(2) { width: 32%; }     /* message preview */
+.messages-table td:nth-child(3) { width: 20%; min-width: 140px; } /* date */
 
 .sender {
   margin-left: 8px;
   display: inline-block;
-  max-width: calc(100% - 56px);  /* room for avatar */
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  overflow-wrap: anywhere;       /* breaks long words */
+  white-space: nowrap;      /* one line */
+  overflow: hidden;         /* hide overflow */
+  text-overflow: ellipsis;  /* add … when too long */
+  /* no fixed max-width here — the column width becomes the cap */
 }
 
 

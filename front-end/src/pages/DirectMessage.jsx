@@ -177,18 +177,18 @@ useEffect(() => {
 
   return (
     <main className="direct-message-content" style={{ padding: 20 }}>
-  <div className="top-bar">
-    <button className="back-button" onClick={() => navigate("/messages")}>
-      Back to Messages
-    </button>
-    <button
-      className="refresh-button"
-      onClick={fetchThread}
-      disabled={refreshing}
-    >
-      {refreshing ? "Refreshing…" : "Refresh"}
-    </button>
-  </div>
+  <div className="message-controls">
+  <button className="back-button" onClick={() => navigate("/messages")}>
+    Back to Messages
+  </button>
+  <button
+    className="refresh-button"
+    onClick={fetchThread}
+    disabled={refreshing}
+  >
+    {refreshing ? "Refreshing…" : "Refresh"}
+  </button>
+</div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
   <img src={thread.other?.avatar || "/images/default-avatar.png"} alt={thread.title} width={50} style={{ borderRadius: "50%" }} />

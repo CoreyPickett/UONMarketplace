@@ -52,25 +52,32 @@ useEffect(() => {
 }, []);
 
   // Mark conversation as read
-  const handleMarkAsRead = async (id) => {
-    // Only call backend if not a demo thread
-    if (!id.startsWith("demo-")) {
-      try {
-        const token = await getAuth().currentUser?.getIdToken();
-        if (token) {
-          await api.post(`/messages/${id}/read`, null, { headers: { authtoken: token } });
-        }
-      } catch (e) {
-        console.error("Failed to mark as read", e);
-      }
-    }
-    // Update local state so UI reflects the change immediately
-    setThreads((prev) =>
-      prev.map((t) => (t._id === id ? { ...t, unread: { ...(t.unread || {}), me: 0 } } : t))
-    );
-    setMenuFor(null);
-  };
+ const handleMarkAsRead = async (id) => {
+  const sid = String(id);
 
+  // only call backend for real threads
+  if (!sid.startsWith("demo-")) {
+    try {
+      const token = await getAuth().currentUser?.getIdToken();
+      if (token) {
+        // send empty object instead of null (some servers choke on null)
+        await api.post(`/messages/${sid}/read`, {}, { headers: { authtoken: token } });
+      }
+    } catch (e) {
+      console.error("Failed to mark as read", e);
+    }
+  }
+
+  // update UI immediately using the same key used for reading
+  setThreads(prev =>
+    prev.map(t =>
+      t._id === id
+        ? { ...t, unread: { ...(t.unread || {}), [me]: 0 } }   // <-- dynamic key
+        : t
+    )
+  );
+  setMenuFor(null);
+};
   // Delete conversation
   const handleDelete = async (id) => {
     try {
